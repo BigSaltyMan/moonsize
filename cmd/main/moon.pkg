@@ -1,0 +1,10 @@
+import {
+  "BigSaltyMan/moonsize" @lib,
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+}
+
+supported_targets = "+native"
+
+pkgtype(kind: "executable")
