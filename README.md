@@ -420,3 +420,8 @@ The first step builds `examples/` and leaves the artifact at
 it, the report is generated from that, and the screenshot is a capture of the
 report at 1400px wide and full height. Nothing under `examples/` is edited by
 hand, so a stale number there means a stale build rather than a typo.
+
+`.moonignore` keeps the rendered page out of the published package — it is
+1.2 MB of what would otherwise be a 2.4 MB module, and nobody `moon add`s this
+for a screenshot — while the source, the example binary and the chart library
+all ship.

@@ -272,3 +272,5 @@ moon run cmd/main -- --html examples/report.html examples/fib.wasm
 ```
 
 第一步构建 `examples/`，产物落在 `_build/wasm/debug/build/examples/examples.wasm`；`examples/fib.wasm` 是它的副本，报告由这份 wasm 生成，截图则是那份报告在 1400px 宽、整页高度下的截取。`examples/` 下没有任何东西是手改的——所以那里出现过期数字，意味着构建过期，而不是打错了字。
+
+`.moonignore` 把渲染出来的页面挡在发布包之外——它占了原本 2.4 MB 模块中的 1.2 MB，而没人会为了看一张截图去 `moon add` 这个模块——源码、示例二进制和图表库都照常发布。

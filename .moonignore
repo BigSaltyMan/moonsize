@@ -1,0 +1,15 @@
+# What `moon publish` leaves out of the package.
+#
+# A `.moonignore` overrides the `.gitignore` in the same directory rather than
+# adding to it, so the build directories are repeated here.
+_build/
+.mooncakes/
+target/
+
+# The rendered example report. It is generated from `examples/fib.wasm` and is
+# 1.2 MB of a 2.4 MB package; it belongs in the repository, where the README
+# links to it, but not in a module somebody just `moon add`ed. The example's
+# source and binary stay, and so does the chart library, which `--html` falls
+# back to for an offline page.
+examples/report.html
+examples/report.png
