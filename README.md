@@ -1,5 +1,9 @@
 # moonsize
 
+```sh
+moon add BigSaltyMan/moonsize
+```
+
 A size analyzer for WebAssembly, built for MoonBit's output. It reads a `.wasm`
 file, measures every section, attributes the code section to named functions,
 follows the call graph, and reports what could be deleted.
