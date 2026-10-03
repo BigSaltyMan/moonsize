@@ -217,3 +217,15 @@ moon test
 ```
 
 测试逐条覆盖指令表——每条指令带一个规范编码和规范给出的长度——并固定了三个真实的 MoonBit 函数体，其中一个是 locals 使用两字节 GC 引用类型的，这样一旦某个立即数宽度写错，失败的是一个测试，而不是悄悄产生一张错误的调用图。
+
+### 重新生成示例
+
+[`examples/report.html`](examples/report.html) 和本 README 里引用的数字——文件大小、段占比、Retained Size——都是从真实构建产物里读出来的，不是手写的。所以改了 [`examples/fib.mbt`](examples/fib.mbt)，或者升级了工具链之后，它们就过期了，三步都得重跑：
+
+```sh
+moon build --target wasm
+moon run cmd/main -- --html examples/report.html examples/fib.wasm
+# 然后按这个页面重新截 examples/report.png
+```
+
+第一步构建 `examples/`，产物落在 `_build/wasm/debug/build/examples/examples.wasm`；`examples/fib.wasm` 是它的副本，报告由这份 wasm 生成，截图则是那份报告在 1400px 宽、整页高度下的截取。`examples/` 下没有任何东西是手改的——所以那里出现过期数字，意味着构建过期，而不是打错了字。

@@ -326,3 +326,23 @@ carries a canonical encoding and the length the specification gives it — and p
 three real MoonBit function bodies, including one whose locals use two-byte
 garbage-collection reference types, so a wrong immediate width fails a test
 instead of quietly producing a wrong call graph.
+
+### Regenerating the example
+
+The numbers quoted in [`examples/report.html`](examples/report.html) and in this
+README — the file size, the section shares, the retained sizes — are read out of a
+real build rather than written by hand. Changing
+[`examples/fib.mbt`](examples/fib.mbt) or moving to a new toolchain makes them
+stale, and all three steps have to be run again:
+
+```sh
+moon build --target wasm
+moon run cmd/main -- --html examples/report.html examples/fib.wasm
+# then re-capture examples/report.png from that page
+```
+
+The first step builds `examples/` and leaves the artifact at
+`_build/wasm/debug/build/examples/examples.wasm`; `examples/fib.wasm` is a copy of
+it, the report is generated from that, and the screenshot is a capture of the
+report at 1400px wide and full height. Nothing under `examples/` is edited by
+hand, so a stale number there means a stale build rather than a typo.
