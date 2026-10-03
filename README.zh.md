@@ -98,7 +98,7 @@ MoonBit 编译器的死代码消除做得很好，因此小程序通常报告为
 
 ![moonsize HTML 报告](examples/report.png)
 
-仓库里放了一份现成的例子：[`examples/report.html`](examples/report.html)，由 [`examples/fib.wasm`](examples/fib.wasm) 生成——一个 10,645 字节的 MoonBit 程序。它只有一个文件：图表库被内联进去，所以可以随意移动、发送、在任何地方打开。
+仓库里放了一份现成的例子：[`examples/report.html`](examples/report.html)，由 [`examples/fib.wasm`](examples/fib.wasm) 生成——一个 10,645 字节的 MoonBit 程序。它只有一个文件：图表库被内联进去，所以可以随意移动、发送、在任何地方打开。它的源码是 [`examples/fib.mbt`](examples/fib.mbt)，同时也是本模块的一个包：构建 `--target wasm` 时会连同工具一起产出这个示例。
 
 **顶部三个数字。** 文件总大小、code 段大小，以及文件中不可达部分的大小。第三张卡片在有东西可删时会变红——多数人打开报告就是为了这个数。
 
@@ -202,7 +202,12 @@ SIZE COMPARISON
       --max-size 5KB
 ```
 
-[`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) 就是上面这个形状的骨架。它还没有真正接上——本模块目前不从源码构建示例，所以那个文件对比的是仓库里已有的二进制，构建步骤以注释形式留在里面。
+[`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) 在每个 PR 上做的就是这件事。`examples/` 现在是本模块的一个包，所以两边都按同样的方式编译示例，对比的是同一份源码的两次构建：
+
+```sh
+moon build --target wasm                        # 产出示例 wasm
+moon run cmd/main -- that.wasm --baseline base.wasm --max-size 5KB
+```
 
 ## 开发
 

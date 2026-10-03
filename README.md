@@ -161,7 +161,9 @@ no build step, no network. Open the file and the four charts are there.
 A worked example is checked in at [`examples/report.html`](examples/report.html),
 generated from [`examples/fib.wasm`](examples/fib.wasm) — a 10,645-byte MoonBit
 program. It is one file: the chart library is inlined, so it can be moved,
-emailed or opened from anywhere.
+emailed or opened from anywhere. The source it was built from is
+[`examples/fib.mbt`](examples/fib.mbt), which is also a package here: building
+`--target wasm` produces the example alongside the tool.
 
 **Three headline numbers.** File size, the code section, and how much of the file
 is unreachable. The third card turns red when there is anything to delete, which
@@ -302,10 +304,15 @@ it as the baseline; `--max-size` then reads as the allowance:
       --max-size 5KB
 ```
 
-[`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) is a
-skeleton of exactly that shape. It is not wired up yet — this module does not
-build its example from source, so the file compares the checked-in binaries and
-carries the build steps as comments.
+[`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) does that
+on every pull request. `examples/` is a package of this module, so both sides
+build the example the same way and the comparison is between two builds of the
+same source:
+
+```sh
+moon build --target wasm                        # -> examples wasm
+moon run cmd/main -- that.wasm --baseline base.wasm --max-size 5KB
+```
 
 ## Development
 

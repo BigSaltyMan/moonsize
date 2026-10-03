@@ -1,15 +1,21 @@
 name: Size check
 
-# Report what a pull request does to the size of a built example, by building
-# the same source on both sides of the merge and comparing the two binaries.
+# Report what a pull request does to the size of the example, by building the
+# same source on both sides of the merge and comparing the two binaries.
 #
-# This is a skeleton: the shape is the part worth copying, and the two build
-# steps are left as TODOs because this repository does not yet build its example
-# from source (see the note on `build_example` below).
+# The example is a package of this module (`examples/moon.pkg`), so both sides
+# build it the same way and the comparison is between two builds of the same
+# source rather than between two stored binaries.
 
 on:
   pull_request:
     branches: [main]
+
+env:
+  # Where `moon build --target wasm` leaves the example. Add `--release` to both
+  # build steps below and this becomes `_build/wasm/release/...` if a release
+  # budget is what matters.
+  EXAMPLE: _build/wasm/debug/build/examples/examples.wasm
 
 jobs:
   compare:
@@ -22,37 +28,35 @@ jobs:
           fetch-depth: 0
       - uses: moonbit-community/setup-moonbit@v1
 
-      # `examples/fib.wasm` is a checked-in binary, so rebuilding it needs a
-      # package around `examples/fib.mbt`. Until the example is wired into
-      # `moon build` — say, under `examples/fib/moon.pkg` with an executable
-      # package type — both steps below stay comments rather than guesses, and
-      # the job falls back to comparing the checked-in binaries, which only
-      # differ when a pull request changes them.
-      #
-      # TODO: replace the two fallbacks with the real builds:
-      #
-      #   - name: Build the baseline from the base branch
-      #     run: |
-      #       git worktree add "$RUNNER_TEMP/baseline" "origin/${{ github.base_ref }}"
-      #       cd "$RUNNER_TEMP/baseline"
-      #       moon build --target wasm
-      #       cp _build/wasm/debug/build/fib/main.wasm "$RUNNER_TEMP/baseline.wasm"
-      #
-      #   - name: Build this pull request
-      #     run: |
-      #       moon build --target wasm
-      #       cp _build/wasm/debug/build/fib/main.wasm "$RUNNER_TEMP/current.wasm"
-
-      - name: Fetch the base branch's example
+      - name: Build the base branch's example
         run: |
-          git show "origin/${{ github.base_ref }}:examples/fib.wasm" > "$RUNNER_TEMP/baseline.wasm"
+          git worktree add "$RUNNER_TEMP/base" "origin/${{ github.base_ref }}"
+          if [ -f "$RUNNER_TEMP/base/examples/moon.pkg" ]; then
+            (cd "$RUNNER_TEMP/base" && moon build --target wasm)
+            cp "$RUNNER_TEMP/base/$EXAMPLE" "$RUNNER_TEMP/baseline.wasm"
+          else
+            # A base branch from before the example was a package has no way to
+            # build it, so the checked-in binary is all there is. It carries the
+            # throwaway project's package path rather than this module's, which
+            # shows up as roughly 30 bytes in the name section — noise against a
+            # budget of kilobytes, and gone once this lands on the base branch.
+            git show "origin/${{ github.base_ref }}:examples/fib.wasm" \
+              > "$RUNNER_TEMP/baseline.wasm"
+          fi
+
+      - name: Build this pull request's example
+        run: |
+          moon build --target wasm
+          cp "$EXAMPLE" "$RUNNER_TEMP/current.wasm"
 
       - name: Compare
-        # `--max-size` here is the growth the pull request may get away with.
-        # Raise it deliberately, or delete it to report the change without
-        # failing the job.
+        # The tool doing the comparing is this pull request's, so a change that
+        # breaks the size gate fails here too.
+        #
+        # `--max-size` is the growth a pull request may get away with. Raise it
+        # deliberately, or drop it to report the change without failing the job.
         run: |
-          moon run cmd/main -- examples/fib.wasm \
+          moon run cmd/main -- "$RUNNER_TEMP/current.wasm" \
             --baseline "$RUNNER_TEMP/baseline.wasm" \
             --top 0 \
             --max-size 5KB

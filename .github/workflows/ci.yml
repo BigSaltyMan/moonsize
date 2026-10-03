@@ -34,6 +34,8 @@ jobs:
       - uses: moonbit-community/setup-moonbit@v1
       # The example is 10.4 KB, so this passes; a change that pushed it past
       # 100 KB fails the job with exit code 3.
+      - name: The example still builds
+        run: moon build --target wasm
       - name: The example stays inside its budget
         run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
       # A budget that never fires is worse than no budget, because it looks like
