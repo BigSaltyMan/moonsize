@@ -50,6 +50,42 @@ moonsize app.wasm --call-graph graph.dot        # for Graphviz
 Everything below is built on one idea: a function's bytes only matter if
 something can call it.
 
+### Symbol names
+
+Attribution starts with the names in the binary's name section, and MoonBit does
+not publish how it mangles them, so the rules here were read back from the name
+section of real builds (`moonc` 0.1.20260920, the `wasm` backend):
+
+- a symbol is `_M0<kind>` and then a path: `F` a function, `M` a method, `I` a
+  trait implementation;
+- the package is `B` for the builtin package, `C` for `moonbitlang/core`, or `P`
+  and an index — which runs into the first component's own length, so `P55probe`
+  is index `5` followed by `5probe`;
+- a component is its length and then its name, and the length counts the *mangled*
+  name;
+- anything that cannot appear in an identifier is escaped as `_` and the byte in
+  hex, and a literal underscore is doubled: `to__string_2einner` is
+  `to_string.inner`, `_24default__impl` is `$default_impl`, and a non-ASCII
+  character is escaped one byte at a time, so `中` is `_e4_b8_ad`;
+- a generic instantiation carries `G...E` with one code per argument, where a
+  builtin is a single letter, a tuple is `U...E`, and a named type is `R` and a
+  path;
+- a closure is either an environment named `__moonbit_<fn>` or a body carrying
+  `C<id>l<line>`, the id of the closure and the line it was written on;
+- a trait implementation names two packages, its type's and its trait's.
+
+The reports print the path through `display_name`. `demangle_full` is the fuller
+decoder, for callers that want escapes resolved, arguments spelled out and
+closures marked. Both are display aids rather than a codec: when one cannot
+decode a symbol exactly it returns it untouched, because a report that invents a
+name is worse than one that shows a raw symbol. The known limits are where that
+happens — a generic argument whose type code is not one of the letters a build
+produced (`Int`, `Double`, `String`, `Bool`, `Char`, `Byte`, `Float`, `Int64`,
+`UInt64`, `Unit`) is left undecoded rather than guessed, a named argument is only
+decoded as the last one in its list because its path has no terminator to
+separate it from what follows, and a symbol over 4096 bytes is refused outright
+so a forged name cannot drive the walk into a deep recursion.
+
 ### The call graph
 
 The decoder walks every function body instruction by instruction — the full MVP
