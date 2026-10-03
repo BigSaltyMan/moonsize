@@ -147,6 +147,12 @@ test "a chain retains everything below it" {
 }
 
 ///|
+/// The diamond is the case that separates an exact retained size from the
+/// tempting local rule "count a successor only when this function is its sole
+/// predecessor". Under that rule 4 has two predecessors, so deleting 1 would
+/// appear to free 1, 2 and 3 and spare 4. It is not spared: 2 and 3 die first,
+/// and the last paths into 4 die with them. The 1000 asserted below is the
+/// reachability answer, not an approximation of it.
 test "a diamond loses the branch only the deleted function reached" {
   // 1 -> 2 -> 4 and 1 -> 3 -> 4, with 1 the only root.
   let graph = graph_of([(1, 2), (1, 3), (2, 4), (3, 4)])
