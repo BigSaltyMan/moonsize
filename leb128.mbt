@@ -11,6 +11,11 @@ pub enum WasmError {
   LebOverflow(Int)
   /// An import descriptor whose kind byte is outside the assigned range.
   InvalidImportKind(Int)
+  /// A byte where an opcode was expected that no instruction uses.
+  UnknownOpcode(Int, Int)
+  /// A prefixed opcode whose sub-opcode is unassigned: the prefix byte, the
+  /// sub-opcode, and where they sit.
+  UnknownPrefixedOpcode(Int, Int, Int)
 }
 
 ///|
@@ -106,4 +111,61 @@ pub fn Reader::read_u32_leb(self : Reader) -> Result[Int, WasmError] {
     }
   }
   Ok(result)
+}
+
+///|
+/// Read a signed LEB128 integer of at most `bits` significant bits.
+///
+/// Block types, heap types and the `i32.const`/`i64.const` immediates are all
+/// signed, and the sign lives in the last group's bit 6, so leaving it out would
+/// turn a small negative constant into a large positive one. The `bits` bound is
+/// what makes a non-terminating encoding malformed: a group may only continue
+/// while fewer than `bits` bits have been consumed.
+pub fn Reader::read_signed_leb(
+  self : Reader,
+  bits : Int,
+) -> Result[Int, WasmError] {
+  let start = self.pos
+  let mut result = 0
+  let mut shift = 0
+  let mut byte = 0
+  let mut more = true
+  while more {
+    if self.pos >= self.data.length() {
+      return Err(WasmError::UnexpectedEnd(start, 1))
+    }
+    byte = self.data[self.pos].to_int()
+    self.pos = self.pos + 1
+    result = result | ((byte & 0x7F) << shift)
+    shift = shift + 7
+    if (byte & 0x80) == 0 {
+      more = false
+    } else if shift >= bits {
+      return Err(WasmError::LebOverflow(start))
+    }
+  }
+  // The final group's bit 6 is the sign; anything above it has to be filled in.
+  if (byte & 0x40) != 0 && shift <= 63 {
+    result = result | (-1 << shift)
+  }
+  Ok(result)
+}
+
+///|
+/// Read a little-endian bit pattern of `count` bytes as a single integer.
+///
+/// Floating point constants have no structural meaning for a size analyzer, so
+/// they are kept as the bits the file holds rather than converted and back.
+pub fn Reader::read_bits(self : Reader, count : Int) -> Result[Int, WasmError] {
+  let bytes = match self.read_bytes(count) {
+    Ok(bytes) => bytes
+    Err(error) => return Err(error)
+  }
+  let mut value = 0
+  let mut i = 0
+  while i < count {
+    value = value | (bytes[i].to_int() << (8 * i))
+    i = i + 1
+  }
+  Ok(value)
 }

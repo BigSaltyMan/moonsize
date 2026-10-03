@@ -6,10 +6,16 @@
 /// environment and nothing else.
 
 ///|
-/// What to analyze and how much of it to show.
+/// What to analyze, how much of it to show, and which reports to produce.
 pub struct Options {
   path : String
   top : Int
+  /// Print the retained-size section.
+  retained : Bool
+  /// Print the dead-code section.
+  dead_code : Bool
+  /// Write the call graph to this path instead of printing the text report.
+  call_graph : String?
 }
 
 ///|
@@ -52,12 +58,19 @@ pub fn parse_count(text : String) -> Int? {
 ///|
 /// Parse a full `argv`, including the program name in slot zero.
 ///
-/// The grammar is `moonsize <file.wasm> [--top <n>]`: exactly one positional
-/// path, and a repeat of `--top` keeps the last value. Anything else is
-/// reported as an error so a typo never silently analyses the wrong thing.
+/// The grammar is `moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
+/// [--call-graph <path>]`: exactly one positional path, and a repeat of a flag
+/// keeps the last value. Anything else is reported as an error so a typo never
+/// silently analyses the wrong thing.
+///
+/// `--call-graph` writes a file rather than a report, so combining it with the
+/// two report flags is rejected instead of quietly ignoring one of them.
 pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut path : String? = None
   let mut top = DEFAULT_TOP
+  let mut retained = false
+  let mut dead_code = false
+  let mut call_graph : String? = None
   let mut i = 1
   while i < args.length() {
     let arg = args[i]
@@ -76,6 +89,18 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
           )
       }
       i = i + 2
+    } else if arg == "--retained" {
+      retained = true
+      i = i + 1
+    } else if arg == "--dead-code" {
+      dead_code = true
+      i = i + 1
+    } else if arg == "--call-graph" {
+      if i + 1 >= args.length() {
+        return Err("moonsize: --call-graph needs a path\n\n" + usage())
+      }
+      call_graph = Some(args[i + 1])
+      i = i + 2
     } else if path is None {
       path = Some(arg)
       i = i + 1
@@ -83,8 +108,21 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       return Err("moonsize: unexpected argument " + arg + "\n\n" + usage())
     }
   }
-  match path {
-    Some(path) => Ok({ path, top, })
-    None => Err(usage())
+  let path = match path {
+    Some(path) => path
+    None => return Err(usage())
   }
+  match call_graph {
+    Some(target) =>
+      if retained || dead_code {
+        return Err(
+          "moonsize: --call-graph writes the graph to " +
+          target +
+          ", so it cannot be combined with --retained or --dead-code\n\n" +
+          usage(),
+        )
+      }
+    None => ()
+  }
+  Ok({ path, top, retained, dead_code, call_graph, })
 }

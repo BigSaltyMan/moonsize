@@ -1,7 +1,7 @@
 // Moonsize — a WebAssembly binary size analyzer.
 //
-// Step 2 scope: decode the module preamble and section table, then attribute the
-// code section to named functions and roll those bytes up per module.
+// Step 3 scope: decode the section table and the full instruction set, build the
+// call graph, and report retained sizes and dead code.
 name = "BigSaltyMan/moonsize"
 
 version = "0.1.0"
@@ -12,7 +12,7 @@ preferred_target = "native"
 
 keywords = [ "wasm", "webassembly", "size", "cli", "profiling" ]
 
-description = "Analyse the size of a WebAssembly module: section layout, per-function byte budgets and per-module roll-ups."
+description = "Analyse the size of a WebAssembly module: section layout, per-function byte budgets, call graph, retained sizes and dead code."
 
 import {
   "moonbitlang/x@0.5.5",

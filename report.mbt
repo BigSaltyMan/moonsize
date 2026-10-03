@@ -141,48 +141,23 @@ priv struct ModuleStat {
 }
 
 ///|
-/// Attribute every code-section body to a name and a package.
+/// Attribute a body to a name and a package.
 ///
 /// Attribution is best effort by design: a release binary keeps no function
 /// names, and the sizes are still worth reporting, so unnamed functions come
 /// back labelled `(unnamed)` rather than failing the run.
-pub fn collect_function_stats(
-  parsed : WasmModule,
-  data : Bytes,
-) -> Result[Array[FunctionStat], WasmError] {
-  let mut code_section : Section? = None
-  let mut imported_functions = 0
-  let mut names : Map[Int, String] = Map([])
-  for section in parsed.sections {
-    match section.kind {
-      Code => code_section = Some(section)
-      Import =>
-        match count_imported_functions(data, section) {
-          Ok(count) => imported_functions = count
-          Err(error) => return Err(error)
-        }
-      Custom =>
-        match parse_name_section(data, section) {
-          Some(found) => names = found
-          None => ()
-        }
-      _ => ()
-    }
-  }
-  // The code section lists defined functions only, and imported functions hold
-  // the first index slots, so the import count is what lines the two up.
-  let bodies : Array[FunctionBody] = match code_section {
-    Some(section) =>
-      match parse_code_section(data, section, base_index=imported_functions) {
-        Ok(bodies) => bodies
-        Err(error) => return Err(error)
-      }
-    None => []
-  }
+pub fn function_stats(
+  bodies : Array[FunctionBody],
+  names : Map[Int, String]?,
+) -> Array[FunctionStat] {
   let stats : Array[FunctionStat] = []
   for body in bodies {
-    let raw = match names.get(body.index) {
-      Some(name) => name
+    let raw = match names {
+      Some(names) =>
+        match names.get(body.index) {
+          Some(name) => name
+          None => ""
+        }
       None => ""
     }
     stats.push({
@@ -197,7 +172,42 @@ pub fn collect_function_stats(
       total_size: body.total_size,
     })
   }
-  Ok(stats)
+  stats
+}
+
+///|
+/// Read a module's function names and sizes.
+///
+/// A convenience over `analyze` for callers that only want the size table; the
+/// two share `function_stats`, so they cannot disagree about attribution.
+pub fn collect_function_stats(
+  parsed : WasmModule,
+  data : Bytes,
+) -> Result[Array[FunctionStat], WasmError] {
+  let sections = find_sections(parsed)
+  let imported = match sections.imports {
+    Some(section) =>
+      match count_imported_functions(data, section) {
+        Ok(count) => count
+        Err(error) => return Err(error)
+      }
+    None => 0
+  }
+  // The code section lists defined functions only, and imported functions hold
+  // the first index slots, so the import count is what lines the two up.
+  let bodies = match sections.code {
+    Some(section) =>
+      match parse_code_section(data, section, base_index=imported) {
+        Ok(bodies) => bodies
+        Err(error) => return Err(error)
+      }
+    None => []
+  }
+  let names = match sections.names {
+    Some(section) => parse_name_section(data, section)
+    None => None
+  }
+  Ok(function_stats(bodies, names))
 }
 
 ///|
@@ -402,8 +412,202 @@ pub fn render_module_summary(
 /// Printed when the tool is invoked without a file, or with arguments it cannot
 /// make sense of.
 pub fn usage() -> String {
-  "usage: moonsize <file.wasm> [--top <n>]\n\n" +
+  "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
+  "                 [--call-graph <path>]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
-  "functions and roll the bytes up by module.\n\n" +
-  "  --top <n>  how many functions to rank (default 10)"
+  "functions, roll the bytes up by module, and follow the call graph to\n" +
+  "find what can be deleted.\n\n" +
+  "  --top <n>            how many functions to rank (default 10)\n" +
+  "  --retained           what deleting each function would free\n" +
+  "  --dead-code          functions no root can reach\n" +
+  "  --call-graph <path>  write the call graph as .dot or .json"
+}
+
+///|
+/// A lookup from function index to the name to print for it.
+fn names_by_index(stats : Array[FunctionStat]) -> Map[Int, String] {
+  let names : Map[Int, String] = Map([])
+  for stat in stats {
+    names.set(stat.index, stat.name)
+  }
+  names
+}
+
+///|
+/// The name to print for an index, with a fallback for anything the size table
+/// does not know about.
+fn name_of(names : Map[Int, String], index : Int) -> String {
+  match names.get(index) {
+    Some(name) => name
+    None => UNNAMED_FUNCTION
+  }
+}
+
+///|
+/// The retained-size table: what deleting each function would free.
+///
+/// `SIZE` is the function on its own and `RETAINED` is that plus every function
+/// that becomes unreachable with it, with `DIES` counting how many others that
+/// is. A row where the two sizes match is load-bearing only for itself; a row
+/// where `RETAINED` dwarfs `SIZE` is a good place to look when shrinking a
+/// binary, because removing it takes everything underneath with it.
+pub fn render_retained(
+  stats : Array[FunctionStat],
+  retained : Array[RetainedSize],
+  indirect : Set[Int],
+  file_size : Int,
+  top : Int,
+) -> String {
+  let names = names_by_index(stats)
+  let ranked = retained.copy()
+  ranked.sort_by(fn(a, b) {
+    if a.retained != b.retained {
+      b.retained - a.retained
+    } else {
+      a.index - b.index
+    }
+  })
+  let shown = if top < 0 {
+    0
+  } else if top > ranked.length() {
+    ranked.length()
+  } else {
+    top
+  }
+  let mut index_width = 5
+  let mut size_width = 4
+  let mut retained_width = 8
+  for entry in retained {
+    size_width = number_width(entry.own_size, size_width)
+    retained_width = number_width(entry.retained, retained_width)
+    index_width = number_width(entry.index, index_width)
+  }
+  let mut out = "Retained size\n"
+  if shown == 0 {
+    return out + "\n  no reachable functions to rank"
+  }
+  let rank_width = number_width(shown, 3)
+  out = out +
+    "\n  " +
+    pad_left("#", rank_width) +
+    "  " +
+    pad_left("INDEX", index_width) +
+    "  " +
+    pad_left("SIZE", size_width) +
+    "  " +
+    pad_left("RETAINED", retained_width) +
+    "  " +
+    pad_left("DIES", 4) +
+    "  " +
+    pad_left("SHARE", 7) +
+    "  IND  FUNCTION\n"
+  let mut rank = 0
+  while rank < shown {
+    let entry = ranked[rank]
+    out = out +
+      "  " +
+      pad_left((rank + 1).to_string(), rank_width) +
+      "  " +
+      pad_left(entry.index.to_string(), index_width) +
+      "  " +
+      pad_left(entry.own_size.to_string(), size_width) +
+      "  " +
+      pad_left(entry.retained.to_string(), retained_width) +
+      "  " +
+      pad_left(entry.retained_functions.to_string(), 4) +
+      "  " +
+      pad_left(share_text(entry.retained, file_size), 7) +
+      "  " +
+      pad_left(if indirect.contains(entry.index) { "*" } else { "" }, 3) +
+      "  " +
+      name_of(names, entry.index) +
+      "\n"
+    rank = rank + 1
+  }
+  out = out +
+    "\n  DIES counts the other functions that become unreachable with this one.\n" +
+    "  IND marks a function a call_indirect could reach."
+  out
+}
+
+///|
+/// The dead-code section: functions no root can reach.
+///
+/// This is the report that pays for the analysis. Anything listed here cannot
+/// run: no export, no start function, no table entry and no path of calls leads
+/// to it, so its bytes are already paid for and never used.
+pub fn render_dead_code(
+  stats : Array[FunctionStat],
+  reachable : Set[Int],
+  file_size : Int,
+  top : Int,
+) -> String {
+  let dead : Array[FunctionStat] = []
+  let mut bytes = 0
+  for stat in stats {
+    if !reachable.contains(stat.index) {
+      dead.push(stat)
+      bytes = bytes + stat.total_size
+    }
+  }
+  dead.sort_by(fn(a, b) {
+    if a.total_size != b.total_size {
+      b.total_size - a.total_size
+    } else {
+      a.index - b.index
+    }
+  })
+  let mut out = "Dead code\n"
+  if stats.length() == 0 {
+    return out + "\n  no functions in this binary"
+  }
+  out = out +
+    "\n  " +
+    dead.length().to_string() +
+    " of " +
+    stats.length().to_string() +
+    " functions are unreachable from the roots\n" +
+    "  " +
+    bytes.to_string() +
+    " bytes (" +
+    share_text(bytes, file_size) +
+    " of file)\n"
+  if dead.length() == 0 {
+    return out + "\n  every function is reachable"
+  }
+  let shown = if top < 0 {
+    0
+  } else if top > dead.length() {
+    dead.length()
+  } else {
+    top
+  }
+  let mut size_width = 4
+  for stat in dead {
+    size_width = number_width(stat.total_size, size_width)
+  }
+  out = out +
+    "\n  Top " +
+    plural(shown, "dead function") +
+    "\n\n  " +
+    pad_left("SIZE", size_width) +
+    "  " +
+    pad_left("SHARE", 7) +
+    "  FUNCTION\n"
+  let mut rank = 0
+  while rank < shown {
+    let stat = dead[rank]
+    if rank > 0 {
+      out = out + "\n"
+    }
+    out = out +
+      "  " +
+      pad_left(stat.total_size.to_string(), size_width) +
+      "  " +
+      pad_left(share_text(stat.total_size, file_size), 7) +
+      "  " +
+      stat.name
+    rank = rank + 1
+  }
+  out
 }

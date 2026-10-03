@@ -91,3 +91,141 @@ test "counts decimal text and nothing else" {
 test "rejects a count large enough to overflow the accumulation" {
   assert_eq(parse_count("99999999999999999999"), None)
 }
+
+///|
+test "the report flags default to off" {
+  match parse_options(["moonsize", "app.wasm"]) {
+    Ok(options) => {
+      inspect(
+        options.retained,
+        content=(
+          #|false
+        ),
+      )
+      inspect(
+        options.dead_code,
+        content=(
+          #|false
+        ),
+      )
+      assert_eq(options.call_graph, None)
+    }
+    Err(message) => fail(message)
+  }
+}
+
+///|
+test "the report flags turn their sections on, together or apart" {
+  match parse_options(["moonsize", "app.wasm", "--retained"]) {
+    Ok(options) => {
+      inspect(
+        options.retained,
+        content=(
+          #|true
+        ),
+      )
+      inspect(
+        options.dead_code,
+        content=(
+          #|false
+        ),
+      )
+    }
+    Err(message) => fail(message)
+  }
+  match parse_options(["moonsize", "app.wasm", "--dead-code"]) {
+    Ok(options) => {
+      inspect(
+        options.retained,
+        content=(
+          #|false
+        ),
+      )
+      inspect(
+        options.dead_code,
+        content=(
+          #|true
+        ),
+      )
+    }
+    Err(message) => fail(message)
+  }
+  match
+    parse_options([
+      "moonsize", "--retained", "app.wasm", "--dead-code", "--top", "5",
+    ]) {
+    Ok(options) => {
+      inspect(
+        options.retained,
+        content=(
+          #|true
+        ),
+      )
+      inspect(
+        options.dead_code,
+        content=(
+          #|true
+        ),
+      )
+      inspect(
+        options.top,
+        content=(
+          #|5
+        ),
+      )
+    }
+    Err(message) => fail(message)
+  }
+}
+
+///|
+test "the call graph flag takes a path" {
+  match parse_options(["moonsize", "app.wasm", "--call-graph", "graph.dot"]) {
+    Ok(options) => assert_eq(options.call_graph, Some("graph.dot"))
+    Err(message) => fail(message)
+  }
+}
+
+///|
+test "writing a graph excludes the report sections" {
+  match
+    parse_options([
+      "moonsize", "app.wasm", "--call-graph", "graph.dot", "--retained",
+    ]) {
+    Err(message) =>
+      inspect(
+        message.contains("cannot be combined"),
+        content=(
+          #|true
+        ),
+      )
+    Ok(_) => fail("expected the combination to be rejected")
+  }
+  match
+    parse_options([
+      "moonsize", "app.wasm", "--dead-code", "--call-graph", "graph.json",
+    ]) {
+    Err(message) =>
+      inspect(
+        message.contains("cannot be combined"),
+        content=(
+          #|true
+        ),
+      )
+    Ok(_) => fail("expected the combination to be rejected")
+  }
+}
+
+///|
+test "the call graph flag needs a path" {
+  match parse_options(["moonsize", "app.wasm", "--call-graph"]) {
+    Err(message) =>
+      inspect(
+        message.contains("--call-graph needs a path"),
+        content=(
+          #|true
+        ),
+      )
+    Ok(_) => fail("expected a rejected --call-graph")
+  }
+}

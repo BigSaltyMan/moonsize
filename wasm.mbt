@@ -202,6 +202,18 @@ pub fn describe_error(error : WasmError) -> String {
       "malformed LEB128 integer at offset " + offset.to_string()
     InvalidImportKind(kind) =>
       "unknown import kind " + kind.to_string() + " (expected 0..4)"
+    UnknownOpcode(offset, byte) =>
+      "unknown opcode 0x" +
+      byte.to_string(radix=16) +
+      " at offset " +
+      offset.to_string()
+    UnknownPrefixedOpcode(offset, prefix, sub) =>
+      "unknown opcode 0x" +
+      prefix.to_string(radix=16) +
+      " 0x" +
+      sub.to_string(radix=16) +
+      " at offset " +
+      offset.to_string()
   }
 }
 
@@ -276,6 +288,32 @@ fn skip_limits(reader : Reader) -> Result[Unit, WasmError] {
     }
   }
   Ok(())
+}
+
+///|
+/// Read a `limits` record: a flag byte, a minimum, and a maximum when the flag
+/// says one is present.
+///
+/// The shared and 64-bit flags change the value type but not the shape, so only
+/// the low bit decides whether a maximum follows.
+fn parse_limits(reader : Reader) -> Result[(Int, Int?), WasmError] {
+  let flags = match reader.read_byte() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let minimum = match reader.read_u32_leb() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  if (flags & 0x01) != 0 {
+    let maximum = match reader.read_u32_leb() {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    Ok((minimum, Some(maximum)))
+  } else {
+    Ok((minimum, None))
+  }
 }
 
 ///|
@@ -491,4 +529,461 @@ pub fn parse_name_section(data : Bytes, section : Section) -> Map[Int, String]? 
     reader.seek(sub_end)
   }
   Some(names)
+}
+
+///|
+/// The sections the analysis passes need, picked out of the section table once.
+///
+/// A well-formed module holds at most one of each numbered section, so the last
+/// one seen wins. Several custom sections are legal, and `name` is the only one
+/// this tool reads.
+pub struct Sections {
+  mut code : Section?
+  mut imports : Section?
+  mut names : Section?
+  mut exports : Section?
+  mut elements : Section?
+  mut tables : Section?
+  mut start : Section?
+}
+
+///|
+/// Pick the interesting sections out of a parsed section table.
+pub fn find_sections(parsed : WasmModule) -> Sections {
+  let found : Sections = {
+    code: None,
+    imports: None,
+    names: None,
+    exports: None,
+    elements: None,
+    tables: None,
+    start: None,
+  }
+  for section in parsed.sections {
+    match section.kind {
+      Code => found.code = Some(section)
+      Import => found.imports = Some(section)
+      Export => found.exports = Some(section)
+      Element => found.elements = Some(section)
+      Table => found.tables = Some(section)
+      Start => found.start = Some(section)
+      Custom =>
+        match section.custom_name {
+          Some(name) => if name == "name" { found.names = Some(section) }
+          None => ()
+        }
+      _ => ()
+    }
+  }
+  found
+}
+
+///|
+/// How a call site reaches its target.
+pub enum CallKind {
+  /// `call x`: the target is named outright.
+  Direct(Int)
+  /// `call_indirect`: the target is read from table `x` at run time.
+  Indirect(Int)
+}
+
+///|
+/// One call found in a function body.
+pub struct CallSite {
+  kind : CallKind
+  /// The signature `call_indirect` selects on; `None` for a direct call.
+  type_index : Int?
+  /// Offset of the instruction from the start of the file.
+  offset : Int
+}
+
+///|
+/// Skip a function body's local declaration and decode the expression.
+///
+/// `body_offset` is the first byte after the body's size prefix, so the locals
+/// vector comes first. The declared `body_size` is a hard bound: an instruction
+/// that would run past it is reported rather than read out of the next body,
+/// which is what keeps a wrong immediate width from quietly becoming a wrong
+/// call graph.
+pub fn decode_instructions(
+  bytes : Bytes,
+  body_offset : Int,
+  body_size : Int,
+) -> Result[Array[Instruction], WasmError] {
+  let reader = Reader::new(bytes)
+  reader.seek(body_offset)
+  let end = body_offset + body_size
+  let local_groups = match reader.read_u32_leb() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let mut group = 0
+  while group < local_groups {
+    match reader.read_u32_leb() {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    match reader.read_valtype() {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
+    group = group + 1
+  }
+  if reader.position() > end {
+    return Err(WasmError::UnexpectedEnd(body_offset, body_size))
+  }
+  let instructions : Array[Instruction] = []
+  while reader.position() < end {
+    let offset = reader.position()
+    let instruction = match decode_instruction(bytes, offset) {
+      Ok(instruction) => instruction
+      Err(error) => return Err(error)
+    }
+    if offset + instruction.size > end {
+      return Err(WasmError::UnexpectedEnd(offset, instruction.size))
+    }
+    reader.seek(offset + instruction.size)
+    instructions.push(instruction)
+  }
+  Ok(instructions)
+}
+
+///|
+/// Collect every call a function body makes.
+///
+/// Only `call` and `call_indirect` count here. `ref.func` is a reference rather
+/// than a call, and the call graph picks those up separately.
+pub fn scan_calls(
+  bytes : Bytes,
+  body_offset : Int,
+  body_size : Int,
+) -> Result[Array[CallSite], WasmError] {
+  let instructions = match decode_instructions(bytes, body_offset, body_size) {
+    Ok(instructions) => instructions
+    Err(error) => return Err(error)
+  }
+  let sites : Array[CallSite] = []
+  for instruction in instructions {
+    match instruction.opcode {
+      Call =>
+        sites.push({
+          kind: Direct(instruction.operands[0]),
+          type_index: None,
+          offset: instruction.offset,
+        })
+      CallIndirect =>
+        sites.push({
+          kind: Indirect(instruction.operands[1]),
+          type_index: Some(instruction.operands[0]),
+          offset: instruction.offset,
+        })
+      _ => ()
+    }
+  }
+  Ok(sites)
+}
+
+///|
+/// One entry of the export section.
+pub struct Export {
+  name : String
+  /// 0 function, 1 table, 2 memory, 3 global, 4 tag.
+  kind : Int
+  /// Index into that kind's own index space.
+  index : Int
+}
+
+///|
+/// Decode the export section.
+pub fn parse_export_section(
+  data : Bytes,
+  section : Section,
+) -> Result[Array[Export], WasmError] {
+  let reader = reader_at_payload(data, section)
+  let end = payload_start(section) + section.payload_size
+  let count = match reader.read_u32_leb() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let exports : Array[Export] = []
+  let mut i = 0
+  while i < count {
+    let length = match reader.read_u32_leb() {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let name = match reader.read_bytes(length) {
+      Ok(bytes) => @utf8.decode_lossy(bytes)
+      Err(error) => return Err(error)
+    }
+    let kind = match reader.read_byte() {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let index = match reader.read_u32_leb() {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    if reader.position() > end {
+      return Err(WasmError::UnexpectedEnd(reader.position(), 1))
+    }
+    exports.push({ name, kind, index, })
+    i = i + 1
+  }
+  Ok(exports)
+}
+
+///|
+/// The function the module runs at instantiation, from the start section.
+pub fn parse_start_section(
+  data : Bytes,
+  section : Section,
+) -> Result[Int, WasmError] {
+  let reader = reader_at_payload(data, section)
+  reader.read_u32_leb()
+}
+
+///|
+/// A table declared by the table section.
+pub struct TableType {
+  /// Reference type the slots hold: `0x70` is `funcref`.
+  element_type : Int
+  /// Declared minimum size, in slots.
+  minimum : Int
+  /// Declared maximum, when the limits carry one.
+  maximum : Int?
+}
+
+///|
+/// Decode the table section.
+pub fn parse_table_section(
+  data : Bytes,
+  section : Section,
+) -> Result[Array[TableType], WasmError] {
+  let reader = reader_at_payload(data, section)
+  let count = match reader.read_u32_leb() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let tables : Array[TableType] = []
+  let mut i = 0
+  while i < count {
+    // A table with an explicit initialiser leads with `0x40 0x00`; everything
+    // else starts straight at the reference type.
+    let mut first = match reader.read_byte() {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    if first == 0x40 {
+      match reader.read_byte() {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      first = match reader.read_byte() {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+    }
+    let element_type = if first == REF_NULL_TYPE || first == REF_TYPE {
+      match reader.read_signed_leb(33) {
+        Ok(_) => 0
+        Err(error) => return Err(error)
+      }
+    } else {
+      first
+    }
+    let limits = match parse_limits(reader) {
+      Ok(limits) => limits
+      Err(error) => return Err(error)
+    }
+    tables.push({ element_type, minimum: limits.0, maximum: limits.1, })
+    i = i + 1
+  }
+  Ok(tables)
+}
+
+///|
+/// One entry of the element section.
+pub struct ElementSegment {
+  /// Table the segment initialises, or `-1` when it initialises none.
+  table_index : Int
+  /// True when the segment is passive or declarative: it fills no table at
+  /// instantiation, but the functions it names are still referenced.
+  passive : Bool
+  /// Function indices the segment places, in slot order. Entries written as
+  /// `ref.null` contribute nothing.
+  functions : Array[Int]
+}
+
+///|
+/// Decode the element section.
+///
+/// The eight encodings differ only in whether a table index, an offset
+/// expression, an element kind or a reference type is present, so the shared
+/// tail — a vector of function indices or of constant expressions — is read once
+/// after the mode byte has been handled.
+pub fn parse_element_section(
+  data : Bytes,
+  section : Section,
+) -> Result[Array[ElementSegment], WasmError] {
+  let reader = reader_at_payload(data, section)
+  let end = payload_start(section) + section.payload_size
+  let count = match reader.read_u32_leb() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let segments : Array[ElementSegment] = []
+  let mut i = 0
+  while i < count {
+    let mode = match reader.read_byte() {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let mut table_index = -1
+    let mut passive = false
+    // Modes 2 and 6 name their table; 0 and 4 always mean table 0.
+    if mode == 0x02 || mode == 0x06 {
+      table_index = match reader.read_u32_leb() {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+    } else if mode == 0x00 || mode == 0x04 {
+      table_index = 0
+    }
+    // Active modes carry an offset expression that has to be stepped over.
+    if mode == 0x00 || mode == 0x02 || mode == 0x04 || mode == 0x06 {
+      match skip_constant_expression(data, reader) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+    }
+    if mode == 0x01 || mode == 0x03 || mode == 0x05 || mode == 0x07 {
+      passive = true
+    }
+    if mode == 0x01 || mode == 0x03 {
+      // An element kind byte, which is always `funcref`.
+      match reader.read_byte() {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+    }
+    if mode == 0x05 || mode == 0x06 || mode == 0x07 {
+      match reader.read_reftype() {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+    } else if mode == 0x02 {
+      // Mode 2 carries an element kind after its offset.
+      match reader.read_byte() {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+    }
+    let functions = if mode >= 0x04 {
+      match read_element_expressions(data, reader) {
+        Ok(functions) => functions
+        Err(error) => return Err(error)
+      }
+    } else {
+      let length = match reader.read_u32_leb() {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+      let functions : Array[Int] = []
+      let mut slot = 0
+      while slot < length {
+        match reader.read_u32_leb() {
+          Ok(value) => functions.push(value)
+          Err(error) => return Err(error)
+        }
+        slot = slot + 1
+      }
+      functions
+    }
+    if reader.position() > end {
+      return Err(WasmError::UnexpectedEnd(reader.position(), 1))
+    }
+    segments.push({ table_index, passive, functions, })
+    i = i + 1
+  }
+  Ok(segments)
+}
+
+///|
+/// How an instruction changes the nesting depth of a constant expression: `1`
+/// opens a block, `-1` closes one, and `0` leaves the depth alone.
+fn nesting_delta(opcode : Opcode) -> Int {
+  match opcode {
+    Block | Loop | If => 1
+    End => -1
+    _ => 0
+  }
+}
+
+///|
+/// True when an instruction ends the expression it sits in.
+fn closes_expression(opcode : Opcode, depth : Int) -> Bool {
+  match opcode {
+    End => depth == 0
+    _ => false
+  }
+}
+
+///|
+/// Step over a constant expression, which ends at its matching `end`.
+fn skip_constant_expression(
+  data : Bytes,
+  reader : Reader,
+) -> Result[Unit, WasmError] {
+  let mut depth = 0
+  let mut done = false
+  while !done {
+    let instruction = match decode_instruction(data, reader.position()) {
+      Ok(instruction) => instruction
+      Err(error) => return Err(error)
+    }
+    reader.seek(instruction.offset + instruction.size)
+    if closes_expression(instruction.opcode, depth) {
+      done = true
+    } else {
+      depth = depth + nesting_delta(instruction.opcode)
+    }
+  }
+  Ok(())
+}
+
+///|
+/// Read a vector of element expressions and keep the functions they reference.
+fn read_element_expressions(
+  data : Bytes,
+  reader : Reader,
+) -> Result[Array[Int], WasmError] {
+  let length = match reader.read_u32_leb() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let functions : Array[Int] = []
+  let mut slot = 0
+  while slot < length {
+    let mut depth = 0
+    let mut done = false
+    while !done {
+      let instruction = match decode_instruction(data, reader.position()) {
+        Ok(instruction) => instruction
+        Err(error) => return Err(error)
+      }
+      reader.seek(instruction.offset + instruction.size)
+      match instruction.opcode {
+        RefFunc => functions.push(instruction.operands[0])
+        _ => ()
+      }
+      if closes_expression(instruction.opcode, depth) {
+        done = true
+      } else {
+        depth = depth + nesting_delta(instruction.opcode)
+      }
+    }
+    slot = slot + 1
+  }
+  Ok(functions)
 }
