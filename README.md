@@ -128,7 +128,10 @@ is unreachable. The third card turns red when there is anything to delete, which
 is the one number most people open the report for.
 
 **Sections** — a horizontal bar per section, widest first, with the share of the
-file in the tooltip. This is the stage-one section table, drawn.
+file in the tooltip. This is the stage-one section table, drawn. Both bar charts
+are sized to their row count, so every row keeps its label; a fixed-height box
+makes ECharts drop most of them, and the rows that survive look like headings for
+the unlabelled ones below.
 
 **Top 20 functions by body size** — what the compiler could shrink. Body size is
 used rather than the encoded size so that the ranking answers "where is the
@@ -136,7 +139,10 @@ code", not "where are the size prefixes".
 
 **Modules** — a donut of how the code section divides between packages, as a
 share of the code section rather than of the file, so the slices mean "which
-package is responsible for the code".
+package is responsible for the code". Slices below half a percent are rolled
+into a single `other` slice, named on hover: a slice that thin cannot carry a
+label, and leaving it in draws a sliver nobody can read or aim at. Labels sit
+inside the ring, so they never collide with the legend.
 
 **Treemap** — module → function, where area is bytes. This is the one chart that
 shows the whole binary at once: the big cells are the functions worth looking at,

@@ -68,6 +68,24 @@ fn group_modules(stats : Array[FunctionStat]) -> Array[ModuleGroup] {
 }
 
 ///|
+/// The module's sections, heaviest first.
+///
+/// The chart is about size, so the reader should be able to see which sections
+/// matter without scanning the whole list. Ties keep file order, which is the
+/// only other ordering the section table has.
+fn ordered_sections(parsed : WasmModule) -> Array[Section] {
+  let ordered = parsed.sections.copy()
+  ordered.sort_by(fn(a, b) {
+    if a.total_size != b.total_size {
+      b.total_size - a.total_size
+    } else {
+      a.offset - b.offset
+    }
+  })
+  ordered
+}
+
+///|
 /// The label a section is known by in the report.
 fn section_label(section : Section) -> String {
   match section.custom_name {
@@ -120,7 +138,7 @@ fn report_data(analysis : Analysis, file_path : String) -> Json {
   members.set("codeSize", int_json(section_size(parsed, Code)))
   members.set("deadSize", int_json(dead_size(analysis)))
   let sections : Array[Json] = []
-  for section in parsed.sections {
+  for section in ordered_sections(parsed) {
     let row : Map[String, Json] = Map([])
     row.set("name", Json::string(section_label(section)))
     row.set("total", int_json(section.total_size))
@@ -148,8 +166,9 @@ fn report_data(analysis : Analysis, file_path : String) -> Json {
     functions.push(Json::object(row))
   }
   members.set("functions", Json::array(functions))
+  let groups = group_modules(analysis.stats)
   let modules : Array[Json] = []
-  for group in group_modules(analysis.stats) {
+  for group in groups {
     let children : Array[Json] = []
     for child in group.children {
       let leaf : Map[String, Json] = Map([])
@@ -166,7 +185,82 @@ fn report_data(analysis : Analysis, file_path : String) -> Json {
     modules.push(Json::object(row))
   }
   members.set("modules", Json::array(modules))
+  // The pie gets its own roster: thin slices are rolled up there, while the
+  // treemap keeps every module because its cells are drawn to scale.
+  let slices : Array[Json] = []
+  for slice in pie_slices(groups) {
+    let row : Map[String, Json] = Map([])
+    row.set("name", Json::string(slice.name))
+    row.set("size", int_json(slice.size))
+    let names : Array[Json] = []
+    for name in slice.members {
+      names.push(Json::string(name))
+    }
+    row.set("members", Json::array(names))
+    slices.push(Json::object(row))
+  }
+  members.set("pie", Json::array(slices))
   Json::object(members)
+}
+
+///|
+/// One slice of the module pie.
+priv struct PieSlice {
+  name : String
+  size : Int
+  /// The modules this slice stands for; empty when it is a module itself.
+  members : Array[String]
+}
+
+///|
+/// A slice below half a percent of the code section cannot carry a legible label
+/// or be aimed at with a pointer, so the ones below it are rolled into a single
+/// slice that names them on hover.
+const MIN_SLICE_TENTHS : Int = 5
+
+///|
+/// The pie's slices: every module at or above the threshold, plus one `other`
+/// slice holding the rest.
+///
+/// The comparison is integer arithmetic — `size / total < 0.5%` is
+/// `size * 1000 < total * 5` — so it cannot drift the way a float would.
+fn pie_slices(groups : Array[ModuleGroup]) -> Array[PieSlice] {
+  let slices : Array[PieSlice] = []
+  let mut total = 0
+  for group in groups {
+    total = total + group.size
+  }
+  let big : Array[ModuleGroup] = []
+  let small : Array[ModuleGroup] = []
+  for group in groups {
+    if total > 0 && group.size * 1000 < total * MIN_SLICE_TENTHS {
+      small.push(group)
+    } else {
+      big.push(group)
+    }
+  }
+  // Bucketing nothing, or bucketing everything, would both make the chart worse.
+  if small.length() == 0 || big.length() == 0 {
+    for group in groups {
+      slices.push({ name: group.name, size: group.size, members: [], })
+    }
+    return slices
+  }
+  for group in big {
+    slices.push({ name: group.name, size: group.size, members: [], })
+  }
+  let mut rest = 0
+  let members : Array[String] = []
+  for group in small {
+    rest = rest + group.size
+    members.push(group.name)
+  }
+  slices.push({
+    name: "other (" + small.length().to_string() + ")",
+    size: rest,
+    members,
+  })
+  slices
 }
 
 ///|
@@ -241,7 +335,7 @@ const HTML_STYLE : String = "      :root {\n      --bg: #f6f8fb; --panel: #fffff
 
 ///|
 /// The page's script: number formatting, four chart builders, and the wiring.
-const HTML_SCRIPT : String = "    const DATA = __DATA__;\n\n    const esc = (s) => String(s).replace(/[&<>\"']/g, (c) => ({\n      '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;',\n    }[c]));\n\n    const BYTES = (v) => {\n      if (v >= 1048576) return (v / 1048576).toFixed(2) + ' MB';\n      if (v >= 1024) return (v / 1024).toFixed(1) + ' KB';\n      return v + ' B';\n    };\n\n    const NUM = (v) => v.toLocaleString('en-US');\n    const PCT = (part, whole) => whole > 0 ? (part / whole * 100).toFixed(1) + '%' : 'n/a';\n\n    const INK = '#334155';\n    const LINE = '#e2e8f0';\n    const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';\n\n    const axis = (extra) => Object.assign({\n      axisLine: { lineStyle: { color: '#cbd5e1' } },\n      axisTick: { show: false },\n      axisLabel: { color: INK, fontSize: 11 },\n      splitLine: { lineStyle: { color: LINE } },\n    }, extra || {});\n\n    // A static report: the grow-in animation would leave a chart empty in a\n    // screenshot, a print, or any capture that does not run animation frames.\n    const base = {\n      animation: false,\n      textStyle: { fontFamily: 'ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif' },\n    };\n\n    function barOption(rows, color) {\n      return Object.assign({}, base, {\n        grid: { left: 4, right: 96, top: 12, bottom: 4, containLabel: true },\n        tooltip: {\n          trigger: 'axis',\n          axisPointer: { type: 'shadow' },\n          formatter: (ps) => {\n            const r = rows[ps[0].dataIndex];\n            return '<b>' + esc(r.name) + '</b><br/>' + NUM(r.size) + ' B (' + PCT(r.size, DATA.fileSize) + ' of file)';\n          },\n        },\n        xAxis: axis({ type: 'value', axisLabel: { color: INK, fontSize: 11, formatter: BYTES } }),\n        yAxis: axis({\n          type: 'category',\n          inverse: true,\n          data: rows.map((r) => r.name),\n          axisLabel: { color: INK, fontSize: 11, fontFamily: MONO, width: 190, overflow: 'truncate' },\n          splitLine: { show: false },\n        }),\n        series: [{\n          type: 'bar',\n          data: rows.map((r) => r.size),\n          itemStyle: { color: color, borderRadius: [0, 3, 3, 0] },\n          label: {\n            show: true, position: 'right', color: INK, fontSize: 11,\n            formatter: (p) => BYTES(p.value),\n          },\n        }],\n      });\n    }\n\n    function pieOption(rows) {\n      return Object.assign({}, base, {\n        tooltip: {\n          trigger: 'item',\n          formatter: (p) => '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B<br/>' + p.percent + '% of the code section',\n        },\n        legend: {\n          type: 'scroll', bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8,\n          textStyle: { color: INK, fontSize: 11 },\n        },\n        series: [{\n          type: 'pie',\n          radius: ['40%', '68%'],\n          center: ['50%', '45%'],\n          avoidLabelOverlap: true,\n          itemStyle: { borderColor: '#fff', borderWidth: 1 },\n          label: { fontSize: 11, color: INK, formatter: '{b}\\n{d}%' },\n          labelLine: { length: 8, length2: 8 },\n          data: rows.map((r) => ({ name: r.name, value: r.size })),\n        }],\n      });\n    }\n\n    function treemapOption(rows) {\n      return Object.assign({}, base, {\n        tooltip: {\n          formatter: (p) => '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B'\n            + (p.data && p.data.dead ? '<br/>unreachable' : ''),\n        },\n        series: [{\n          type: 'treemap',\n          roam: false,\n          nodeClick: false,\n          breadcrumb: { show: false },\n          width: '100%',\n          height: '100%',\n          top: 2,\n          left: 2,\n          right: 2,\n          bottom: 2,\n          upperLabel: { show: true, height: 22, fontSize: 11, color: '#fff' },\n          itemStyle: { borderColor: '#fff', borderWidth: 1, gapWidth: 1 },\n          levels: [\n            { itemStyle: { borderWidth: 0, gapWidth: 3 }, colorSaturation: [0.4, 0.55] },\n            { itemStyle: { borderWidth: 1, gapWidth: 1 }, colorSaturation: [0.35, 0.5] },\n          ],\n          data: rows.map((m) => ({\n            name: m.name,\n            value: m.size,\n            children: m.children.map((c) => ({\n              name: c.name,\n              value: c.value,\n              dead: c.dead,\n              itemStyle: c.dead ? { color: '#f87171' } : undefined,\n            })),\n          })),\n        }],\n      });\n    }\n\n    function emptyInto(id, message) {\n      const el = document.getElementById(id);\n      el.className = 'empty';\n      el.textContent = message;\n    }\n\n    const charts = [];\n\n    function mount(id, option) {\n      const chart = echarts.init(document.getElementById(id));\n      chart.setOption(option);\n      charts.push(chart);\n    }\n\n    function main() {\n      const sections = DATA.sections.map((s) => ({ name: s.name, size: s.total, payload: s.payload }));\n      if (sections.length) mount('sections', barOption(sections, '#60a5fa'));\n      else emptyInto('sections', 'no sections');\n\n      const top = DATA.functions.slice(0, 20).map((f) => ({ name: f.name, size: f.bodySize }));\n      if (top.length) mount('functions', barOption(top, '#34d399'));\n      else emptyInto('functions', 'no functions');\n\n      const modules = DATA.modules.filter((m) => m.size > 0);\n      if (modules.length) mount('modules', pieOption(modules));\n      else emptyInto('modules', 'no functions');\n\n      if (modules.length) mount('treemap', treemapOption(modules));\n      else emptyInto('treemap', 'no functions');\n\n      window.addEventListener('resize', () => charts.forEach((c) => c.resize()));\n    }\n\n    main();"
+const HTML_SCRIPT : String = "    const DATA = __DATA__;\n\n    const esc = (s) => String(s).replace(/[&<>\"']/g, (c) => ({\n      '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;',\n    }[c]));\n\n    const BYTES = (v) => {\n      if (v >= 1048576) return (v / 1048576).toFixed(2) + ' MB';\n      if (v >= 1024) return (v / 1024).toFixed(1) + ' KB';\n      return v + ' B';\n    };\n\n    const NUM = (v) => v.toLocaleString('en-US');\n    const PCT = (part, whole) => whole > 0 ? (part / whole * 100).toFixed(1) + '%' : 'n/a';\n\n    const INK = '#334155';\n    const LINE = '#e2e8f0';\n    const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';\n\n    const axis = (extra) => Object.assign({\n      axisLine: { lineStyle: { color: '#cbd5e1' } },\n      axisTick: { show: false },\n      axisLabel: { color: INK, fontSize: 11 },\n      splitLine: { lineStyle: { color: LINE } },\n    }, extra || {});\n\n    // A static report: the grow-in animation would leave a chart empty in a\n    // screenshot, a print, or any capture that does not run animation frames.\n    const base = {\n      animation: false,\n      textStyle: { fontFamily: 'ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif' },\n    };\n\n    function barOption(rows, color, maxValue) {\n      // One unit across the axis: mixing \"1000 B\" with \"2.9 KB\" makes the ticks\n      // read as unrelated numbers and, being long, collide with each other.\n      const unit = maxValue >= 1048576 ? 1048576 : maxValue >= 1024 ? 1024 : 1;\n      const suffix = unit === 1048576 ? ' MB' : unit === 1024 ? ' KB' : ' B';\n      // A step that is a whole number of units keeps every tick round: stepping\n      // by whole kilobytes reads \"0, 2, 4 KB\" instead of \"0.9, 2.9, 4.9 KB\".\n      const step = unit * Math.max(1, Math.ceil(maxValue / unit / 4));\n      // Pinning the top of the axis to a whole step keeps ECharts from adding a\n      // final tick at its own niced extent, which is the one label that would\n      // not be round.\n      const top = unit === 1 ? undefined : step * Math.ceil(maxValue / step);\n      const tick = (v) => unit === 1 ? String(Math.round(v)) : (v / unit).toFixed(1).replace(/\\.0$/, '') + suffix;\n      return Object.assign({}, base, {\n        grid: { left: 4, right: 96, top: 12, bottom: 4, containLabel: true },\n        tooltip: {\n          trigger: 'axis',\n          axisPointer: { type: 'shadow' },\n          formatter: (ps) => {\n            const r = rows[ps[0].dataIndex];\n            return '<b>' + esc(r.name) + '</b><br/>' + NUM(r.size) + ' B (' + PCT(r.size, DATA.fileSize) + ' of file)';\n          },\n        },\n        xAxis: axis({\n          type: 'value',\n          // The byte axis keeps ECharts' auto ticks but asks for fewer of them:\n          // the panel is narrow, and a label that collides is dropped, which\n          // leaves the survivors looking arbitrarily spaced.\n          splitNumber: unit === 1 ? 3 : undefined,\n          interval: unit === 1 ? undefined : step,\n          max: top,\n          axisLabel: { color: INK, fontSize: 11, hideOverlap: true, formatter: tick },\n        }),\n        yAxis: axis({\n          type: 'category',\n          inverse: true,\n          data: rows.map((r) => r.name),\n          // interval 0 labels every row. Left to 'auto', a chart shorter than its\n          // row count silently drops most of them, and the rows that keep a label\n          // appear to head the unlabelled ones below them.\n          axisLabel: { color: INK, fontSize: 11, fontFamily: MONO, width: 190, overflow: 'truncate', interval: 0 },\n          splitLine: { show: false },\n        }),\n        series: [{\n          type: 'bar',\n          data: rows.map((r) => r.size),\n          itemStyle: { color: color, borderRadius: [0, 3, 3, 0] },\n          label: {\n            show: true, position: 'right', color: INK, fontSize: 11,\n            formatter: (p) => BYTES(p.value),\n          },\n        }],\n      });\n    }\n\n    // Below this share of the ring a slice is too narrow to hold its own label,\n    // so it is identified by the legend and the tooltip instead.\n    const LABELLED_PCT = 6;\n\n    function pieOption(rows) {\n      const total = rows.reduce((sum, r) => sum + r.size, 0);\n      return Object.assign({}, base, {\n        tooltip: {\n          trigger: 'item',\n          formatter: (p) => {\n            const r = rows[p.dataIndex];\n            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B<br/>' + p.percent + '% of the code section';\n            if (r && r.members && r.members.length) text += '<br/>' + esc(r.members.join(', '));\n            return text;\n          },\n        },\n        legend: {\n          type: 'scroll', bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8,\n          textStyle: { color: INK, fontSize: 11 },\n        },\n        series: [{\n          type: 'pie',\n          radius: ['40%', '66%'],\n          center: ['50%', '47%'],\n          avoidLabelOverlap: true,\n          itemStyle: { borderColor: '#fff', borderWidth: 1 },\n          // Labels sit inside the ring, where they cannot collide with the\n          // legend or with each other, and only the slices wide enough to hold\n          // one keep it. Everything else is identified by the legend and the\n          // tooltip — never by a leader line pointing at empty space.\n          label: {\n            position: 'inside',\n            fontSize: 11,\n            color: '#fff',\n            textBorderColor: 'rgba(15,23,42,0.45)',\n            textBorderWidth: 2,\n            formatter: '{d}%',\n          },\n          labelLine: { show: false },\n          data: rows.map((r) => {\n            const labelled = r.size / total * 100 >= LABELLED_PCT;\n            return {\n              name: r.name,\n              value: r.size,\n              label: { show: labelled },\n              labelLine: { show: labelled },\n              itemStyle: r.members && r.members.length ? { color: '#94a3b8' } : undefined,\n            };\n          }),\n        }],\n      });\n    }\n\n    function treemapOption(rows) {\n      return Object.assign({}, base, {\n        tooltip: {\n          formatter: (p) => '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B'\n            + (p.data && p.data.dead ? '<br/>unreachable' : ''),\n        },\n        series: [{\n          type: 'treemap',\n          roam: false,\n          nodeClick: false,\n          breadcrumb: { show: false },\n          width: '100%',\n          height: '100%',\n          top: 2,\n          left: 2,\n          right: 2,\n          bottom: 2,\n          upperLabel: { show: true, height: 22, fontSize: 11, color: '#fff' },\n          itemStyle: { borderColor: '#fff', borderWidth: 1, gapWidth: 1 },\n          levels: [\n            { itemStyle: { borderWidth: 0, gapWidth: 3 }, colorSaturation: [0.4, 0.55] },\n            { itemStyle: { borderWidth: 1, gapWidth: 1 }, colorSaturation: [0.35, 0.5] },\n          ],\n          data: rows.map((m) => ({\n            name: m.name,\n            value: m.size,\n            children: m.children.map((c) => ({\n              name: c.name,\n              value: c.value,\n              dead: c.dead,\n              itemStyle: c.dead ? { color: '#f87171' } : undefined,\n            })),\n          })),\n        }],\n      });\n    }\n\n    function emptyInto(id, message) {\n      const el = document.getElementById(id);\n      el.className = 'empty';\n      el.textContent = message;\n    }\n\n    const charts = [];\n\n    function mount(id, option) {\n      const chart = echarts.init(document.getElementById(id));\n      chart.setOption(option);\n      charts.push(chart);\n    }\n\n    function main() {\n      const sections = DATA.sections\n        .map((s) => ({ name: s.name, size: s.total, payload: s.payload }))\n        .sort((a, b) => b.size - a.size);\n      const top = DATA.functions.slice(0, 20).map((f) => ({ name: f.name, size: f.bodySize }));\n\n      // Give the two bar charts the height their rows need. A fixed box is what\n      // used to squeeze thirteen rows into a space that fits eight.\n      const barRows = Math.max(sections.length, top.length);\n      const barHeight = Math.max(320, barRows * 26 + 60);\n      ['sections', 'functions'].forEach((id) => {\n        document.getElementById(id).style.height = barHeight + 'px';\n      });\n\n      if (sections.length) mount('sections', barOption(sections, '#60a5fa', sections[0].size));\n      else emptyInto('sections', 'no sections');\n\n      if (top.length) mount('functions', barOption(top, '#34d399', top[0].size));\n      else emptyInto('functions', 'no functions');\n\n      const modules = DATA.modules.filter((m) => m.size > 0);\n      // The ring needs room for the labels that sit outside it, so it is taller\n      // than the default box even though its row is sized by the bar charts.\n      document.getElementById('modules').style.height = '460px';\n      if (DATA.pie.length) mount('modules', pieOption(DATA.pie));\n      else emptyInto('modules', 'no functions');\n\n      if (modules.length) mount('treemap', treemapOption(modules));\n      else emptyInto('treemap', 'no functions');\n\n      window.addEventListener('resize', () => charts.forEach((c) => c.resize()));\n    }\n\n    main();"
 
 ///|
 /// A byte count with thousands separators, for the headline numbers.

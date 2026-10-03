@@ -193,3 +193,207 @@ test "the report draws on the analysis rather than reparsing" {
   assert_true(html.contains("moonbit.println"))
   assert_true(html.contains("\"dead\":true"))
 }
+
+///|
+/// A module group for the pie tests, with no children: only the name and the
+/// total matter to `pie_slices`.
+fn pie_group(name : String, size : Int) -> ModuleGroup {
+  { name, size, functions: 1, children: [], }
+}
+
+///|
+test "the section chart is ordered heaviest first" {
+  // named_module: import 24, function 5, code 11, custom (name) 69 bytes.
+  let parsed = match parse_module(named_module()) {
+    Ok(parsed) => parsed
+    Err(error) => fail(describe_error(error))
+  }
+  let ordered = ordered_sections(parsed)
+  inspect(
+    ordered.length(),
+    content=(
+      #|4
+    ),
+  )
+  inspect(
+    ordered[0].total_size,
+    content=(
+      #|69
+    ),
+  )
+  inspect(
+    ordered[0].kind.name(),
+    content=(
+      #|custom
+    ),
+  )
+  inspect(
+    ordered[1].total_size,
+    content=(
+      #|24
+    ),
+  )
+  inspect(
+    ordered[1].kind.name(),
+    content=(
+      #|import
+    ),
+  )
+  inspect(
+    ordered[2].kind.name(),
+    content=(
+      #|code
+    ),
+  )
+  inspect(
+    ordered[3].kind.name(),
+    content=(
+      #|function
+    ),
+  )
+}
+
+///|
+test "sections of equal size keep their order in the file" {
+  // minimal_module: type and code both total six bytes; type comes first.
+  let parsed = match parse_module(minimal_module()) {
+    Ok(parsed) => parsed
+    Err(error) => fail(describe_error(error))
+  }
+  let ordered = ordered_sections(parsed)
+  inspect(
+    ordered[0].total_size,
+    content=(
+      #|6
+    ),
+  )
+  inspect(
+    ordered[0].kind.name(),
+    content=(
+      #|type
+    ),
+  )
+  inspect(
+    ordered[1].total_size,
+    content=(
+      #|6
+    ),
+  )
+  inspect(
+    ordered[1].kind.name(),
+    content=(
+      #|code
+    ),
+  )
+  inspect(
+    ordered[2].kind.name(),
+    content=(
+      #|function
+    ),
+  )
+}
+
+///|
+test "the pie rolls slices below half a percent into one" {
+  let slices = pie_slices([
+    pie_group("big", 9000),
+    pie_group("small", 8),
+    pie_group("tiny", 4),
+  ])
+  inspect(
+    slices.length(),
+    content=(
+      #|2
+    ),
+  )
+  inspect(
+    slices[0].name,
+    content=(
+      #|big
+    ),
+  )
+  inspect(
+    slices[1].name,
+    content=(
+      #|other (2)
+    ),
+  )
+  inspect(
+    slices[1].size,
+    content=(
+      #|12
+    ),
+  )
+  assert_eq(slices[1].members, ["small", "tiny"])
+}
+
+///|
+test "a slice exactly at the threshold keeps its own name" {
+  // These total 10,000 bytes, so half a percent is exactly 50.
+  let slices = pie_slices([
+    pie_group("big", 9901),
+    pie_group("edge", 50),
+    pie_group("under", 49),
+  ])
+  inspect(
+    slices.length(),
+    content=(
+      #|3
+    ),
+  )
+  inspect(
+    slices[1].name,
+    content=(
+      #|edge
+    ),
+  )
+  inspect(
+    slices[2].name,
+    content=(
+      #|other (1)
+    ),
+  )
+}
+
+///|
+test "nothing is bucketed when every slice is comfortably sized" {
+  let slices = pie_slices([
+    pie_group("a", 1000),
+    pie_group("b", 900),
+    pie_group("c", 800),
+  ])
+  inspect(
+    slices.length(),
+    content=(
+      #|3
+    ),
+  )
+  for slice in slices {
+    assert_eq(slice.members, [])
+  }
+}
+
+///|
+test "a pie made only of tiny slices is left alone" {
+  // Bucketing here would replace the whole chart with one grey slice.
+  let slices = pie_slices([pie_group("a", 30), pie_group("b", 20)])
+  inspect(
+    slices.length(),
+    content=(
+      #|2
+    ),
+  )
+  inspect(
+    slices[0].name,
+    content=(
+      #|a
+    ),
+  )
+}
+
+///|
+test "the data blob carries the pie roster beside the raw modules" {
+  let html = render_html(analysis_with_name("demo::fib"), "app.wasm")
+  assert_true(html.contains("\"pie\":["))
+  assert_true(html.contains("\"modules\":["))
+}
