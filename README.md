@@ -21,12 +21,19 @@ moon build --release
 ./_build/native/release/build/cmd/main/main.exe app.wasm
 ```
 
+The module declares `supported_targets = "+native"`, so a project that depends on
+it builds with `--target native` as well.
+
 ## Usage
 
 ```
-moonsize <file.wasm> [--top <n>] [--retained] [--dead-code] [--compress]
-                     [--call-graph <path>] [--html <path>]
-                     [--max-size <size>] [--baseline <path.wasm>]
+usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
+                 [--compress] [--call-graph <path>] [--html <path>]
+                 [--max-size <size>] [--baseline <path.wasm>]
+
+Report the section table of a WebAssembly binary, rank its heaviest
+functions, roll the bytes up by module, and follow the call graph to
+find what can be deleted.
 
   --top <n>            how many functions to rank (default 10)
   --retained           what deleting each function would free
@@ -38,6 +45,8 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code] [--compress]
                        bytes or a KB/MB/GB count such as 10KB or 1.5MB
   --baseline <path>    compare against another module and print the change;
                        --max-size then bounds the growth, not the file
+
+Exit codes: 0 ok, 1 unreadable input, 2 bad command line, 3 over budget.
 ```
 
 Without flags it prints the section table, the heaviest functions and the
@@ -204,6 +213,44 @@ bytes is nothing against a table of kilobytes.
 3. Treat `IND` rows with care: an indirect candidate can only be removed when the
    table entry and the call sites go with it.
 
+## Example output
+
+A 10,675-byte MoonBit program (`--target wasm`, debug), reduced to the analysis
+sections:
+
+```
+Retained size
+
+    #  INDEX  SIZE  RETAINED  DIES    SHARE  IND  FUNCTION
+    1     47   158      5162    46    48.3%       ____moonbit__main
+    2     39   301      1773    10    16.6%       int::Int::to__string_2einner
+    3     37    24       887     8     8.3%       println
+    4     34     9       819     5     7.6%       moonbit.println
+    5     33   206       810     4     7.5%       moonbit.fprintln
+    6     28    49       717     7     6.7%       moonbit.decref
+    7     29   409       668     6     6.2%       moonbit.gc.free
+    8     43   633       633     0     5.9%       int__to__string__dec
+
+  DIES counts the other functions that become unreachable with this one.
+  IND marks a function a call_indirect could reach.
+
+Dead code
+
+  0 of 47 functions are unreachable from the roots
+  0 bytes (0.0% of file)
+
+  every function is reachable
+```
+
+`____moonbit__main` retains 5,162 bytes — 48.3% of the file, 46 functions — which
+is what a program with a single entry point looks like: everything hangs off it.
+`int__to__string__dec` is the largest single function at 633 bytes but retains
+only itself, so shrinking it is a compiler problem rather than a deletion.
+
+`--call-graph graph.dot` writes the same graph for Graphviz, with dead functions
+dashed and indirect edges dotted; `--call-graph graph.json` writes it with the
+roots, every edge and every indirect site's candidate set.
+
 ## HTML report
 
 `--html <path>` writes the same analysis as one self-contained page: no server,
@@ -243,9 +290,8 @@ code", not "where are the size prefixes".
 
 **Modules** — a donut of how the code section divides between packages, as a
 share of the code section rather than of the file, so the slices mean "which
-package is responsible for the code". Slices below half a percent are rolled
-into a single `other` slice, named on hover: a slice that thin cannot carry a
-label, and leaving it in draws a sliver nobody can read or aim at. Labels sit
+package is responsible for the code". Slices below 0.5% are rolled into a
+single `other` slice, named on hover: a slice that thin cannot carry a label, and leaving it in draws a sliver nobody can read or aim at. Labels sit
 inside the ring, so they never collide with the legend.
 
 **Treemap** — module → function, where area is bytes. This is the one chart that
@@ -265,44 +311,6 @@ into the page. When that file is not next to the working directory — running a
 installed binary from elsewhere, say — the page falls back to a CDN `<script
 src>` tag instead and the command says so; that report needs a network
 connection to draw.
-
-## Example output
-
-A 10,675-byte MoonBit program (`--target wasm`, debug), reduced to the analysis
-sections:
-
-```
-Retained size
-
-    #  INDEX  SIZE  RETAINED  DIES    SHARE  IND  FUNCTION
-    1     47   158      5162    46    48.3%       ____moonbit__main
-    2     39   301      1773    10    16.6%       int::Int::to__string_2einner
-    3     37    24       887     8     8.3%       println
-    4     34     9       819     5     7.6%       moonbit.println
-    5     33   206       810     4     7.5%       moonbit.fprintln
-    6     28    49       717     7     6.7%       moonbit.decref
-    7     29   409       668     6     6.2%       moonbit.gc.free
-    8     43   633       633     0     5.9%       int__to__string__dec
-
-  DIES counts the other functions that become unreachable with this one.
-  IND marks a function a call_indirect could reach.
-
-Dead code
-
-  0 of 47 functions are unreachable from the roots
-  0 bytes (0.0% of file)
-
-  every function is reachable
-```
-
-`____moonbit__main` retains 5,162 bytes — 48.3% of the file, 46 functions — which
-is what a program with a single entry point looks like: everything hangs off it.
-`int__to__string__dec` is the largest single function at 633 bytes but retains
-only itself, so shrinking it is a compiler problem rather than a deletion.
-
-`--call-graph graph.dot` writes the same graph for Graphviz, with dead functions
-dashed and indirect edges dotted; `--call-graph graph.json` writes it with the
-roots, every edge and every indirect site's candidate set.
 
 ## CI integration
 

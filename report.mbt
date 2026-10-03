@@ -443,8 +443,8 @@ pub fn render_module_summary(
 /// make sense of.
 pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
-  "                 [--call-graph <path>] [--html <path>]\n" +
-  "                 [--max-size <size>] [--baseline <path.wasm>] [--compress]\n\n" +
+  "                 [--compress] [--call-graph <path>] [--html <path>]\n" +
+  "                 [--max-size <size>] [--baseline <path.wasm>]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
   "find what can be deleted.\n\n" +
