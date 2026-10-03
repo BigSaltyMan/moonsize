@@ -1,12 +1,10 @@
-// The source `fib.wasm` was built from, in a throwaway project whose package was
-// `demo/sample/src`:
+// The source `fib.wasm` was built from:
 //
 //   moon build --target wasm        (MoonBit 0.1.20260920, debug)
 //
-// Kept here so the checked-in report can be regenerated and compared. This
-// directory is also a package of this module, so `moon build --target wasm`
-// builds the example too — from `examples.wasm`, and about 30 bytes larger,
-// because the symbols then carry this module's package path.
+// `examples/` is a package of this module, so that command builds the example
+// as `examples.wasm`; `fib.wasm` is that artifact, kept here so the checked-in
+// report can be regenerated and compared.
 
 ///|
 fn fib(n : Int) -> Int {

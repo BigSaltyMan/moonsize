@@ -98,7 +98,7 @@ MoonBit 编译器的死代码消除做得很好，因此小程序通常报告为
 
 ![moonsize HTML 报告](examples/report.png)
 
-仓库里放了一份现成的例子：[`examples/report.html`](examples/report.html)，由 [`examples/fib.wasm`](examples/fib.wasm) 生成——一个 10,645 字节的 MoonBit 程序。它只有一个文件：图表库被内联进去，所以可以随意移动、发送、在任何地方打开。它的源码是 [`examples/fib.mbt`](examples/fib.mbt)，同时也是本模块的一个包：构建 `--target wasm` 时会连同工具一起产出这个示例。
+仓库里放了一份现成的例子：[`examples/report.html`](examples/report.html)，由 [`examples/fib.wasm`](examples/fib.wasm) 生成——一个 10,675 字节的 MoonBit 程序。它只有一个文件：图表库被内联进去，所以可以随意移动、发送、在任何地方打开。它的源码是 [`examples/fib.mbt`](examples/fib.mbt)，同时也是本模块的一个包：构建 `--target wasm` 时会连同工具一起产出这个示例。
 
 **顶部三个数字。** 文件总大小、code 段大小，以及文件中不可达部分的大小。第三张卡片在有东西可删时会变红——多数人打开报告就是为了这个数。
 
@@ -116,17 +116,17 @@ MoonBit 编译器的死代码消除做得很好，因此小程序通常报告为
 
 ## 输出示例
 
-一个 10,645 字节的 MoonBit 程序（`--target wasm`，debug），只保留分析章节：
+一个 10,675 字节的 MoonBit 程序（`--target wasm`，debug），只保留分析章节：
 
 ```
 Retained size
 
     #  INDEX  SIZE  RETAINED  DIES    SHARE  IND  FUNCTION
-    1     47   158      5162    46    48.4%       ____moonbit__main
+    1     47   158      5162    46    48.3%       ____moonbit__main
     2     39   301      1773    10    16.6%       int::Int::to__string_2einner
     3     37    24       887     8     8.3%       println
     4     34     9       819     5     7.6%       moonbit.println
-    5     33   206       810     4     7.6%       moonbit.fprintln
+    5     33   206       810     4     7.5%       moonbit.fprintln
     6     28    49       717     7     6.7%       moonbit.decref
     7     29   409       668     6     6.2%       moonbit.gc.free
     8     43   633       633     0     5.9%       int__to__string__dec
@@ -142,7 +142,7 @@ Dead code
   every function is reachable
 ```
 
-`____moonbit__main` retained 5,162 字节——占文件的 48.4%，牵连 46 个函数——这正是单入口程序的样子：所有东西都挂在它下面。`int__to__string__dec` 是最大的单个函数（633 字节），但只 retained 自己，所以要缩小它属于改代码，而不是删代码。
+`____moonbit__main` retained 5,162 字节——占文件的 48.3%，牵连 46 个函数——这正是单入口程序的样子：所有东西都挂在它下面。`int__to__string__dec` 是最大的单个函数（633 字节），但只 retained 自己，所以要缩小它属于改代码，而不是删代码。
 
 `--call-graph graph.dot` 把同一张图写给 Graphviz，死函数画成虚线，间接边画成点线；`--call-graph graph.json` 则输出根、每条边以及每个间接调用点的候选集。
 
@@ -161,9 +161,9 @@ moonsize app.wasm --baseline main.wasm --max-size 5KB  # 最多增长 5 KB
 SIZE COMPARISON
 
                       baseline  current  delta
-  total                  10645    11000  +355  (+3.3%)
+  total                  10675    11039  +364  (+3.4%)
   code                    5166     5299  +133  (+2.5%)
-  custom (name)           4945     5166  +221  (+4.4%)
+  custom (name)           4975     5205  +230  (+4.6%)
   data                     252      252  0  (0.0%)
   custom (producers)        71       71  0  (0.0%)
   ...

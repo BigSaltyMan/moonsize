@@ -159,7 +159,7 @@ no build step, no network. Open the file and the four charts are there.
 ![moonsize HTML report](examples/report.png)
 
 A worked example is checked in at [`examples/report.html`](examples/report.html),
-generated from [`examples/fib.wasm`](examples/fib.wasm) — a 10,645-byte MoonBit
+generated from [`examples/fib.wasm`](examples/fib.wasm) — a 10,675-byte MoonBit
 program. It is one file: the chart library is inlined, so it can be moved,
 emailed or opened from anywhere. The source it was built from is
 [`examples/fib.mbt`](examples/fib.mbt), which is also a package here: building
@@ -202,18 +202,18 @@ connection to draw.
 
 ## Example output
 
-A 10,645-byte MoonBit program (`--target wasm`, debug), reduced to the analysis
+A 10,675-byte MoonBit program (`--target wasm`, debug), reduced to the analysis
 sections:
 
 ```
 Retained size
 
     #  INDEX  SIZE  RETAINED  DIES    SHARE  IND  FUNCTION
-    1     47   158      5162    46    48.4%       ____moonbit__main
+    1     47   158      5162    46    48.3%       ____moonbit__main
     2     39   301      1773    10    16.6%       int::Int::to__string_2einner
     3     37    24       887     8     8.3%       println
     4     34     9       819     5     7.6%       moonbit.println
-    5     33   206       810     4     7.6%       moonbit.fprintln
+    5     33   206       810     4     7.5%       moonbit.fprintln
     6     28    49       717     7     6.7%       moonbit.decref
     7     29   409       668     6     6.2%       moonbit.gc.free
     8     43   633       633     0     5.9%       int__to__string__dec
@@ -229,7 +229,7 @@ Dead code
   every function is reachable
 ```
 
-`____moonbit__main` retains 5,162 bytes — 48.4% of the file, 46 functions — which
+`____moonbit__main` retains 5,162 bytes — 48.3% of the file, 46 functions — which
 is what a program with a single entry point looks like: everything hangs off it.
 `int__to__string__dec` is the largest single function at 633 bytes but retains
 only itself, so shrinking it is a compiler problem rather than a deletion.
@@ -258,9 +258,9 @@ with the change as bytes and as a share of what it was:
 SIZE COMPARISON
 
                       baseline  current  delta
-  total                  10645    11000  +355  (+3.3%)
+  total                  10675    11039  +364  (+3.4%)
   code                    5166     5299  +133  (+2.5%)
-  custom (name)           4945     5166  +221  (+4.4%)
+  custom (name)           4975     5205  +230  (+4.6%)
   data                     252      252  0  (0.0%)
   custom (producers)        71       71  0  (0.0%)
   ...

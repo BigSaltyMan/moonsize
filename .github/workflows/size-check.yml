@@ -36,10 +36,10 @@ jobs:
             cp "$RUNNER_TEMP/base/$EXAMPLE" "$RUNNER_TEMP/baseline.wasm"
           else
             # A base branch from before the example was a package has no way to
-            # build it, so the checked-in binary is all there is. It carries the
-            # throwaway project's package path rather than this module's, which
-            # shows up as roughly 30 bytes in the name section — noise against a
-            # budget of kilobytes, and gone once this lands on the base branch.
+            # build it, so the checked-in binary is all there is. A base branch
+            # older than that binary's own regeneration differs in the name
+            # section by a few tens of bytes — noise against a budget measured in
+            # kilobytes, and gone once the base branch catches up.
             git show "origin/${{ github.base_ref }}:examples/fib.wasm" \
               > "$RUNNER_TEMP/baseline.wasm"
           fi
