@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Format, check and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The marketplace action installs the toolchain and puts `moon` on PATH.
+      # If it is ever unavailable, the documented installer is
+      # `curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash` followed
+      # by adding `$HOME/.moon/bin` to `$GITHUB_PATH`.
+      - uses: moonbit-community/setup-moonbit@v1
+      - name: Formatting
+        run: moon fmt --check
+      # Warnings are errors here, because the library is meant to build clean on
+      # a toolchain that keeps finding new things to warn about.
+      - name: Check
+        run: moon check --target native --deny-warn
+      - name: Test
+        run: moon test
+
+  size-budget:
+    name: Size budget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: moonbit-community/setup-moonbit@v1
+      # The example is 10.4 KB, so this passes; a change that pushed it past
+      # 100 KB fails the job with exit code 3.
+      - name: The example stays inside its budget
+        run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
+      # A budget that never fires is worse than no budget, because it looks like
+      # one. This runs the same example against a budget it cannot meet and
+      # checks that the tool says so.
+      - name: The gate actually fires
+        run: |
+          if moon run cmd/main -- --max-size 1KB examples/fib.wasm > gate.log 2>&1; then
+            echo "expected exit code 3 from a 1KB budget on a 10.4KB file"
+            cat gate.log
+            exit 1
+          fi
+          grep -q "over the budget" gate.log

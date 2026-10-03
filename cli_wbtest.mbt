@@ -302,3 +302,88 @@ test "the two file outputs are mutually exclusive" {
     Ok(_) => fail("expected the combination to be rejected")
   }
 }
+
+///|
+test "reads --max-size in bytes, kilobytes and megabytes" {
+  match parse_options(["moonsize", "app.wasm", "--max-size", "1024"]) {
+    Ok(options) => assert_eq(options.max_size, Some(1024))
+    Err(message) => fail(message)
+  }
+  // A bare suffix is binary: 10KB is 10240 bytes, not 10000.
+  match parse_options(["moonsize", "app.wasm", "--max-size", "10KB"]) {
+    Ok(options) => assert_eq(options.max_size, Some(10240))
+    Err(message) => fail(message)
+  }
+  assert_eq(parse_size("1.5MB"), Some(1572864))
+  // The suffix is not case sensitive.
+  assert_eq(parse_size("2mb"), Some(2097152))
+  assert_eq(parse_size("1GB"), Some(1073741824))
+  assert_eq(parse_size("512b"), Some(512))
+}
+
+///|
+test "rejects a --max-size that is not a size" {
+  for text in ["abc", "", "10XB", "KB", "1.5", "1.2.3MB", "-1", "10 KB"] {
+    assert_eq(parse_size(text), None)
+  }
+  match parse_options(["moonsize", "app.wasm", "--max-size", "abc"]) {
+    Ok(_) => fail("--max-size abc should be rejected")
+    Err(message) =>
+      assert_true(message.contains("--max-size wants a byte count"))
+  }
+  match parse_options(["moonsize", "app.wasm", "--max-size"]) {
+    Ok(_) => fail("a bare --max-size should be rejected")
+    Err(message) => assert_true(message.contains("--max-size needs a size"))
+  }
+}
+
+///|
+test "refuses a size past what an Int can hold" {
+  // The ceiling is what keeps a long digit run from wrapping round instead of
+  // being rejected.
+  assert_eq(parse_size("99999999999999999999"), None)
+  assert_eq(parse_size("999999GB"), None)
+}
+
+///|
+test "reads --baseline as a path" {
+  match parse_options(["moonsize", "app.wasm", "--baseline", "main.wasm"]) {
+    Ok(options) => {
+      inspect(options.path, content="app.wasm")
+      assert_eq(options.baseline, Some("main.wasm"))
+    }
+    Err(message) => fail(message)
+  }
+  match parse_options(["moonsize", "app.wasm", "--baseline"]) {
+    Ok(_) => fail("a bare --baseline should be rejected")
+    Err(message) => assert_true(message.contains("--baseline needs a path"))
+  }
+}
+
+///|
+test "--max-size and --baseline can be used together" {
+  match
+    parse_options([
+      "moonsize", "app.wasm", "--max-size", "2KB", "--baseline", "main.wasm",
+    ]) {
+    Ok(options) => {
+      assert_eq(options.max_size, Some(2048))
+      assert_eq(options.baseline, Some("main.wasm"))
+      // The size gate is orthogonal to the output modes, so it combines with
+      // them rather than being rejected the way two output modes are.
+      inspect(options.retained, content="false")
+    }
+    Err(message) => fail(message)
+  }
+  match
+    parse_options([
+      "moonsize", "app.wasm", "--baseline", "main.wasm", "--max-size", "512B", "--retained",
+      "--dead-code",
+    ]) {
+    Ok(options) => {
+      assert_eq(options.max_size, Some(512))
+      inspect(options.retained, content="true")
+    }
+    Err(message) => fail(message)
+  }
+}

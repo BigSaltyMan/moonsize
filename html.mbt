@@ -68,33 +68,6 @@ fn group_modules(stats : Array[FunctionStat]) -> Array[ModuleGroup] {
 }
 
 ///|
-/// The module's sections, heaviest first.
-///
-/// The chart is about size, so the reader should be able to see which sections
-/// matter without scanning the whole list. Ties keep file order, which is the
-/// only other ordering the section table has.
-fn ordered_sections(parsed : WasmModule) -> Array[Section] {
-  let ordered = parsed.sections.copy()
-  ordered.sort_by(fn(a, b) {
-    if a.total_size != b.total_size {
-      b.total_size - a.total_size
-    } else {
-      a.offset - b.offset
-    }
-  })
-  ordered
-}
-
-///|
-/// The label a section is known by in the report.
-fn section_label(section : Section) -> String {
-  match section.custom_name {
-    Some(name) => section.kind.name() + " (" + name + ")"
-    None => section.kind.name()
-  }
-}
-
-///|
 /// The bytes spent on a named section, or zero when the module has none.
 fn section_size(parsed : WasmModule, kind : SectionId) -> Int {
   let mut total = 0

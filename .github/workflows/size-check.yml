@@ -1,0 +1,58 @@
+name: Size check
+
+# Report what a pull request does to the size of a built example, by building
+# the same source on both sides of the merge and comparing the two binaries.
+#
+# This is a skeleton: the shape is the part worth copying, and the two build
+# steps are left as TODOs because this repository does not yet build its example
+# from source (see the note on `build_example` below).
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  compare:
+    name: Compare the example against the base branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The base branch has to be present to build the baseline from.
+          fetch-depth: 0
+      - uses: moonbit-community/setup-moonbit@v1
+
+      # `examples/fib.wasm` is a checked-in binary, so rebuilding it needs a
+      # package around `examples/fib.mbt`. Until the example is wired into
+      # `moon build` — say, under `examples/fib/moon.pkg` with an executable
+      # package type — both steps below stay comments rather than guesses, and
+      # the job falls back to comparing the checked-in binaries, which only
+      # differ when a pull request changes them.
+      #
+      # TODO: replace the two fallbacks with the real builds:
+      #
+      #   - name: Build the baseline from the base branch
+      #     run: |
+      #       git worktree add "$RUNNER_TEMP/baseline" "origin/${{ github.base_ref }}"
+      #       cd "$RUNNER_TEMP/baseline"
+      #       moon build --target wasm
+      #       cp _build/wasm/debug/build/fib/main.wasm "$RUNNER_TEMP/baseline.wasm"
+      #
+      #   - name: Build this pull request
+      #     run: |
+      #       moon build --target wasm
+      #       cp _build/wasm/debug/build/fib/main.wasm "$RUNNER_TEMP/current.wasm"
+
+      - name: Fetch the base branch's example
+        run: |
+          git show "origin/${{ github.base_ref }}:examples/fib.wasm" > "$RUNNER_TEMP/baseline.wasm"
+
+      - name: Compare
+        # `--max-size` here is the growth the pull request may get away with.
+        # Raise it deliberately, or delete it to report the change without
+        # failing the job.
+        run: |
+          moon run cmd/main -- examples/fib.wasm \
+            --baseline "$RUNNER_TEMP/baseline.wasm" \
+            --top 0 \
+            --max-size 5KB

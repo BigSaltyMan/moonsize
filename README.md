@@ -236,6 +236,77 @@ only itself, so shrinking it is a compiler problem rather than a deletion.
 dashed and indirect edges dotted; `--call-graph graph.json` writes it with the
 roots, every edge and every indirect site's candidate set.
 
+## CI integration
+
+`--max-size` turns the report into a gate, and `--baseline` turns it into a
+comparison, so a build can fail on growth instead of on a number somebody has to
+keep updating by hand.
+
+```sh
+moonsize app.wasm --max-size 100KB                     # a ceiling on the file
+moonsize app.wasm --baseline main.wasm --max-size 5KB  # at most 5 KB of growth
+```
+
+With a baseline, `--max-size` bounds the *change*, not the file: the question a
+pull request asks is what it costs, not how big the program already was. A run
+with a baseline prints the comparison after the report, heaviest section first,
+with the change as bytes and as a share of what it was:
+
+```
+SIZE COMPARISON
+
+                      baseline  current  delta
+  total                  10645    11000  +355  (+3.3%)
+  code                    5166     5299  +133  (+2.5%)
+  custom (name)           4945     5166  +221  (+4.4%)
+  data                     252      252  0  (0.0%)
+  custom (producers)        71       71  0  (0.0%)
+  ...
+```
+
+The exit codes are `0` ok, `1` unreadable input, `2` bad command line and `3`
+over budget, so a job can fail on the budget alone or tell a broken input apart
+from a broken build.
+
+This repository gates itself in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+formatting, `moon check --target native --deny-warn`, `moon test`, and the
+checked-in example held to a budget.
+
+```yaml
+- uses: moonbit-community/setup-moonbit@v1
+- name: The example stays inside its budget
+  run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
+```
+
+The same three lines gate any project that produces a `.wasm`:
+
+```yaml
+- uses: moonbit-community/setup-moonbit@v1
+- run: moon build --target wasm --release
+- name: Size budget
+  run: moonsize _build/wasm/release/build/app/app.wasm --max-size 250KB
+```
+
+To catch growth rather than an absolute size, build the base branch too and pass
+it as the baseline; `--max-size` then reads as the allowance:
+
+```yaml
+- name: Build the base branch
+  run: |
+    git worktree add "$RUNNER_TEMP/base" "origin/${{ github.base_ref }}"
+    (cd "$RUNNER_TEMP/base" && moon build --target wasm --release)
+- name: Size budget
+  run: |
+    moonsize _build/wasm/release/build/app/app.wasm \
+      --baseline "$RUNNER_TEMP/base/_build/wasm/release/build/app/app.wasm" \
+      --max-size 5KB
+```
+
+[`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) is a
+skeleton of exactly that shape. It is not wired up yet — this module does not
+build its example from source, so the file compares the checked-in binaries and
+carries the build steps as comments.
+
 ## Development
 
 ```sh

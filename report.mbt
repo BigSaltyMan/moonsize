@@ -21,6 +21,33 @@ fn pad_right(text : String, width : Int) -> String {
 }
 
 ///|
+/// The module's sections, heaviest first.
+///
+/// The chart is about size, so the reader should be able to see which sections
+/// matter without scanning the whole list. Ties keep file order, which is the
+/// only other ordering the section table has.
+fn ordered_sections(parsed : WasmModule) -> Array[Section] {
+  let ordered = parsed.sections.copy()
+  ordered.sort_by(fn(a, b) {
+    if a.total_size != b.total_size {
+      b.total_size - a.total_size
+    } else {
+      a.offset - b.offset
+    }
+  })
+  ordered
+}
+
+///|
+/// The label a section is known by in the report.
+fn section_label(section : Section) -> String {
+  match section.custom_name {
+    Some(name) => section.kind.name() + " (" + name + ")"
+    None => section.kind.name()
+  }
+}
+
+///|
 /// Render a ratio as a percentage with one decimal, using double arithmetic so
 /// large module sizes cannot overflow the multiplication.
 fn share_text(part : Int, whole : Int) -> String {
@@ -413,7 +440,8 @@ pub fn render_module_summary(
 /// make sense of.
 pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
-  "                 [--call-graph <path>] [--html <path>]\n\n" +
+  "                 [--call-graph <path>] [--html <path>]\n" +
+  "                 [--max-size <size>] [--baseline <path.wasm>]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
   "find what can be deleted.\n\n" +
@@ -421,7 +449,12 @@ pub fn usage() -> String {
   "  --retained           what deleting each function would free\n" +
   "  --dead-code          functions no root can reach\n" +
   "  --call-graph <path>  write the call graph as .dot or .json\n" +
-  "  --html <path>        write the charts as a self-contained HTML report"
+  "  --html <path>        write the charts as a self-contained HTML report\n" +
+  "  --max-size <size>    fail with exit code 3 above this size, where size is\n" +
+  "                       bytes or a KB/MB/GB count such as 10KB or 1.5MB\n" +
+  "  --baseline <path>    compare against another module and print the change;\n" +
+  "                       --max-size then bounds the growth, not the file\n\n" +
+  "Exit codes: 0 ok, 1 unreadable input, 2 bad command line, 3 over budget."
 }
 
 ///|

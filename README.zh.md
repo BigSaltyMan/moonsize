@@ -146,6 +146,64 @@ Dead code
 
 `--call-graph graph.dot` 把同一张图写给 Graphviz，死函数画成虚线，间接边画成点线；`--call-graph graph.json` 则输出根、每条边以及每个间接调用点的候选集。
 
+## CI 集成
+
+`--max-size` 把报告变成一道闸门，`--baseline` 把它变成一次对比，于是构建可以因为「变大了」而失败，而不是因为某个人得手动维护的那个数字。
+
+```sh
+moonsize app.wasm --max-size 100KB                     # 给文件一个上限
+moonsize app.wasm --baseline main.wasm --max-size 5KB  # 最多增长 5 KB
+```
+
+带 baseline 时，`--max-size` 限制的是**增量**而不是文件本身：一个 PR 要回答的问题是「它多花了多少」，而不是「程序本来有多大」。带 baseline 运行时，报告之后会打印对比表，按当前体积从大到小排列，增量同时给出字节数和相对基线的比例：
+
+```
+SIZE COMPARISON
+
+                      baseline  current  delta
+  total                  10645    11000  +355  (+3.3%)
+  code                    5166     5299  +133  (+2.5%)
+  custom (name)           4945     5166  +221  (+4.4%)
+  data                     252      252  0  (0.0%)
+  custom (producers)        71       71  0  (0.0%)
+  ...
+```
+
+退出码：`0` 正常，`1` 输入无法读取，`2` 命令行错误，`3` 超出预算。CI 既可以只依据预算判定失败，也能把「输入坏了」和「构建坏了」区分开。
+
+本仓库用 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 给自己上闸：格式检查、`moon check --target native --deny-warn`、`moon test`，以及把示例文件限制在预算内。
+
+```yaml
+- uses: moonbit-community/setup-moonbit@v1
+- name: The example stays inside its budget
+  run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
+```
+
+任何产出 `.wasm` 的项目都可以用同样的三行：
+
+```yaml
+- uses: moonbit-community/setup-moonbit@v1
+- run: moon build --target wasm --release
+- name: Size budget
+  run: moonsize _build/wasm/release/build/app/app.wasm --max-size 250KB
+```
+
+如果要卡的是「增长」而非绝对体积，就把 base 分支也编译一份作为基线，此时 `--max-size` 的含义变成允许的增量：
+
+```yaml
+- name: Build the base branch
+  run: |
+    git worktree add "$RUNNER_TEMP/base" "origin/${{ github.base_ref }}"
+    (cd "$RUNNER_TEMP/base" && moon build --target wasm --release)
+- name: Size budget
+  run: |
+    moonsize _build/wasm/release/build/app/app.wasm \
+      --baseline "$RUNNER_TEMP/base/_build/wasm/release/build/app/app.wasm" \
+      --max-size 5KB
+```
+
+[`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) 就是上面这个形状的骨架。它还没有真正接上——本模块目前不从源码构建示例，所以那个文件对比的是仓库里已有的二进制，构建步骤以注释形式留在里面。
+
 ## 开发
 
 ```sh
