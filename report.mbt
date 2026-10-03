@@ -441,13 +441,14 @@ pub fn render_module_summary(
 pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
   "                 [--call-graph <path>] [--html <path>]\n" +
-  "                 [--max-size <size>] [--baseline <path.wasm>]\n\n" +
+  "                 [--max-size <size>] [--baseline <path.wasm>] [--compress]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
   "find what can be deleted.\n\n" +
   "  --top <n>            how many functions to rank (default 10)\n" +
   "  --retained           what deleting each function would free\n" +
   "  --dead-code          functions no root can reach\n" +
+  "  --compress           what the file and each section cost gzip-compressed\n" +
   "  --call-graph <path>  write the call graph as .dot or .json\n" +
   "  --html <path>        write the charts as a self-contained HTML report\n" +
   "  --max-size <size>    fail with exit code 3 above this size, where size is\n" +
@@ -642,6 +643,109 @@ pub fn render_dead_code(
       "  " +
       stat.name
     rank = rank + 1
+  }
+  out
+}
+
+///|
+/// A compression ratio with two decimals, or `n/a` when there is nothing to
+/// divide by.
+fn ratio_text(raw : Int, gzip : Int) -> String {
+  if gzip <= 0 {
+    return "n/a"
+  }
+  let hundredths = (raw.to_double() / gzip.to_double() * 100.0).to_int()
+  let fraction = hundredths % 100
+  let fraction_text = if fraction < 10 {
+    "0" + fraction.to_string()
+  } else {
+    fraction.to_string()
+  }
+  (hundredths / 100).to_string() + "." + fraction_text + "x"
+}
+
+///|
+/// The compression report: what the file costs as a transfer, and which sections
+/// that cost is made of.
+///
+/// `SHARE(GZIP)` is a section's compressed size as a share of the whole file's
+/// compressed size, not of its raw size, because that is the distribution a
+/// network pays for. A section that is large raw and small compressed is not the
+/// expensive one, and only this column says so.
+///
+/// The totals and the per-section numbers come from compressing each piece on its
+/// own, so the sections do not add up to the total. Two effects are at work:
+/// gzip finds redundancy between sections that compressing one in isolation
+/// cannot see, and every stream pays its own header and trailer — about 20 bytes
+/// — which a section smaller than that shows up as a ratio below 1. The shares
+/// barely move for the same reason: 20 bytes against a table of kilobytes.
+pub fn render_compression(
+  raw_size : Int,
+  gzip_size : Int,
+  sections : Array[SectionCompression],
+) -> String {
+  let mut label_width = "SECTION".length()
+  let mut raw_width = "RAW".length()
+  let mut gzip_width = "GZIP".length()
+  let mut ratio_width = "RATIO".length()
+  let ratios : Array[String] = []
+  for section in sections {
+    if section.label.length() > label_width {
+      label_width = section.label.length()
+    }
+    raw_width = number_width(section.raw, raw_width)
+    gzip_width = number_width(section.gzip, gzip_width)
+    let ratio = ratio_text(section.raw, section.gzip)
+    if ratio.length() > ratio_width {
+      ratio_width = ratio.length()
+    }
+    ratios.push(ratio)
+  }
+  let share_width = "SHARE(GZIP)".length()
+  let total_width = number_width(gzip_size, number_width(raw_size, 1))
+  let mut out = "COMPRESSED SIZE\n  " +
+    pad_right("raw", 4) +
+    "  " +
+    pad_left(raw_size.to_string(), total_width) +
+    " B\n  " +
+    pad_right("gzip", 4) +
+    "  " +
+    pad_left(gzip_size.to_string(), total_width) +
+    " B  (" +
+    share_text(gzip_size, raw_size) +
+    " of raw, ratio " +
+    ratio_text(raw_size, gzip_size) +
+    ")\n\n  BY SECTION\n"
+  if sections.length() == 0 {
+    return out + "\n  no sections"
+  }
+  out = out +
+    "\n  " +
+    pad_right("SECTION", label_width) +
+    "  " +
+    pad_left("RAW", raw_width) +
+    "  " +
+    pad_left("GZIP", gzip_width) +
+    "  " +
+    pad_left("RATIO", ratio_width) +
+    "  " +
+    pad_left("SHARE(GZIP)", share_width) +
+    "\n"
+  let mut i = 0
+  for section in sections {
+    out = out +
+      "  " +
+      pad_right(section.label, label_width) +
+      "  " +
+      pad_left(section.raw.to_string(), raw_width) +
+      "  " +
+      pad_left(section.gzip.to_string(), gzip_width) +
+      "  " +
+      pad_left(ratios[i], ratio_width) +
+      "  " +
+      pad_left(share_text(section.gzip, gzip_size), share_width) +
+      "\n"
+    i = i + 1
   }
   out
 }

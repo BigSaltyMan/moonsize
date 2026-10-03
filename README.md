@@ -24,14 +24,20 @@ moon build --release
 ## Usage
 
 ```
-moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
+moonsize <file.wasm> [--top <n>] [--retained] [--dead-code] [--compress]
                      [--call-graph <path>] [--html <path>]
+                     [--max-size <size>] [--baseline <path.wasm>]
 
   --top <n>            how many functions to rank (default 10)
   --retained           what deleting each function would free
   --dead-code          functions no root can reach
+  --compress           what the file and each section cost gzip-compressed
   --call-graph <path>  write the call graph as .dot or .json
   --html <path>        write the charts as a self-contained HTML report
+  --max-size <size>    fail with exit code 3 above this size, where size is
+                       bytes or a KB/MB/GB count such as 10KB or 1.5MB
+  --baseline <path>    compare against another module and print the change;
+                       --max-size then bounds the growth, not the file
 ```
 
 Without flags it prints the section table, the heaviest functions and the
@@ -140,6 +146,53 @@ already paid for and never used, so the list is a deletion list.
 
 MoonBit's compiler does dead-code elimination well, so a small program usually
 reports none — that is a finding too.
+
+### Compressed size
+
+A WebAssembly module is not served raw. It is served gzipped, and how much that
+saves depends on what the bytes are: machine code compresses a little, symbol
+names and strings compress a lot, and already-packed data barely moves at all. A
+section table read raw therefore misleads in both directions, and `--compress`
+answers the question a network asks instead:
+
+```
+COMPRESSED SIZE
+  raw   10675 B
+  gzip   5207 B  (48.7% of raw, ratio 2.05x)
+
+  BY SECTION
+
+  SECTION              RAW  GZIP  RATIO  SHARE(GZIP)
+  code                5166  2712  1.90x        52.0%
+  custom (name)       4975  1983  2.50x        38.0%
+  data                 252   174  1.44x         3.3%
+  custom (producers)    71    95  0.74x         1.8%
+  type                  59    66  0.89x         1.2%
+  function              50    63  0.79x         1.2%
+  import                37    61  0.60x         1.1%
+  export                21    45  0.46x         0.8%
+  global                13    34  0.38x         0.6%
+  element                8    32  0.25x         0.6%
+  table                  7    31  0.22x         0.5%
+  memory                 5    29  0.17x         0.5%
+  datacount              3    27  0.11x         0.5%
+```
+
+`SHARE(GZIP)` is what the section costs as a share of the compressed file rather
+than of the raw one, and it is the column to read. Here the code section is 48.3%
+of the file raw but 52.0% of it compressed, while the name section goes the other
+way — 46.6% raw, 38.0% compressed. The bytes the compiler emitted are the ones
+worth attacking; the symbol names are close to free on the wire, which is worth
+knowing before spending an afternoon on `--strip`.
+
+Two things to keep in mind reading it. It is an estimate: the compressor runs at
+its default level, which is the level servers use, but a server may be configured
+differently, and it compresses the whole response rather than each section on its
+own. And every section is compressed as its own stream, so each pays its own gzip
+container of about twenty bytes — which is invisible for a section of kilobytes
+and dominant for one of a handful of bytes, and is why the smallest sections
+above read as growing when compressed. The shares barely notice, because twenty
+bytes is nothing against a table of kilobytes.
 
 ### Judging what can be deleted
 

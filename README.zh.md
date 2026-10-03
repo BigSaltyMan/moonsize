@@ -20,14 +20,20 @@ moon build --release
 ## 用法
 
 ```
-moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
+moonsize <file.wasm> [--top <n>] [--retained] [--dead-code] [--compress]
                      [--call-graph <path>] [--html <path>]
+                     [--max-size <size>] [--baseline <path.wasm>]
 
   --top <n>            排名显示多少个函数（默认 10）
   --retained           删除每个函数能连带释放多少
   --dead-code          从根不可达的函数
+  --compress           文件和每个段 gzip 压缩后要花多少字节
   --call-graph <path>  把调用图写成 .dot 或 .json
   --html <path>        把图表写成自包含的 HTML 报告
+  --max-size <size>    超过这个大小就以退出码 3 失败，size 可以是字节数或
+                       10KB、1.5MB 这种带 KB/MB/GB 后缀的写法
+  --baseline <path>    与另一个模块对比并打印变化；此时 --max-size 限制的是
+                       增量，而不是文件本身
 ```
 
 不带参数时打印段表、最重的函数和按包聚合的结果。`--retained` 和 `--dead-code` 追加各自的章节，可以组合使用。`--call-graph` 和 `--html` 写文件而不是打印报告，因此单独使用：
@@ -85,6 +91,37 @@ moonsize app.wasm --call-graph graph.dot        # 给 Graphviz
 从根不可达的一切都不会运行：没有导出能到达它，没有 start 函数，没有 table 槽位，也没有从上述任何一处出发的调用链。它的字节已经付出代价却从未被使用，所以这份清单就是一份删除清单。
 
 MoonBit 编译器的死代码消除做得很好，因此小程序通常报告为零——这本身也是一个结论。
+
+### 压缩后体积
+
+WebAssembly 模块不会以原始形式传输，服务端发的是 gzip 之后的内容，而省下多少完全取决于字节长什么样：机器码压不太动，符号名和字符串压得很狠，已经打包好的数据几乎不动。所以只看原始段表会在两个方向上误导人，`--compress` 回答的是网络真正关心的问题：
+
+```
+COMPRESSED SIZE
+  raw   10675 B
+  gzip   5207 B  (48.7% of raw, ratio 2.05x)
+
+  BY SECTION
+
+  SECTION              RAW  GZIP  RATIO  SHARE(GZIP)
+  code                5166  2712  1.90x        52.0%
+  custom (name)       4975  1983  2.50x        38.0%
+  data                 252   174  1.44x         3.3%
+  custom (producers)    71    95  0.74x         1.8%
+  type                  59    66  0.89x         1.2%
+  function              50    63  0.79x         1.2%
+  import                37    61  0.60x         1.1%
+  export                21    45  0.46x         0.8%
+  global                13    34  0.38x         0.6%
+  element                8    32  0.25x         0.6%
+  table                  7    31  0.22x         0.5%
+  memory                 5    29  0.17x         0.5%
+  datacount              3    27  0.11x         0.5%
+```
+
+`SHARE(GZIP)` 是段压缩后大小占**整个文件压缩后**大小的比例，而不是占原始大小的比例——这一列才是要看的。这里 code 段原始占文件的 48.3%，压缩后涨到 52.0%；name 段则相反，原始 46.6%，压缩后只剩 38.0%。真正值得下手的是编译器吐出来的字节；符号名在网络上几乎是免费的，这件事最好在花一下午搞 `--strip` 之前就知道。
+
+读这张表有两点要留意。它是估算：压缩器跑在默认等级（也就是服务端常用的等级），但服务端配置未必相同，而且它是把整个响应当一个流压，而不是每段独立压。另外每段都是独立的流，各自要付大约二十字节的 gzip 容器开销——对上千字节的段可以忽略，对只有几个字节的段就是主要成本，这也是表里最小的那些段"压完反而变大"的原因。占比几乎不受影响，因为二十字节放在上千字节的表里不算什么。
 
 ### 判断哪些可以删
 

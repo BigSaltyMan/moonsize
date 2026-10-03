@@ -75,11 +75,22 @@ fn read_echarts() -> String {
 /// The text report: the section table, the function ranking, the module summary,
 /// and whichever optional sections were asked for.
 fn print_report(
+  bytes : Bytes,
   parsed : @lib.WasmModule,
   analysis : @lib.Analysis,
   options : @lib.Options,
 ) -> Unit {
   println(@lib.format_report(parsed, options.path))
+  if options.compress {
+    println("")
+    println(
+      @lib.render_compression(
+        parsed.file_size,
+        @lib.compressed_size(bytes),
+        @lib.compress_sections(bytes, parsed),
+      ),
+    )
+  }
   println("")
   println(
     @lib.render_top_functions(analysis.stats, parsed.file_size, options.top),
@@ -162,7 +173,7 @@ fn main {
           write_output(target, contents)
           println("HTML report written to " + target)
         }
-        None => print_report(parsed, analysis, options)
+        None => print_report(bytes, parsed, analysis, options)
       }
   }
   match baseline {

@@ -1,4 +1,5 @@
 import {
+  "bikallem/compress/gzip",
   "moonbitlang/core/encoding/utf8",
 }
 

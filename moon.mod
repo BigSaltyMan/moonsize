@@ -5,6 +5,7 @@ version = "0.1.0"
 
 import {
   "moonbitlang/x@0.5.5",
+  "bikallem/compress@0.3.4",
 }
 
 readme = "README.md"
