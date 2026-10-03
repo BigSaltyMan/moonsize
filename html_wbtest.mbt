@@ -20,6 +20,7 @@ fn analysis_of_stats(stats : Array[FunctionStat]) -> Analysis raise {
     })
   }
   {
+    data,
     parsed,
     stats,
     graph: graph_of([]),
@@ -34,7 +35,14 @@ fn analysis_of_stats(stats : Array[FunctionStat]) -> Analysis raise {
 /// One function with the given name, so a test can choose what goes in it.
 fn analysis_with_name(name : String) -> Analysis raise {
   analysis_of_stats([
-    { index: 1, name, module_name: "demo", body_size: 120, total_size: 122, },
+    {
+      index: 1,
+      name,
+      module_name: "demo",
+      body_size: 120,
+      total_size: 122,
+      offset: 0,
+    },
   ])
 }
 
@@ -396,4 +404,84 @@ test "the data blob carries the pie roster beside the raw modules" {
   let html = render_html(analysis_with_name("demo::fib"), "app.wasm")
   assert_true(html.contains("\"pie\":["))
   assert_true(html.contains("\"modules\":["))
+}
+
+///|
+test "the page reports the compressed size the tool actually computes" {
+  // The card's number has to be the compressor's, not a second opinion: the
+  // test computes it the same way and looks for it in the JSON and in the card.
+  let analysis = analysis_with_name("demo::fib")
+  let gzip_size = compressed_size(analysis.data)
+  let html = render_html(analysis, "app.wasm")
+  assert_true(html.contains("\"gzipSize\":" + gzip_size.to_string()))
+  assert_true(html.contains("<span class=\"label\">Gzip size</span>"))
+  assert_true(
+    html.contains("<span class=\"value\">" + grouped(gzip_size) + " B</span>"),
+  )
+  // The share of raw and the ratio ride underneath it.
+  assert_true(
+    html.contains(
+      share_text(gzip_size, analysis.parsed.file_size) + " of raw · ",
+    ),
+  )
+}
+
+///|
+test "every section and function carries its compressed size" {
+  // A real module this time, so the numbers are the compressor's own rather
+  // than a fixture's stand-ins.
+  let data = named_module()
+  let parsed = match parse_module(data) {
+    Ok(parsed) => parsed
+    Err(error) => fail(decode_failure(error))
+  }
+  let analysis = match analyze(data, parsed) {
+    Ok(analysis) => analysis
+    Err(error) => fail(decode_failure(error))
+  }
+  let json = report_data(analysis, "named.wasm").stringify()
+  let html = render_html(analysis, "named.wasm")
+  // The headline is the compressor's number for the whole file.
+  assert_true(
+    json.contains("\"gzipSize\":" + compressed_size(data).to_string()),
+  )
+  // A section's number is the compressor's number for that section's own bytes,
+  // not a share of the total dressed up as one.
+  let section = parsed.sections[0]
+  assert_true(
+    json.contains(
+      "\"gzip\":" +
+      compressed_span(data, section.offset, section.total_size).to_string(),
+    ),
+  )
+  // And a function's, off the offsets the decoder recorded.
+  let stat = analysis.stats[0]
+  assert_true(
+    json.contains(
+      "\"gzip\":" +
+      compressed_span(data, stat.offset, stat.total_size).to_string(),
+    ),
+  )
+  assert_true(html.contains("\"gzip\":"))
+}
+
+///|
+test "the sections chart offers both views of the same bars" {
+  let html = render_html(analysis_with_name("demo::fib"), "app.wasm")
+  // Two series over one axis, with the compressed one hidden until it is asked
+  // for, so switching shows the drop rather than rescaling the axis.
+  assert_true(html.contains("data: ['raw', 'gzip']"))
+  assert_true(html.contains("selected: { raw: true, gzip: false }"))
+  assert_true(html.contains("barGap: '-100%'"))
+  assert_true(html.contains("'#a78bfa')"))
+}
+
+///|
+test "non-ASCII text survives escaping" {
+  // Escaping walks the document byte by byte; copying one byte of a multi-byte
+  // character would replace it with a replacement character.
+  let html = render_html(analysis_with_name("demo::fib"), "/tmp/示例.wasm")
+  assert_true(html.contains("<title>moonsize — /tmp/示例.wasm</title>"))
+  assert_true(html.contains("<p class=\"file\">/tmp/示例.wasm</p>"))
+  assert_false(html.contains("\u{fffd}"))
 }

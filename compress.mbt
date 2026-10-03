@@ -80,3 +80,17 @@ pub fn compress_sections(
   }
   rows
 }
+
+///|
+/// The compressed size of `data[offset : offset + length]`, or `length` when that
+/// range does not fit the file.
+///
+/// This is how a section or a function body is measured on its own: the caller
+/// has the offsets the decoder recorded, not a slice of its own.
+fn compressed_span(data : Bytes, offset : Int, length : Int) -> Int {
+  let end = offset + length
+  if offset < 0 || offset > end || end > data.length() {
+    return length
+  }
+  compressed_size(data[offset:end].to_owned())
+}

@@ -9,6 +9,10 @@
 ///|
 /// A parsed module with its sizes, call graph and reachability resolved.
 pub struct Analysis {
+  /// The bytes the module was parsed from. Reports that measure a piece of the
+  /// file on its own — the compression view — need the actual bytes, not just
+  /// where they are.
+  data : Bytes
   parsed : WasmModule
   stats : Array[FunctionStat]
   graph : CallGraph
@@ -85,6 +89,7 @@ pub fn analyze(
     sizes.set(stat.index, stat.total_size)
   }
   Ok({
+    data,
     parsed,
     stats,
     graph,

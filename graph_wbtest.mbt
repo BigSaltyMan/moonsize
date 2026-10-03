@@ -347,6 +347,7 @@ test "dead code names the heaviest functions first" {
       module_name: "live",
       body_size: 10,
       total_size: 11,
+      offset: 0,
     },
     {
       index: 2,
@@ -354,6 +355,7 @@ test "dead code names the heaviest functions first" {
       module_name: "dead",
       body_size: 20,
       total_size: 21,
+      offset: 0,
     },
     {
       index: 3,
@@ -361,6 +363,7 @@ test "dead code names the heaviest functions first" {
       module_name: "dead",
       body_size: 300,
       total_size: 301,
+      offset: 0,
     },
   ]
   inspect(
@@ -389,6 +392,7 @@ test "retained size is reported as a table of two numbers" {
       module_name: "app",
       body_size: 100,
       total_size: 101,
+      offset: 0,
     },
     {
       index: 2,
@@ -396,6 +400,7 @@ test "retained size is reported as a table of two numbers" {
       module_name: "app",
       body_size: 200,
       total_size: 201,
+      offset: 0,
     },
   ]
   let retained : Array[RetainedSize] = [

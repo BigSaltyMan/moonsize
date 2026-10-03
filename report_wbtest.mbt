@@ -9,6 +9,7 @@ fn sample_stats() -> Array[FunctionStat] {
       module_name: "demo::sample::src",
       body_size: 300,
       total_size: 302,
+      offset: 0,
     },
     {
       index: 2,
@@ -16,6 +17,7 @@ fn sample_stats() -> Array[FunctionStat] {
       module_name: "moonbit",
       body_size: 80,
       total_size: 82,
+      offset: 0,
     },
     {
       index: 3,
@@ -23,6 +25,7 @@ fn sample_stats() -> Array[FunctionStat] {
       module_name: "tlsf",
       body_size: 100,
       total_size: 102,
+      offset: 0,
     },
     {
       index: 4,
@@ -30,6 +33,7 @@ fn sample_stats() -> Array[FunctionStat] {
       module_name: "tlsf",
       body_size: 40,
       total_size: 42,
+      offset: 0,
     },
   ]
 }

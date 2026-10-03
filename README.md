@@ -207,7 +207,8 @@ bytes is nothing against a table of kilobytes.
 ## HTML report
 
 `--html <path>` writes the same analysis as one self-contained page: no server,
-no build step, no network. Open the file and the four charts are there.
+no build step, no network. Open the file and the four charts are there, with the
+compressed sizes the text report only shows under `--compress`.
 
 ![moonsize HTML report](examples/report.png)
 
@@ -218,15 +219,23 @@ emailed or opened from anywhere. The source it was built from is
 [`examples/fib.mbt`](examples/fib.mbt), which is also a package here: building
 `--target wasm` produces the example alongside the tool.
 
-**Three headline numbers.** File size, the code section, and how much of the file
-is unreachable. The third card turns red when there is anything to delete, which
-is the one number most people open the report for.
+**Four headline numbers.** File size, the code section, what the file costs
+gzipped, and how much of it is unreachable. The gzip card carries the share of
+raw and the ratio underneath, and the dead-code card turns red when there is
+anything to delete, which is the one number most people open the report for.
 
 **Sections** — a horizontal bar per section, widest first, with the share of the
 file in the tooltip. This is the stage-one section table, drawn. Both bar charts
 are sized to their row count, so every row keeps its label; a fixed-height box
 makes ECharts drop most of them, and the rows that survive look like headings for
 the unlabelled ones below.
+
+The sections chart has two views, switched by the `raw` / `gzip` legend in its
+corner: the same bars measured before and after compression. They share one axis
+and overlap exactly, so switching shows how much shorter the compressed bars are
+instead of rescaling the axis to hide it — the code section barely moves, the
+name section loses half its length. The tooltip gives both numbers and the ratio
+in either view.
 
 **Top 20 functions by body size** — what the compiler could shrink. Body size is
 used rather than the encoded size so that the ranking answers "where is the
@@ -241,11 +250,15 @@ inside the ring, so they never collide with the legend.
 
 **Treemap** — module → function, where area is bytes. This is the one chart that
 shows the whole binary at once: the big cells are the functions worth looking at,
-and cells are drawn red when the function is unreachable.
+and cells are drawn red when the function is unreachable. The area stays the raw
+size — a treemap drawn by compressed bytes would be a different chart, and a less
+useful one — so the compressed size and ratio are reported in the tooltip
+instead of drawn.
 
 Hovering any bar, slice or cell shows the exact bytes and percentage. Every
 number in the page comes from the same `Analysis` the text report uses, so the
-two cannot disagree.
+two cannot disagree — including the compressed ones, which the page computes with
+the same compressor and the same level as `--compress`.
 
 The library is vendored in [`assets/echarts.min.js`](assets/README.md) and inlined
 into the page. When that file is not next to the working directory — running a

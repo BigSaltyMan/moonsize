@@ -156,6 +156,8 @@ pub struct FunctionStat {
   body_size : Int
   /// The body's size prefix plus the body: what the file actually spends.
   total_size : Int
+  /// Offset of that size prefix from the start of the file.
+  offset : Int
 }
 
 ///|
@@ -197,6 +199,7 @@ pub fn function_stats(
       module_name: module_of(raw),
       body_size: body.body_size,
       total_size: body.total_size,
+      offset: body.offset,
     })
   }
   stats
