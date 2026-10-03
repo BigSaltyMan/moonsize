@@ -16,6 +16,8 @@ pub struct Options {
   dead_code : Bool
   /// Write the call graph to this path instead of printing the text report.
   call_graph : String?
+  /// Write the HTML report to this path instead of printing the text report.
+  html : String?
 }
 
 ///|
@@ -59,18 +61,20 @@ pub fn parse_count(text : String) -> Int? {
 /// Parse a full `argv`, including the program name in slot zero.
 ///
 /// The grammar is `moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
-/// [--call-graph <path>]`: exactly one positional path, and a repeat of a flag
-/// keeps the last value. Anything else is reported as an error so a typo never
-/// silently analyses the wrong thing.
+/// [--call-graph <path>] [--html <path>]`: exactly one positional path, and a
+/// repeat of a flag keeps the last value. Anything else is reported as an error
+/// so a typo never silently analyses the wrong thing.
 ///
-/// `--call-graph` writes a file rather than a report, so combining it with the
-/// two report flags is rejected instead of quietly ignoring one of them.
+/// `--call-graph` and `--html` each write a file rather than a report, so
+/// combining either with another output mode is rejected instead of quietly
+/// ignoring one of them.
 pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut path : String? = None
   let mut top = DEFAULT_TOP
   let mut retained = false
   let mut dead_code = false
   let mut call_graph : String? = None
+  let mut html : String? = None
   let mut i = 1
   while i < args.length() {
     let arg = args[i]
@@ -101,6 +105,12 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
       call_graph = Some(args[i + 1])
       i = i + 2
+    } else if arg == "--html" {
+      if i + 1 >= args.length() {
+        return Err("moonsize: --html needs a path\n\n" + usage())
+      }
+      html = Some(args[i + 1])
+      i = i + 2
     } else if path is None {
       path = Some(arg)
       i = i + 1
@@ -114,9 +124,21 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   }
   match call_graph {
     Some(target) =>
-      if retained || dead_code {
+      if retained || dead_code || html is Some(_) {
         return Err(
           "moonsize: --call-graph writes the graph to " +
+          target +
+          ", so it cannot be combined with --retained, --dead-code or --html\n\n" +
+          usage(),
+        )
+      }
+    None => ()
+  }
+  match html {
+    Some(target) =>
+      if retained || dead_code {
+        return Err(
+          "moonsize: --html writes the report to " +
           target +
           ", so it cannot be combined with --retained or --dead-code\n\n" +
           usage(),
@@ -124,5 +146,5 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
     None => ()
   }
-  Ok({ path, top, retained, dead_code, call_graph, })
+  Ok({ path, top, retained, dead_code, call_graph, html, })
 }

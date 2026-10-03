@@ -47,28 +47,6 @@ fn section_of(parsed : WasmModule, kind : SectionId) -> Section raise {
 }
 
 ///|
-/// Compare two section ids, which carry no payload and so need no `Eq` impl.
-fn same_kind(a : SectionId, b : SectionId) -> Bool {
-  match (a, b) {
-    (Custom, Custom)
-    | (Type, Type)
-    | (Import, Import)
-    | (Function, Function)
-    | (Table, Table)
-    | (Memory, Memory)
-    | (Global, Global)
-    | (Export, Export)
-    | (Start, Start)
-    | (Element, Element)
-    | (Code, Code)
-    | (Data, Data)
-    | (DataCount, DataCount)
-    | (Tag, Tag) => true
-    _ => false
-  }
-}
-
-///|
 test "counts function imports and skips the others" {
   match parse_module(named_module()) {
     Ok(parsed) =>

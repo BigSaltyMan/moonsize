@@ -8,6 +8,8 @@ The analysis model follows [Twiggy](https://github.com/rustwasm/twiggy): sizes
 are attributed to individual functions, functions are grouped by package, and
 reachability from the module's roots decides what is really used.
 
+Chinese version: [README.zh.md](README.zh.md).
+
 ## Building
 
 ```sh
@@ -19,18 +21,25 @@ moon build --release
 
 ```
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
-                     [--call-graph <path>]
+                     [--call-graph <path>] [--html <path>]
 
   --top <n>            how many functions to rank (default 10)
   --retained           what deleting each function would free
   --dead-code          functions no root can reach
   --call-graph <path>  write the call graph as .dot or .json
+  --html <path>        write the charts as a self-contained HTML report
 ```
 
 Without flags it prints the section table, the heaviest functions and the
 per-package roll-up. `--retained` and `--dead-code` add their sections and can
-be combined; `--call-graph` writes a file instead of a report, so it is used on
-its own.
+be combined. `--call-graph` and `--html` each write a file instead of printing
+a report, so they are used on their own:
+
+```sh
+moonsize app.wasm --retained --dead-code        # the full text report
+moonsize app.wasm --html report.html            # charts, opens in a browser
+moonsize app.wasm --call-graph graph.dot        # for Graphviz
+```
 
 ## Analysis
 
@@ -101,6 +110,47 @@ reports none — that is a finding too.
    Those are the functions whose removal cascades.
 3. Treat `IND` rows with care: an indirect candidate can only be removed when the
    table entry and the call sites go with it.
+
+## HTML report
+
+`--html <path>` writes the same analysis as one self-contained page: no server,
+no build step, no network. Open the file and the four charts are there.
+
+![moonsize HTML report](examples/report.png)
+
+A worked example is checked in at [`examples/report.html`](examples/report.html),
+generated from [`examples/fib.wasm`](examples/fib.wasm) — a 10,645-byte MoonBit
+program. It is one file: the chart library is inlined, so it can be moved,
+emailed or opened from anywhere.
+
+**Three headline numbers.** File size, the code section, and how much of the file
+is unreachable. The third card turns red when there is anything to delete, which
+is the one number most people open the report for.
+
+**Sections** — a horizontal bar per section, widest first, with the share of the
+file in the tooltip. This is the stage-one section table, drawn.
+
+**Top 20 functions by body size** — what the compiler could shrink. Body size is
+used rather than the encoded size so that the ranking answers "where is the
+code", not "where are the size prefixes".
+
+**Modules** — a donut of how the code section divides between packages, as a
+share of the code section rather than of the file, so the slices mean "which
+package is responsible for the code".
+
+**Treemap** — module → function, where area is bytes. This is the one chart that
+shows the whole binary at once: the big cells are the functions worth looking at,
+and cells are drawn red when the function is unreachable.
+
+Hovering any bar, slice or cell shows the exact bytes and percentage. Every
+number in the page comes from the same `Analysis` the text report uses, so the
+two cannot disagree.
+
+The library is vendored in [`assets/echarts.min.js`](assets/README.md) and inlined
+into the page. When that file is not next to the working directory — running a
+installed binary from elsewhere, say — the page falls back to a CDN `<script
+src>` tag instead and the command says so; that report needs a network
+connection to draw.
 
 ## Example output
 

@@ -413,14 +413,15 @@ pub fn render_module_summary(
 /// make sense of.
 pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
-  "                 [--call-graph <path>]\n\n" +
+  "                 [--call-graph <path>] [--html <path>]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
   "find what can be deleted.\n\n" +
   "  --top <n>            how many functions to rank (default 10)\n" +
   "  --retained           what deleting each function would free\n" +
   "  --dead-code          functions no root can reach\n" +
-  "  --call-graph <path>  write the call graph as .dot or .json"
+  "  --call-graph <path>  write the call graph as .dot or .json\n" +
+  "  --html <path>        write the charts as a self-contained HTML report"
 }
 
 ///|

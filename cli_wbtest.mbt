@@ -229,3 +229,76 @@ test "the call graph flag needs a path" {
     Ok(_) => fail("expected a rejected --call-graph")
   }
 }
+
+///|
+test "the html flag takes a path" {
+  match parse_options(["moonsize", "app.wasm", "--html", "report.html"]) {
+    Ok(options) => assert_eq(options.html, Some("report.html"))
+    Err(message) => fail(message)
+  }
+}
+
+///|
+test "the html flag defaults to off" {
+  match parse_options(["moonsize", "app.wasm"]) {
+    Ok(options) => assert_eq(options.html, None)
+    Err(message) => fail(message)
+  }
+}
+
+///|
+test "the html flag needs a path" {
+  match parse_options(["moonsize", "app.wasm", "--html"]) {
+    Err(message) =>
+      inspect(
+        message.contains("--html needs a path"),
+        content=(
+          #|true
+        ),
+      )
+    Ok(_) => fail("expected a rejected --html")
+  }
+}
+
+///|
+test "writing an html report excludes the text sections" {
+  match
+    parse_options(["moonsize", "app.wasm", "--html", "r.html", "--retained"]) {
+    Err(message) =>
+      inspect(
+        message.contains("cannot be combined"),
+        content=(
+          #|true
+        ),
+      )
+    Ok(_) => fail("expected the combination to be rejected")
+  }
+  match
+    parse_options(["moonsize", "app.wasm", "--dead-code", "--html", "r.html"]) {
+    Err(message) =>
+      inspect(
+        message.contains("cannot be combined"),
+        content=(
+          #|true
+        ),
+      )
+    Ok(_) => fail("expected the combination to be rejected")
+  }
+}
+
+///|
+test "the two file outputs are mutually exclusive" {
+  match
+    parse_options([
+      "moonsize", "app.wasm", "--call-graph", "g.dot", "--html", "r.html",
+    ]) {
+    Err(message) =>
+      inspect(
+        message.contains("cannot be combined"),
+        content=(
+          #|true
+        ),
+      )
+    Ok(_) => fail("expected the combination to be rejected")
+  }
+}

@@ -1,0 +1,138 @@
+# moonsize
+
+面向 MoonBit 产物的 WebAssembly 体积分析器。读取 `.wasm` 文件，测量每个段，把 code 段归因到具体函数，跟随调用图，并报告哪些部分可以删除。
+
+分析模型参考 [Twiggy](https://github.com/rustwasm/twiggy)：体积归因到单个函数，函数按包聚合，从模块根出发的可达性决定哪些是真正被用到的。
+
+英文版见 [README.md](README.md)。
+
+## 构建
+
+```sh
+moon build --release
+./_build/native/release/build/cmd/main/main.exe app.wasm
+```
+
+## 用法
+
+```
+moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
+                     [--call-graph <path>] [--html <path>]
+
+  --top <n>            排名显示多少个函数（默认 10）
+  --retained           删除每个函数能连带释放多少
+  --dead-code          从根不可达的函数
+  --call-graph <path>  把调用图写成 .dot 或 .json
+  --html <path>        把图表写成自包含的 HTML 报告
+```
+
+不带参数时打印段表、最重的函数和按包聚合的结果。`--retained` 和 `--dead-code` 追加各自的章节，可以组合使用。`--call-graph` 和 `--html` 写文件而不是打印报告，因此单独使用：
+
+```sh
+moonsize app.wasm --retained --dead-code        # 完整文本报告
+moonsize app.wasm --html report.html            # 图表，浏览器打开
+moonsize app.wasm --call-graph graph.dot        # 给 Graphviz
+```
+
+## 分析原理
+
+下面所有内容都建立在一个判断上：一个函数的字节，只有在有东西能调用它时才有意义。
+
+### 调用图
+
+解码器逐条指令遍历每个函数体——完整的 MVP 指令集、`0xFC` 的饱和转换与批量内存操作码、MoonBit 会发出的异常处理与尾调用操作码，以及其 `wasm-gc` 后端使用的 `0xFB` 垃圾回收操作码。每个函数体贡献：
+
+- `call x` —— 指向 `x` 的精确边；
+- `ref.func x` —— 一次引用，算作可达，因为该函数之后可能作为闭包被运行；
+- `call_indirect` —— 指向该 table 中**所有**可能函数的保守边。table 的内容静态不可知，所以候选集取全集：漏一条边就等于漏一个函数、把一个还在用的函数报成死代码，这是这里唯一值得避免的错误。
+
+如果外部世界能到达一个函数，它就是**根**：它被导出、它是 start 函数，或者它位于某个 table 中。从这些根可达的一切都是活的，其余都是死的。
+
+### Retained Size
+
+`SIZE` 是函数自身的体积。`RETAINED` 是删掉它实际能释放的体积：它自己的字节加上所有随之变得不可达的函数，`DIES` 是后者的个数。
+
+这个集合恰好是被删函数所**支配**的函数集合——从根出发的每一条路径都必须经过的那些。把模块的图取出，在真实根之上加一个虚拟根，求支配树，一次就能得到所有函数的 retained size。环由不动点自然收敛，不需要特判；结果是精确的，而不是靠局部前驱数量做的近似：如果两条分支都调用某个函数，删掉其中一条分支不会释放它，但删掉两条分支汇合的那个点会。
+
+怎么读这张表：
+
+- `RETAINED == SIZE` —— 这个函数只对自己负责，删掉它只省下它自己的字节。
+- `RETAINED ≫ SIZE` 且 `DIES` 较大 —— 好的候选。删掉它会带走一整棵子树。
+- `IND` —— 该函数可以通过 `call_indirect` 到达，只有在没有 table 槽位和间接调用依赖它时才能安全删除。
+
+两个数都打印是有意的。`SIZE` 说明编译期把函数改小能省多少；`RETAINED` 说明直接删掉它省多少，后者通常是更便宜的改动。
+
+### 死代码
+
+从根不可达的一切都不会运行：没有导出能到达它，没有 start 函数，没有 table 槽位，也没有从上述任何一处出发的调用链。它的字节已经付出代价却从未被使用，所以这份清单就是一份删除清单。
+
+MoonBit 编译器的死代码消除做得很好，因此小程序通常报告为零——这本身也是一个结论。
+
+### 判断哪些可以删
+
+1. 先看 `--dead-code`。那里每一行都可以直接删；确认没有模块外部按名字调用它（如果被导出，它就已经是根了，所以这一点已经被考虑在内）。
+2. 再看 `--retained` 中 `RETAINED` 很大且 `DIES` 大于零的行。这些是删除后会连锁的函数。
+3. 对带 `IND` 的行要谨慎：间接候选只有在 table 槽位和调用点一起删除时才安全。
+
+## HTML 报告
+
+`--html <path>` 把同一份分析写成一个自包含页面：不需要服务器、不需要构建步骤、不需要联网。打开文件就能看到四张图。
+
+![moonsize HTML 报告](examples/report.png)
+
+仓库里放了一份现成的例子：[`examples/report.html`](examples/report.html)，由 [`examples/fib.wasm`](examples/fib.wasm) 生成——一个 10,645 字节的 MoonBit 程序。它只有一个文件：图表库被内联进去，所以可以随意移动、发送、在任何地方打开。
+
+**顶部三个数字。** 文件总大小、code 段大小，以及文件中不可达部分的大小。第三张卡片在有东西可删时会变红——多数人打开报告就是为了这个数。
+
+**Sections（段概览）** —— 每个段一条横向条形，按体积从大到小排列，悬浮提示里给出占文件的比例。这就是第一阶段的段表，画出来了。
+
+**Top 20 functions by body size** —— 编译器还能压缩的部分。这里用的是 body 大小而不是编码后大小，让排名回答"代码在哪里"，而不是"长度前缀在哪里"。
+
+**Modules（模块聚合）** —— 环形图，展示 code 段如何在各包之间划分；分母是 code 段而非整个文件，所以每一片的含义是"哪个包占用了代码"。
+
+**Treemap** —— 模块 → 函数两级，面积代表字节数。这是唯一一张一次展示整个二进制的图：面积大的格子就是值得看的函数，函数不可达时格子画成红色。
+
+悬浮任意条形、扇区或格子都会显示精确字节数与百分比。页面里每个数字都来自文本报告所用的同一个 `Analysis`，两者不可能对不上。
+
+图表库 vendored 在 [`assets/echarts.min.js`](assets/README.md)，并被内联进页面。当该文件不在工作目录旁时——比如从别处运行已安装的二进制——页面会退回到 CDN 的 `<script src>` 标签，命令也会明确提示；那种报告需要联网才能绘制。
+
+## 输出示例
+
+一个 10,645 字节的 MoonBit 程序（`--target wasm`，debug），只保留分析章节：
+
+```
+Retained size
+
+    #  INDEX  SIZE  RETAINED  DIES    SHARE  IND  FUNCTION
+    1     47   158      5162    46    48.4%       ____moonbit__main
+    2     39   301      1773    10    16.6%       int::Int::to__string_2einner
+    3     37    24       887     8     8.3%       println
+    4     34     9       819     5     7.6%       moonbit.println
+    5     33   206       810     4     7.6%       moonbit.fprintln
+    6     28    49       717     7     6.7%       moonbit.decref
+    7     29   409       668     6     6.2%       moonbit.gc.free
+    8     43   633       633     0     5.9%       int__to__string__dec
+
+  DIES counts the other functions that become unreachable with this one.
+  IND marks a function a call_indirect could reach.
+
+Dead code
+
+  0 of 47 functions are unreachable from the roots
+  0 bytes (0.0% of file)
+
+  every function is reachable
+```
+
+`____moonbit__main` retained 5,162 字节——占文件的 48.4%，牵连 46 个函数——这正是单入口程序的样子：所有东西都挂在它下面。`int__to__string__dec` 是最大的单个函数（633 字节），但只 retained 自己，所以要缩小它属于改代码，而不是删代码。
+
+`--call-graph graph.dot` 把同一张图写给 Graphviz，死函数画成虚线，间接边画成点线；`--call-graph graph.json` 则输出根、每条边以及每个间接调用点的候选集。
+
+## 开发
+
+```sh
+moon check --target native --deny-warn
+moon test
+```
+
+测试逐条覆盖指令表——每条指令带一个规范编码和规范给出的长度——并固定了三个真实的 MoonBit 函数体，其中一个是 locals 使用两字节 GC 引用类型的，这样一旦某个立即数宽度写错，失败的是一个测试，而不是悄悄产生一张错误的调用图。

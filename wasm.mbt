@@ -87,6 +87,32 @@ pub struct Section {
 }
 
 ///|
+/// True when two section ids are the same variant.
+///
+/// Section ids carry no payload and this toolchain derives no `Eq` for them, so
+/// the comparison is written out once here rather than spelled at each call site
+/// that has to pick a section out of the table.
+pub fn same_kind(a : SectionId, b : SectionId) -> Bool {
+  match (a, b) {
+    (Custom, Custom)
+    | (Type, Type)
+    | (Import, Import)
+    | (Function, Function)
+    | (Table, Table)
+    | (Memory, Memory)
+    | (Global, Global)
+    | (Export, Export)
+    | (Start, Start)
+    | (Element, Element)
+    | (Code, Code)
+    | (Data, Data)
+    | (DataCount, DataCount)
+    | (Tag, Tag) => true
+    _ => false
+  }
+}
+
+///|
 /// A decoded module preamble plus its section table.
 pub struct WasmModule {
   version : Int
