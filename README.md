@@ -421,6 +421,10 @@ moon run cmd/main -- that.wasm --baseline base.wasm --max-size 5KB
 
 ## Development
 
+The key decisions, the known limits of the symbol rules, the role AI tools
+played, and the provenance of everything vendored are written down in
+[`docs/devlog.md`](docs/devlog.md).
+
 ```sh
 moon check --target native --deny-warn
 moon test

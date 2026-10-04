@@ -280,6 +280,8 @@ moon run cmd/main -- that.wasm --baseline base.wasm --max-size 5KB
 
 ## 开发
 
+关键决策、符号规则的已知边界、AI 工具所扮演的角色，以及所有内联资源的来源，都写在 [`docs/devlog.md`](docs/devlog.md) 里。
+
 ```sh
 moon check --target native --deny-warn
 moon test
