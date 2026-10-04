@@ -16,3 +16,7 @@ examples/report.png
 
 # Local ecosystem-scan output, never published.
 .ecoscan/
+
+# The library-consumer probe: part of the module so `moon check` covers it, but
+# a program to run is not something to hand to whoever adds this package.
+_probe/
