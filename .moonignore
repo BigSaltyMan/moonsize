@@ -13,3 +13,6 @@ target/
 # back to for an offline page.
 examples/report.html
 examples/report.png
+
+# Local ecosystem-scan output, never published.
+.ecoscan/
