@@ -60,6 +60,37 @@ moonsize app.wasm --html report.html            # charts, opens in a browser
 moonsize app.wasm --call-graph graph.dot        # for Graphviz
 ```
 
+## Using the library
+
+The parsing, the analysis and every report are ordinary packages in this module,
+so a program can take the numbers instead of the text. `moon add
+BigSaltyMan/moonsize` and import it; `Options::default` is the way in, because
+`Options` is read-only and no other package may write one.
+
+```moonbit
+fn main {
+  let bytes : Bytes = read("app.wasm")
+  match @moonsize.parse_module(bytes) {
+    Ok(parsed) =>
+      match @moonsize.analyze(bytes, parsed) {
+        Ok(analysis) => {
+          let options = @moonsize.Options::default("app.wasm")
+          // What the five heaviest functions cost, as text or as numbers:
+          // `analysis.stats` and `analysis.retained` are there to be read.
+          println(@moonsize.render_top_functions(analysis.stats, analysis.data.length(), 5))
+          println(@moonsize.render_html(analysis, options.path))
+        }
+        Err(error) => println(@moonsize.describe_error(error))
+      }
+    Err(error) => println(@moonsize.describe_error(error))
+  }
+}
+```
+
+The library does no I/O, so reading the file and choosing an exit code stay with
+the caller. `supported_targets = "+native"` applies to a program that depends on
+this module too: build it with `--target native`.
+
 ## Analysis
 
 Everything below is built on one idea: a function's bytes only matter if

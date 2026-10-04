@@ -48,6 +48,32 @@ moonsize app.wasm --html report.html            # 图表，浏览器打开
 moonsize app.wasm --call-graph graph.dot        # 给 Graphviz
 ```
 
+## 作为库使用
+
+解析、分析和每一份报告都是这个模块里的普通包，所以程序可以直接取数字而不是取文本。`moon add BigSaltyMan/moonsize` 之后导入即可；入口是 `Options::default`，因为 `Options` 是只读类型，别的包无法用字面量构造它。
+
+```moonbit
+fn main {
+  let bytes : Bytes = read("app.wasm")
+  match @moonsize.parse_module(bytes) {
+    Ok(parsed) =>
+      match @moonsize.analyze(bytes, parsed) {
+        Ok(analysis) => {
+          let options = @moonsize.Options::default("app.wasm")
+          // 最重的 5 个函数：要文本就用 render_*，要数字就读
+          // `analysis.stats` 与 `analysis.retained`。
+          println(@moonsize.render_top_functions(analysis.stats, analysis.data.length(), 5))
+          println(@moonsize.render_html(analysis, options.path))
+        }
+        Err(error) => println(@moonsize.describe_error(error))
+      }
+    Err(error) => println(@moonsize.describe_error(error))
+  }
+}
+```
+
+库不做任何 I/O，读文件和决定退出码都留给调用方。`supported_targets = "+native"` 同样约束依赖它的程序：用 `--target native` 构建。
+
 ## 分析原理
 
 下面所有内容都建立在一个判断上：一个函数的字节，只有在有东西能调用它时才有意义。

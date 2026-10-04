@@ -32,6 +32,24 @@ pub struct Options {
 pub const DEFAULT_TOP : Int = 10
 
 ///|
+/// The defaults `parse_options` starts from, with one flat report for the module
+/// at `path`. For callers that link this module as a library instead of running
+/// the CLI: every flag the command line can set is left at its absent value.
+pub fn Options::default(path : String) -> Options {
+  {
+    path,
+    top: DEFAULT_TOP,
+    retained: false,
+    dead_code: false,
+    call_graph: None,
+    html: None,
+    max_size: None,
+    baseline: None,
+    compress: false,
+  }
+}
+
+///|
 /// A guard that keeps the decimal scan from overflowing on long input; no real
 /// module has a million functions, let alone this many.
 const MAX_TOP : Int = 1000000

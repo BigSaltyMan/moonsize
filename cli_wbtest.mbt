@@ -387,3 +387,40 @@ test "--max-size and --baseline can be used together" {
     Err(message) => fail(message)
   }
 }
+
+///|
+/// A library caller builds its options here, because `Options` is read-only:
+/// nothing outside this package can write one with a record literal. The values
+/// have to agree with what an absent flag means on the command line, or the two
+/// entry points would drift apart.
+test "Options::default matches an absent flag" {
+  let options = Options::default("app.wasm")
+  // Compared with `assert_eq` rather than `inspect`, because inspecting an
+  // `Options` would need it to implement `Show`, and the core library has
+  // deprecated that in favour of `Debug`.
+  assert_eq(options.path, "app.wasm")
+  assert_eq(options.top, 10)
+  assert_eq(options.retained, false)
+  assert_eq(options.dead_code, false)
+  assert_eq(options.call_graph, None)
+  assert_eq(options.html, None)
+  assert_eq(options.max_size, None)
+  assert_eq(options.baseline, None)
+  assert_eq(options.compress, false)
+  // The same starting point the parser uses, so `moonsize app.wasm` and
+  // `Options::default("app.wasm")` cannot disagree.
+  match parse_options(["moonsize", "app.wasm"]) {
+    Ok(parsed) => {
+      assert_eq(parsed.path, options.path)
+      assert_eq(parsed.top, options.top)
+      assert_eq(parsed.retained, options.retained)
+      assert_eq(parsed.dead_code, options.dead_code)
+      assert_eq(parsed.call_graph, options.call_graph)
+      assert_eq(parsed.html, options.html)
+      assert_eq(parsed.max_size, options.max_size)
+      assert_eq(parsed.baseline, options.baseline)
+      assert_eq(parsed.compress, options.compress)
+    }
+    Err(message) => fail(message)
+  }
+}
