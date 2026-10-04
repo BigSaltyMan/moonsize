@@ -1,7 +1,7 @@
 // Moonsize — a WebAssembly binary size analyzer for MoonBit.
 name = "BigSaltyMan/moonsize"
 
-version = "0.2.1"
+version = "0.3.0"
 
 import {
   "moonbitlang/x@0.5.5",
