@@ -25,6 +25,9 @@ pub struct Options {
   baseline : String?
   /// Print what the file and each section cost once gzip-compressed.
   compress : Bool
+  /// Refuse to report at all when the call graph is incomplete, rather than
+  /// printing the numbers with a warning above them.
+  strict : Bool
 }
 
 ///|
@@ -46,6 +49,7 @@ pub fn Options::default(path : String) -> Options {
     max_size: None,
     baseline: None,
     compress: false,
+    strict: false,
   }
 }
 
@@ -205,7 +209,7 @@ pub fn parse_size(text : String) -> Int? {
 ///
 /// The grammar is `moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
 /// [--call-graph <path>] [--html <path>] [--max-size <size>] [--baseline
-/// <path.wasm>] [--compress]`: exactly one positional path, and a repeat of a flag keeps the
+/// <path.wasm>] [--compress] [--strict]`: exactly one positional path, and a repeat of a flag keeps the
 /// last value. Anything else is reported as an error so a typo never silently
 /// analyses the wrong thing.
 ///
@@ -222,6 +226,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut max_size : Int? = None
   let mut baseline : String? = None
   let mut compress = false
+  let mut strict = false
   let mut i = 1
   while i < args.length() {
     let arg = args[i]
@@ -276,6 +281,9 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     } else if arg == "--compress" {
       compress = true
       i = i + 1
+    } else if arg == "--strict" {
+      strict = true
+      i = i + 1
     } else if arg == "--baseline" {
       if i + 1 >= args.length() {
         return Err("moonsize: --baseline needs a path\n\n" + usage())
@@ -327,5 +335,6 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     max_size,
     baseline,
     compress,
+    strict,
   })
 }

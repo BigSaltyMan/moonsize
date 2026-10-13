@@ -28,7 +28,7 @@ it builds with `--target native` as well.
 
 ```
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
-                 [--compress] [--call-graph <path>] [--html <path>]
+                 [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>]
 
 Report the section table of a WebAssembly binary, rank its heaviest
@@ -39,6 +39,8 @@ find what can be deleted.
   --retained           what deleting each function would free
   --dead-code          functions no root can reach
   --compress           what the file and each section cost gzip-compressed
+  --strict             refuse to report when the call graph is incomplete,
+                       instead of reporting it with a warning
   --call-graph <path>  write the call graph as .dot or .json
   --html <path>        write the charts as a self-contained HTML report
   --max-size <size>    fail with exit code 3 above this size, where size is
@@ -143,9 +145,24 @@ opcodes its `wasm-gc` backend uses. Each body contributes:
 - `ref.func x` — a reference, which counts as reachable because the function may
   run later as a closure;
 - `call_indirect` — a *conservative* edge to every function any element segment
-  places in that table. The table's contents are not known statically, so the
-  candidates are all of them; a missing edge would mean a missing function and a
-  function wrongly reported dead, which is the one mistake worth avoiding here.
+  places in that table. The table's contents are not known statically, so a
+  missing edge would mean a missing function and a function wrongly reported
+  dead, which is the one mistake worth avoiding here.
+
+There is one hole the decoder cannot close. A module may fill a table at run time
+— `table.set`, `table.init`, or the host handing it functions — and a table with
+**no element segment at all** then says nothing about who sits in it. Those
+`call_indirect` sites contribute no edges, so reachability and the dominator tree
+are lower bounds rather than answers. The report says so above everything else:
+
+```
+WARNING: 1 call_indirect site has no resolvable target (table filled at runtime).
+Dead-code and retained-size results may be inaccurate; treat them as lower bounds.
+```
+
+`--dead-code` and `--retained` repeat it under their titles, and `--strict` turns
+the warning into a refusal — no report, exit code 3 — for a job that has no way to
+judge a warning itself.
 
 A function is a **root** if the outside world can reach it: it is exported, it is
 the start function, or it sits in a table. Everything reachable from those roots

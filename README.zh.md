@@ -23,13 +23,14 @@ moon build --release
 
 ```
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
-                 [--compress] [--call-graph <path>] [--html <path>]
+                 [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>]
 
   --top <n>            排名显示多少个函数（默认 10）
   --retained           删除每个函数能连带释放多少
   --dead-code          从根不可达的函数
   --compress           文件和每个段 gzip 压缩后要花多少字节
+  --strict             调用图不完整时拒绝输出报告，而不是带着警告输出
   --call-graph <path>  把调用图写成 .dot 或 .json
   --html <path>        把图表写成自包含的 HTML 报告
   --max-size <size>    超过这个大小就以退出码 3 失败，size 可以是字节数或
@@ -98,7 +99,16 @@ fn main {
 
 - `call x` —— 指向 `x` 的精确边；
 - `ref.func x` —— 一次引用，算作可达，因为该函数之后可能作为闭包被运行；
-- `call_indirect` —— 指向该 table 中**所有**可能函数的保守边。table 的内容静态不可知，所以候选集取全集：漏一条边就等于漏一个函数、把一个还在用的函数报成死代码，这是这里唯一值得避免的错误。
+- `call_indirect` —— 指向 element 段放进该 table 的**每个**函数的保守边。table 的内容静态不可知，而漏一条边就等于漏一个函数、把一个还在用的函数报成死代码，这是这里唯一值得避免的错误。
+
+有一个解码器补不上的洞。模块可以在运行时填充 table——`table.set`、`table.init`，或者由宿主塞进去——而**完全没有 element 段**的 table 就等于什么也没说。这些 `call_indirect` 调用点贡献不了任何边，于是可达性和支配树给出的是下界而不是答案。报告会在最前面说明这一点：
+
+```
+WARNING: 1 call_indirect site has no resolvable target (table filled at runtime).
+Dead-code and retained-size results may be inaccurate; treat them as lower bounds.
+```
+
+`--dead-code` 和 `--retained` 会在各自标题下重复这句；`--strict` 把警告变成拒绝——不输出报告、退出码 3——留给那些没法自己判断警告的 CI 任务。
 
 如果外部世界能到达一个函数，它就是**根**：它被导出、它是 start 函数，或者它位于某个 table 中。从这些根可达的一切都是活的，其余都是死的。
 

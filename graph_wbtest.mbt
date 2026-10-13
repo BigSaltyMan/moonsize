@@ -25,7 +25,7 @@ fn graph_of_kind(pairs : Array[(Int, Int)], kind : EdgeKind) -> CallGraph {
   for pair in pairs {
     add_edge(calls, called_by, edges, pair.0, pair.1, kind, 0)
   }
-  { calls, called_by, indirect_sites: [], edges, }
+  { calls, called_by, indirect_sites: [], unresolved_indirect: [], edges, }
 }
 
 ///|
@@ -420,4 +420,144 @@ test "retained size is reported as a table of two numbers" {
       #|  IND marks a function a call_indirect could reach.
     ),
   )
+}
+
+///|
+/// A 54-byte module whose only call is a `call_indirect` through a table that no
+/// element segment fills: the table is declared so the call is legal, but its
+/// contents are only knowable at run time.
+///
+/// `func 0` is exported, so it is the root; `func 1` can be reached only through
+/// the table.
+fn dynamic_table_module() -> Bytes {
+  b"\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x60" +
+  b"\x00\x01\x7f\x60\x01\x7f\x01\x7f\x03\x03\x02\x01" +
+  b"\x00\x04\x04\x01\x70\x00\x02\x07\x05\x01\x01\x67" +
+  b"\x00\x00\x0a\x0e\x02\x07\x00\x41\x00\x11\x00\x00" +
+  b"\x0b\x04\x00\x20\x00\x0b"
+}
+
+///|
+/// The same module with its element segment written, so the table's contents are
+/// known: 64 bytes. The pair is the regression — one graph is complete, the
+/// other is not, and only the difference between them is under test.
+fn static_table_module() -> Bytes {
+  b"\x00\x61\x73\x6d\x01\x00\x00\x00\x01\x0a\x02\x60" +
+  b"\x00\x01\x7f\x60\x01\x7f\x01\x7f\x03\x03\x02\x01" +
+  b"\x00\x04\x04\x01\x70\x00\x02\x07\x05\x01\x01\x67" +
+  b"\x00\x00\x09\x08\x01\x00\x41\x00\x0b\x02\x00\x01" +
+  b"\x0a\x0e\x02\x07\x00\x41\x00\x11\x00\x00\x0b\x04" +
+  b"\x00\x20\x00\x0b"
+}
+
+///|
+/// Parse and analyse a fixture, or fail the test that asked for it.
+fn analysis_of_module(data : Bytes) -> Analysis raise {
+  let parsed = match parse_module(data) {
+    Ok(parsed) => parsed
+    Err(error) => fail(describe_error(error))
+  }
+  match analyze(data, parsed) {
+    Ok(analysis) => analysis
+    Err(error) => fail(describe_error(error))
+  }
+}
+
+///|
+test "a call_indirect with no candidates is recorded, not dropped" {
+  let analysis = analysis_of_module(dynamic_table_module())
+  // The site is kept and counted even though it contributed no edge: that record
+  // is the difference between a warning and a wrong answer.
+  inspect(analysis.graph.indirect_sites.length(), content="1")
+  inspect(analysis.graph.unresolved_indirect.length(), content="1")
+  inspect(analysis.unresolved_count, content="1")
+  inspect(analysis.graph_complete, content="false")
+  inspect(is_graph_complete(analysis.graph), content="false")
+  // And this is what it costs: the function the call could reach is invisible to
+  // reachability, which is exactly how it used to be reported as dead code.
+  assert_true(!analysis.reachable.contains(1))
+}
+
+///|
+test "an incomplete graph says so, in the report and in each section it touches" {
+  let analysis = analysis_of_module(dynamic_table_module())
+  let warning = render_graph_warning(analysis.unresolved_count)
+  assert_true(
+    warning.contains(
+      "WARNING: 1 call_indirect site has no resolvable target (table filled at runtime).",
+    ),
+  )
+  assert_true(
+    warning.contains(
+      "Dead-code and retained-size results may be inaccurate; treat them as lower bounds.",
+    ),
+  )
+  // The two sections whose numbers are lower bounds repeat it under their titles.
+  let dead = render_dead_code(
+    analysis.stats,
+    analysis.reachable,
+    54,
+    5,
+    unresolved=analysis.unresolved_count,
+  )
+  assert_true(
+    dead.contains("  (graph incomplete: 1 unresolved indirect call)\n"),
+  )
+  let retained = render_retained(
+    analysis.stats,
+    analysis.retained,
+    analysis.indirect,
+    54,
+    5,
+    unresolved=analysis.unresolved_count,
+  )
+  assert_true(
+    retained.contains("  (graph incomplete: 1 unresolved indirect call)\n"),
+  )
+}
+
+///|
+test "a complete graph warns about nothing" {
+  let analysis = analysis_of_module(static_table_module())
+  inspect(analysis.graph.indirect_sites.length(), content="1")
+  inspect(analysis.graph.unresolved_indirect.length(), content="0")
+  inspect(analysis.unresolved_count, content="0")
+  inspect(analysis.graph_complete, content="true")
+  inspect(render_graph_warning(0), content="")
+  // Both functions are reachable through the table once its contents are known.
+  assert_true(analysis.reachable.contains(1))
+  // Nothing to declare, so the sections read exactly as they always did.
+  assert_true(
+    !render_dead_code(analysis.stats, analysis.reachable, 64, 5).contains(
+      "graph incomplete",
+    ),
+  )
+  assert_true(
+    !render_retained(
+      analysis.stats,
+      analysis.retained,
+      analysis.indirect,
+      64,
+      5,
+    ).contains("graph incomplete"),
+  )
+}
+
+///|
+test "--strict refuses an incomplete graph, and only then" {
+  let strict = match parse_options(["moonsize", "app.wasm", "--strict"]) {
+    Ok(options) => options
+    Err(message) => fail(message)
+  }
+  let lax = match parse_options(["moonsize", "app.wasm"]) {
+    Ok(options) => options
+    Err(message) => fail(message)
+  }
+  inspect(strict.strict, content="true")
+  inspect(lax.strict, content="false")
+  // Incomplete + strict is the only combination that fails.
+  inspect(strict_exit_code(strict, false), content="3")
+  inspect(strict_exit_code(strict, true), content="0")
+  inspect(strict_exit_code(lax, false), content="0")
+  inspect(strict_exit_code(lax, true), content="0")
 }

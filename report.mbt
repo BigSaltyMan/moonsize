@@ -443,7 +443,7 @@ pub fn render_module_summary(
 /// make sense of.
 pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
-  "                 [--compress] [--call-graph <path>] [--html <path>]\n" +
+  "                 [--compress] [--strict] [--call-graph <path>] [--html <path>]\n" +
   "                 [--max-size <size>] [--baseline <path.wasm>]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
@@ -452,6 +452,8 @@ pub fn usage() -> String {
   "  --retained           what deleting each function would free\n" +
   "  --dead-code          functions no root can reach\n" +
   "  --compress           what the file and each section cost gzip-compressed\n" +
+  "  --strict             refuse to report when the call graph is incomplete,\n" +
+  "                       instead of reporting it with a warning\n" +
   "  --call-graph <path>  write the call graph as .dot or .json\n" +
   "  --html <path>        write the charts as a self-contained HTML report\n" +
   "  --max-size <size>    fail with exit code 3 above this size, where size is\n" +
@@ -482,6 +484,41 @@ fn name_of(names : Map[Int, String], index : Int) -> String {
 }
 
 ///|
+/// The line a section prints under its title when the call graph has holes, or
+/// `""` when it does not, so a complete graph's report reads exactly as before.
+fn incomplete_note(unresolved : Int) -> String {
+  if unresolved == 0 {
+    return ""
+  }
+  "  (graph incomplete: " +
+  unresolved.to_string() +
+  " unresolved indirect " +
+  (if unresolved == 1 { "call" } else { "calls" }) +
+  ")\n"
+}
+
+///|
+/// The warning a report carries when the call graph could not follow every call,
+/// or `""` when there is nothing to warn about.
+///
+/// It belongs above the whole report rather than beside the sections it
+/// undermines: those sections are spread through the output, and a reader who
+/// skips one of them still has to see this. Saying it is the point — a tool that
+/// silently reports a lower bound as a fact is how a function in use gets
+/// deleted.
+pub fn render_graph_warning(unresolved : Int) -> String {
+  if unresolved == 0 {
+    return ""
+  }
+  "WARNING: " +
+  unresolved.to_string() +
+  " call_indirect " +
+  (if unresolved == 1 { "site has" } else { "sites have" }) +
+  " no resolvable target (table filled at runtime).\n" +
+  "Dead-code and retained-size results may be inaccurate; treat them as lower bounds."
+}
+
+///|
 /// The retained-size table: what deleting each function would free.
 ///
 /// `SIZE` is the function on its own and `RETAINED` is that plus every function
@@ -495,6 +532,7 @@ pub fn render_retained(
   indirect : Set[Int],
   file_size : Int,
   top : Int,
+  unresolved? : Int = 0,
 ) -> String {
   let names = names_by_index(stats)
   let ranked = retained.copy()
@@ -521,6 +559,7 @@ pub fn render_retained(
     index_width = number_width(entry.index, index_width)
   }
   let mut out = "Retained size\n"
+  out = out + incomplete_note(unresolved)
   if shown == 0 {
     return out + "\n  no reachable functions to rank"
   }
@@ -579,6 +618,7 @@ pub fn render_dead_code(
   reachable : Set[Int],
   file_size : Int,
   top : Int,
+  unresolved? : Int = 0,
 ) -> String {
   let dead : Array[FunctionStat] = []
   let mut bytes = 0
@@ -596,6 +636,7 @@ pub fn render_dead_code(
     }
   })
   let mut out = "Dead code\n"
+  out = out + incomplete_note(unresolved)
   if stats.length() == 0 {
     return out + "\n  no functions in this binary"
   }

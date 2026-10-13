@@ -80,6 +80,11 @@ fn print_report(
   analysis : @lib.Analysis,
   options : @lib.Options,
 ) -> Unit {
+  let warning = @lib.render_graph_warning(analysis.unresolved_count)
+  if warning.length() > 0 {
+    println(warning)
+    println("")
+  }
   println(@lib.format_report(parsed, options.path))
   if options.compress {
     println("")
@@ -106,6 +111,7 @@ fn print_report(
         analysis.indirect,
         parsed.file_size,
         options.top,
+        unresolved=analysis.unresolved_count,
       ),
     )
   }
@@ -117,6 +123,7 @@ fn print_report(
         analysis.reachable,
         parsed.file_size,
         options.top,
+        unresolved=analysis.unresolved_count,
       ),
     )
   }
@@ -158,6 +165,19 @@ fn main {
       @sys.exit(@lib.EXIT_INPUT)
       return
     }
+  }
+  // `--strict` refuses before any output: a report is what a caller acts on, and
+  // half a report with a warning on it is exactly the failure mode this flag
+  // exists to rule out for a job that cannot judge the warning itself.
+  if @lib.strict_exit_code(options, analysis.graph_complete) != @lib.EXIT_OK {
+    println(@lib.render_graph_warning(analysis.unresolved_count))
+    println("")
+    println(
+      "moonsize: --strict: refusing to report an incomplete call graph for " +
+      options.path,
+    )
+    @sys.exit(@lib.EXIT_OVER_SIZE)
+    return
   }
   match options.call_graph {
     Some(target) =>

@@ -55,8 +55,28 @@ pub struct CallGraph {
   called_by : Map[Int, Set[Int]]
   /// Every `call_indirect`, with the candidates its table allows.
   indirect_sites : Array[IndirectSite]
+  /// The subset of those sites whose table gave no candidates at all.
+  ///
+  /// This is the one hole the decoder cannot close. A module may fill a table at
+  /// run time — `table.set`, `table.init`, or the host handing it functions —
+  /// and a table with no element segment tells this tool nothing about who sits
+  /// in it. Dropping the site would mean dropping every edge it stands for, and
+  /// a missing edge is a function wrongly called dead, so the sites are kept
+  /// here and every report says out loud what they cost.
+  unresolved_indirect : Array[IndirectSite]
   /// Every edge with its kind and site, for export.
   edges : Array[CallEdge]
+}
+
+///|
+/// Whether the graph accounts for every call the module can make.
+///
+/// When it does not, reachability and the dominator tree are lower bounds rather
+/// than answers: some function this graph never reaches may in fact run. The
+/// callers that care — `--dead-code`, `--retained`, `--strict` — say so rather
+/// than presenting a bound as a fact.
+pub fn is_graph_complete(graph : CallGraph) -> Bool {
+  graph.unresolved_indirect.length() == 0
 }
 
 ///|
@@ -89,6 +109,7 @@ pub fn build(
   let called_by : Map[Int, Set[Int]] = Map([])
   let edges : Array[CallEdge] = []
   let sites : Array[IndirectSite] = []
+  let unresolved : Array[IndirectSite] = []
   for body in bodies {
     let start = body.offset + body.total_size - body.body_size
     let instructions = match decode_instructions(data, start, body.body_size) {
@@ -121,13 +142,20 @@ pub fn build(
           let type_index = instruction.operands[0]
           let table_index = instruction.operands[1]
           let candidates = table_functions(elements, table_index)
-          sites.push({
+          let site : IndirectSite = {
             caller: body.index,
             table_index,
             type_index,
             offset: instruction.offset,
             candidates,
-          })
+          }
+          sites.push(site)
+          // A site with nothing to point at still gets recorded: the report has
+          // to be able to say how many of them there are, because every one is a
+          // call this graph cannot follow.
+          if candidates.length() == 0 {
+            unresolved.push(site)
+          }
           for candidate in candidates {
             add_edge(
               calls,
@@ -144,7 +172,13 @@ pub fn build(
       }
     }
   }
-  Ok({ calls, called_by, indirect_sites: sites, edges, })
+  Ok({
+    calls,
+    called_by,
+    indirect_sites: sites,
+    unresolved_indirect: unresolved,
+    edges,
+  })
 }
 
 ///|

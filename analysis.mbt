@@ -24,6 +24,12 @@ pub struct Analysis {
   retained : Array[RetainedSize]
   /// Functions a `call_indirect` could reach.
   indirect : Set[Int]
+  /// Whether the graph followed every call the module can make. `false` means a
+  /// table is filled at run time, so `reachable` and `retained` are lower bounds.
+  graph_complete : Bool
+  /// How many `call_indirect` sites had no resolvable target, for the reports to
+  /// quote.
+  unresolved_count : Int
 }
 
 ///|
@@ -97,5 +103,7 @@ pub fn analyze(
     reachable,
     retained: retained_sizes(graph, sizes, roots),
     indirect: indirect_targets(graph),
+    graph_complete: is_graph_complete(graph),
+    unresolved_count: graph.unresolved_indirect.length(),
   })
 }

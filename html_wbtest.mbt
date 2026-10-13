@@ -28,6 +28,8 @@ fn analysis_of_stats(stats : Array[FunctionStat]) -> Analysis raise {
     reachable,
     retained,
     indirect: Set([]),
+    graph_complete: true,
+    unresolved_count: 0,
   }
 }
 

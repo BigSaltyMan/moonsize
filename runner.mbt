@@ -19,7 +19,10 @@ pub const EXIT_INPUT : Int = 1
 pub const EXIT_USAGE : Int = 2
 
 ///|
-/// The module is over the size budget the invocation set.
+/// The run produced something the caller should not accept: the module is over
+/// the size budget the invocation set, or `--strict` found the call graph
+/// incomplete. Both mean "this run's answer is refused", which is why they share
+/// a code — a job branches on it either way.
 pub const EXIT_OVER_SIZE : Int = 3
 
 ///|
@@ -47,6 +50,21 @@ pub fn size_exit_code(
           }
         None => if current_size > budget { EXIT_OVER_SIZE } else { EXIT_OK }
       }
+  }
+}
+
+///|
+/// The exit code `--strict` earns, or `EXIT_OK` when the graph is complete or
+/// the flag is absent.
+///
+/// It lives here rather than in the entry point so the rule can be tested
+/// without a process: a job that passes `--strict` is saying it cannot judge a
+/// warning itself, and the run has to fail rather than print one.
+pub fn strict_exit_code(options : Options, graph_complete : Bool) -> Int {
+  if options.strict && !graph_complete {
+    EXIT_OVER_SIZE
+  } else {
+    EXIT_OK
   }
 }
 
