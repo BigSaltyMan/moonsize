@@ -413,7 +413,10 @@ test "the page reports the compressed size the tool actually computes" {
   // The card's number has to be the compressor's, not a second opinion: the
   // test computes it the same way and looks for it in the JSON and in the card.
   let analysis = analysis_with_name("demo::fib")
-  let gzip_size = compressed_size(analysis.data)
+  let gzip_size = match compressed_size(analysis.data) {
+    Ok(size) => size
+    Err(message) => fail(message)
+  }
   let html = render_html(analysis, "app.wasm")
   assert_true(html.contains("\"gzipSize\":" + gzip_size.to_string()))
   assert_true(html.contains("<span class=\"label\">Gzip size</span>"))
@@ -444,26 +447,27 @@ test "every section and function carries its compressed size" {
   let json = report_data(analysis, "named.wasm").stringify()
   let html = render_html(analysis, "named.wasm")
   // The headline is the compressor's number for the whole file.
-  assert_true(
-    json.contains("\"gzipSize\":" + compressed_size(data).to_string()),
-  )
+  let whole = match compressed_size(data) {
+    Ok(size) => size.to_string()
+    Err(message) => fail(message)
+  }
+  assert_true(json.contains("\"gzipSize\":" + whole))
   // A section's number is the compressor's number for that section's own bytes,
   // not a share of the total dressed up as one.
   let section = parsed.sections[0]
-  assert_true(
-    json.contains(
-      "\"gzip\":" +
-      compressed_span(data, section.offset, section.total_size).to_string(),
-    ),
-  )
+  let section_gzip = match
+    compressed_span(data, section.offset, section.total_size) {
+    Ok(size) => size.to_string()
+    Err(message) => fail(message)
+  }
+  assert_true(json.contains("\"gzip\":" + section_gzip))
   // And a function's, off the offsets the decoder recorded.
   let stat = analysis.stats[0]
-  assert_true(
-    json.contains(
-      "\"gzip\":" +
-      compressed_span(data, stat.offset, stat.total_size).to_string(),
-    ),
-  )
+  let stat_gzip = match compressed_span(data, stat.offset, stat.total_size) {
+    Ok(size) => size.to_string()
+    Err(message) => fail(message)
+  }
+  assert_true(json.contains("\"gzip\":" + stat_gzip))
   assert_true(html.contains("\"gzip\":"))
 }
 
@@ -486,4 +490,22 @@ test "non-ASCII text survives escaping" {
   assert_true(html.contains("<title>moonsize — /tmp/示例.wasm</title>"))
   assert_true(html.contains("<p class=\"file\">/tmp/示例.wasm</p>"))
   assert_false(html.contains("\u{fffd}"))
+}
+
+///|
+test "every headline card is one well-formed element" {
+  let html = render_html(analysis_with_name("demo::fib"), "app.wasm")
+  // A mistyped string concatenation once emitted `<div class="card">card">`,
+  // which every substring assertion above is happy to accept. This one looks at
+  // the tag itself.
+  assert_true(!html.contains("card\">card"))
+  for label in ["File size", "Code section", "Gzip size", "Dead code"] {
+    assert_true(
+      html.contains(
+        "      <div class=\"card\">\n        <span class=\"label\">" +
+        label +
+        "</span>",
+      ),
+    )
+  }
 }

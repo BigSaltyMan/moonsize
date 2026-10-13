@@ -720,12 +720,15 @@ fn ratio_text(raw : Int, gzip : Int) -> String {
 /// The totals and the per-section numbers come from compressing each piece on its
 /// own, so the sections do not add up to the total. Two effects are at work:
 /// gzip finds redundancy between sections that compressing one in isolation
-/// cannot see, and every stream pays its own header and trailer — about 20 bytes
-/// — which a section smaller than that shows up as a ratio below 1. The shares
+/// cannot see, and every stream pays its own header and trailer - about 20 bytes
+/// - which a section smaller than that shows up as a ratio below 1. The shares
 /// barely move for the same reason: 20 bytes against a table of kilobytes.
+///
+/// A piece the compressor refuses is printed as a failure rather than as its raw
+/// size: the two are not the same number and must not look like one.
 pub fn render_compression(
   raw_size : Int,
-  gzip_size : Int,
+  gzip : Result[Int, String],
   sections : Array[SectionCompression],
 ) -> String {
   let mut label_width = "SECTION".length()
@@ -738,15 +741,36 @@ pub fn render_compression(
       label_width = section.label.length()
     }
     raw_width = number_width(section.raw, raw_width)
-    gzip_width = number_width(section.gzip, gzip_width)
-    let ratio = ratio_text(section.raw, section.gzip)
-    if ratio.length() > ratio_width {
-      ratio_width = ratio.length()
+    match section.gzip {
+      Ok(size) => {
+        gzip_width = number_width(size, gzip_width)
+        let ratio = ratio_text(section.raw, size)
+        if ratio.length() > ratio_width {
+          ratio_width = ratio.length()
+        }
+        ratios.push(ratio)
+      }
+      Err(_) => {
+        // The column has to fit the word as well as the numbers under it.
+        gzip_width = number_width("failed".length(), gzip_width)
+        ratios.push("-")
+      }
     }
-    ratios.push(ratio)
   }
   let share_width = "SHARE(GZIP)".length()
-  let total_width = number_width(gzip_size, number_width(raw_size, 1))
+  let mut total_width = number_width(raw_size, 1)
+  let total_text = match gzip {
+    Ok(size) => {
+      total_width = number_width(size, total_width)
+      pad_left(size.to_string(), total_width) +
+      " B  (" +
+      share_text(size, raw_size) +
+      " of raw, ratio " +
+      ratio_text(raw_size, size) +
+      ")"
+    }
+    Err(message) => "failed: " + message
+  }
   let mut out = "COMPRESSED SIZE\n  " +
     pad_right("raw", 4) +
     "  " +
@@ -754,12 +778,8 @@ pub fn render_compression(
     " B\n  " +
     pad_right("gzip", 4) +
     "  " +
-    pad_left(gzip_size.to_string(), total_width) +
-    " B  (" +
-    share_text(gzip_size, raw_size) +
-    " of raw, ratio " +
-    ratio_text(raw_size, gzip_size) +
-    ")\n\n  BY SECTION\n"
+    total_text +
+    "\n\n  BY SECTION\n"
   if sections.length() == 0 {
     return out + "\n  no sections"
   }
@@ -777,17 +797,35 @@ pub fn render_compression(
     "\n"
   let mut i = 0
   for section in sections {
+    let (gzip_cell, ratio_cell, share_cell) = match section.gzip {
+      Ok(size) =>
+        (
+          pad_left(size.to_string(), gzip_width),
+          pad_left(ratios[i], ratio_width),
+          match gzip {
+            Ok(total) => pad_left(share_text(size, total), share_width)
+            // Without a total there is nothing to be a share of.
+            Err(_) => pad_left("-", share_width)
+          },
+        )
+      Err(_) =>
+        (
+          pad_left("failed", gzip_width),
+          pad_left("-", ratio_width),
+          pad_left("-", share_width),
+        )
+    }
     out = out +
       "  " +
       pad_right(section.label, label_width) +
       "  " +
       pad_left(section.raw.to_string(), raw_width) +
       "  " +
-      pad_left(section.gzip.to_string(), gzip_width) +
+      gzip_cell +
       "  " +
-      pad_left(ratios[i], ratio_width) +
+      ratio_cell +
       "  " +
-      pad_left(share_text(section.gzip, gzip_size), share_width) +
+      share_cell +
       "\n"
     i = i + 1
   }

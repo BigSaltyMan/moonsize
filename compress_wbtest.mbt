@@ -28,10 +28,11 @@ test "an empty input still produces a well-formed stream" {
   // A gzip stream has a header and a trailer even with nothing in it.
   inspect(compressed.length() > 0, content="true")
   inspect(compressed.length() < 40, content="true")
-  inspect(
-    compressed_size(Bytes::new(0)),
-    content=compressed.length().to_string(),
-  )
+  // And the size helper agrees with the stream it just produced.
+  match compressed_size(Bytes::new(0)) {
+    Ok(size) => inspect(size, content=compressed.length().to_string())
+    Err(message) => fail(message)
+  }
 }
 
 ///|
@@ -50,7 +51,10 @@ test "a gzip stream decompresses back to what went in" {
 ///|
 test "incompressible data does not get smaller" {
   let data = noise(1024)
-  let size = compressed_size(data)
+  let size = match compressed_size(data) {
+    Ok(size) => size
+    Err(message) => fail(message)
+  }
   // A stream that cannot be compressed still has to be stored, plus its
   // container, so this is the case where the "compressed" size is the larger one.
   inspect(size > data.length(), content="true")
@@ -61,7 +65,10 @@ test "incompressible data does not get smaller" {
 test "repetitive data compresses by a wide margin" {
   let data = @utf8.encode("moonbit ".repeat(1000))
   assert_eq(data.length(), 8000)
-  let size = compressed_size(data)
+  let size = match compressed_size(data) {
+    Ok(size) => size
+    Err(message) => fail(message)
+  }
   // The exact number depends on the deflate implementation, so the assertion is
   // the order of magnitude: this is what a name section full of symbols does.
   inspect(size < data.length() / 20, content="true")
@@ -70,12 +77,12 @@ test "repetitive data compresses by a wide margin" {
 ///|
 test "the compression report renders totals and the per-section table" {
   let sections : Array[SectionCompression] = [
-    { label: "code", raw: 5166, gzip: 1543, },
-    { label: "custom (name)", raw: 4975, gzip: 964, },
-    { label: "data", raw: 252, gzip: 210, },
+    { label: "code", raw: 5166, gzip: Ok(1543), },
+    { label: "custom (name)", raw: 4975, gzip: Ok(964), },
+    { label: "data", raw: 252, gzip: Ok(210), },
   ]
   inspect(
-    render_compression(10675, 2891, sections),
+    render_compression(10675, Ok(2891), sections),
     content=(
       #|COMPRESSED SIZE
       #|  raw   10675 B
@@ -97,9 +104,9 @@ test "a section that grew when compressed is not hidden" {
   // A ratio below one is the honest answer for a section smaller than a gzip
   // container, so it is printed rather than clamped.
   let sections : Array[SectionCompression] = [
-    { label: "datacount", raw: 3, gzip: 27, },
+    { label: "datacount", raw: 3, gzip: Ok(27), },
   ]
-  let text = render_compression(10675, 5207, sections)
+  let text = render_compression(10675, Ok(5207), sections)
   assert_true(text.contains("datacount"))
   assert_true(text.contains("0.11x"))
   assert_true(text.contains("0.5%"))
@@ -108,7 +115,7 @@ test "a section that grew when compressed is not hidden" {
 ///|
 test "the report copes with a module that has no sections" {
   let sections : Array[SectionCompression] = []
-  let text = render_compression(8, 27, sections)
+  let text = render_compression(8, Ok(27), sections)
   assert_true(text.contains("no sections"))
   assert_true(text.contains("ratio 0.29x"))
 }
@@ -117,9 +124,9 @@ test "the report copes with a module that has no sections" {
 test "compression ratios are padded to two decimals" {
   // 1000 / 333 is 3.003…, which has to read as 3.00x and not 3.3x.
   let sections : Array[SectionCompression] = [
-    { label: "x", raw: 1000, gzip: 333, },
+    { label: "x", raw: 1000, gzip: Ok(333), },
   ]
-  assert_true(render_compression(1000, 333, sections).contains("3.00x"))
+  assert_true(render_compression(1000, Ok(333), sections).contains("3.00x"))
 }
 
 ///|
@@ -144,4 +151,59 @@ test "--compress is off unless it is asked for" {
     }
     Err(message) => fail(message)
   }
+}
+
+///|
+test "a refused compression is reported, not passed off as the raw size" {
+  // The real compressor is unlikely to refuse a stream, so the failure is
+  // injected where it enters the report — which the `Result` in the signature
+  // exists to make possible. What is under test is that the report says so:
+  // printing 10675 where the compressed size belongs would read as a ratio of
+  // 1.00x, and that is a different claim from "nothing was measured".
+  let sections : Array[SectionCompression] = [
+    { label: "code", raw: 5166, gzip: Err("deflate refused the stream"), },
+    { label: "data", raw: 252, gzip: Ok(174), },
+  ]
+  let text = render_compression(
+    10675,
+    Err("deflate refused the stream"),
+    sections,
+  )
+  assert_true(text.contains("gzip  failed: deflate refused the stream"))
+  // The raw size never appears where the compressed size belongs, and neither
+  // does the ratio that would follow from it.
+  assert_true(!text.contains("10675 B  ("))
+  assert_true(!text.contains("ratio 1.00x"))
+  // The section that failed says so, and the one that did not still shows its
+  // own number — but no share anywhere, because with no total there is nothing
+  // for a share to be a share of.
+  assert_true(text.contains("failed"))
+  assert_true(text.contains("174"))
+  assert_true(!text.contains("%"))
+}
+
+///|
+test "a section that compressed stays readable when the total did not" {
+  let sections : Array[SectionCompression] = [
+    { label: "code", raw: 5166, gzip: Ok(2712), },
+  ]
+  let text = render_compression(10675, Err("boom"), sections)
+  // Its own size stands, because that one was measured...
+  assert_true(text.contains("2712"))
+  // ...but its share does not, because there is no total to be a share of.
+  assert_true(!text.contains("52.0%"))
+}
+
+///|
+test "the gzip card says N/A rather than a ratio of one" {
+  let (value, sub, title) = gzip_card_fields(10675, Err("deflate refused"))
+  inspect(value, content="N/A")
+  inspect(sub, content="compression failed")
+  // The reason travels with it, for the card's hover text.
+  inspect(title, content="deflate refused")
+  // And a successful card still reads exactly as it did.
+  let (ok_value, ok_sub, ok_title) = gzip_card_fields(10675, Ok(5207))
+  inspect(ok_value, content="5,207 B")
+  inspect(ok_sub, content="48.7% of raw · 2.05x")
+  inspect(ok_title, content="")
 }

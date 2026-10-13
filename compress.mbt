@@ -24,16 +24,18 @@ pub fn compress_gzip(data : Bytes) -> Result[Bytes, String] {
 }
 
 ///|
-/// The compressed size of `data` in bytes, or its raw size when it cannot be
-/// compressed at all.
+/// The compressed size of `data` in bytes, or why the compressor would not take
+/// it.
 ///
-/// Falling back rather than failing keeps a report renderable: one stream the
-/// compressor refuses should not take the run down, and claiming it shrank would
-/// be worse than saying it did not.
-pub fn compressed_size(data : Bytes) -> Int {
+/// The failure comes back as a failure rather than being swallowed into the raw
+/// size. Returning `data.length()` would render as a ratio of 1.00x, which reads
+/// as "this stream does not compress" when the truth is that nothing was measured
+/// at all — a report that cannot tell those apart is worse than one that admits
+/// it is missing a number.
+pub fn compressed_size(data : Bytes) -> Result[Int, String] {
   match compress_gzip(data) {
-    Ok(compressed) => compressed.length()
-    Err(_) => data.length()
+    Ok(compressed) => Ok(compressed.length())
+    Err(message) => Err(message)
   }
 }
 
@@ -42,7 +44,8 @@ pub fn compressed_size(data : Bytes) -> Int {
 pub struct SectionCompression {
   label : String
   raw : Int
-  gzip : Int
+  /// The section's compressed size, or why the compressor refused it.
+  gzip : Result[Int, String]
 }
 
 ///|
@@ -82,15 +85,28 @@ pub fn compress_sections(
 }
 
 ///|
-/// The compressed size of `data[offset : offset + length]`, or `length` when that
-/// range does not fit the file.
+/// The compressed size of `data[offset : offset + length]`, or why there is none.
 ///
 /// This is how a section or a function body is measured on its own: the caller
-/// has the offsets the decoder recorded, not a slice of its own.
-fn compressed_span(data : Bytes, offset : Int, length : Int) -> Int {
+/// has the offsets the decoder recorded, not a slice of its own. A range that
+/// does not fit the file is reported too — measuring it as its own length would
+/// be the same silent guess in a different place.
+fn compressed_span(
+  data : Bytes,
+  offset : Int,
+  length : Int,
+) -> Result[Int, String] {
   let end = offset + length
   if offset < 0 || offset > end || end > data.length() {
-    return length
+    return Err(
+      "range " +
+      offset.to_string() +
+      ".." +
+      end.to_string() +
+      " is outside a file of " +
+      data.length().to_string() +
+      " bytes",
+    )
   }
   compressed_size(data[offset:end].to_owned())
 }

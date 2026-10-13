@@ -251,6 +251,11 @@ and dominant for one of a handful of bytes, and is why the smallest sections
 above read as growing when compressed. The shares barely notice, because twenty
 bytes is nothing against a table of kilobytes.
 
+A piece the compressor refuses is reported as a failure, never as its raw size:
+`gzip failed: ...` in the text report, `N/A` with the reason on hover in the HTML
+card. Printing the raw size would read as a ratio of 1.00x, and that is a
+different claim from "nothing was measured".
+
 ### Judging what can be deleted
 
 1. Start with `--dead-code`. Every row there is free to remove; check that
