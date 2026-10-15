@@ -26,9 +26,7 @@ jobs:
         with:
           # The base branch has to be present to build the baseline from.
           fetch-depth: 0
-      - uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
-        with:
-          version: latest
+      - uses: ./.github/actions/setup-moonbit
       - name: Toolchain version
         run: moon version --all
 

@@ -507,18 +507,26 @@ from a broken build.
 
 This repository gates itself in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
 formatting, `moon check --target native --deny-warn`, `moon test`, and the
-checked-in example held to a budget.
+checked-in example held to a budget. The local setup action pins MoonBit
+`0.10.13+cbb11c36f` to match local formatting and tests, and runs `moon update`
+before dependency resolution. A toolchain upgrade should update local checks
+and CI together.
 
 ```yaml
-- uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
+- uses: ./.github/actions/setup-moonbit
 - name: The example stays inside its budget
   run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
 ```
 
-The same three lines gate any project that produces a `.wasm`:
+For another project that produces a `.wasm`, install the compatible toolchain
+with the official installer before applying its size budget:
 
 ```yaml
-- uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
+- name: Setup MoonBit
+  run: |
+    curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s '0.10.13+cbb11c36f'
+    echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+- run: moon update
 - run: moon build --target wasm --release
 - name: Size budget
   run: moonsize _build/wasm/release/build/app/app.wasm --max-size 250KB

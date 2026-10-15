@@ -12,10 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # The upstream action has no v1 tag; pin its main revision for reproducibility.
-      - uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
-        with:
-          version: latest
+      # Match the release used for the project's local checks and formatting.
+      - uses: ./.github/actions/setup-moonbit
       # The CLI scripts use V8 to validate Wasm GC, reference and tail-call fixtures.
       - uses: actions/setup-node@v4
         with:
@@ -48,9 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
-        with:
-          version: latest
+      - uses: ./.github/actions/setup-moonbit
       - name: Toolchain version
         run: moon version --all
       # The example is 10.4 KB, so this passes; a change that pushed it past

@@ -1,0 +1,19 @@
+name: Setup project MoonBit
+description: Install the tested MoonBit release and initialize the dependency registry.
+
+runs:
+  using: composite
+  steps:
+    - name: Install MoonBit 0.10.13
+      shell: bash
+      env:
+        MOONBIT_VERSION: 0.10.13+cbb11c36f
+      run: |
+        curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o "$RUNNER_TEMP/install-moonbit.sh"
+        bash "$RUNNER_TEMP/install-moonbit.sh" "$MOONBIT_VERSION"
+        echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+    - name: Initialize MoonBit dependencies
+      shell: bash
+      run: |
+        moon version --all
+        moon update

@@ -300,18 +300,22 @@ SIZE COMPARISON
 
 退出码：`0` 正常，`1` 输入无法读取，`2` 命令行错误，`3` 超出预算或被严格模式拒绝。
 
-本仓库用 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 给自己上闸：格式检查、`moon check --target native --deny-warn`、`moon test`，以及把示例文件限制在预算内。
+本仓库用 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 给自己上闸：格式检查、`moon check --target native --deny-warn`、`moon test`，以及把示例文件限制在预算内。本地 setup action 固定 MoonBit `0.10.13+cbb11c36f`，与本地格式和测试使用的版本一致，并在解析依赖前运行 `moon update`。升级工具链时应同步更新本地检查与 CI。
 
 ```yaml
-- uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
+- uses: ./.github/actions/setup-moonbit
 - name: The example stays inside its budget
   run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
 ```
 
-任何产出 `.wasm` 的项目都可以用同样的三行：
+其它产出 `.wasm` 的项目可以先用官方安装器安装兼容工具链，再执行体积预算检查：
 
 ```yaml
-- uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
+- name: Setup MoonBit
+  run: |
+    curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s '0.10.13+cbb11c36f'
+    echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+- run: moon update
 - run: moon build --target wasm --release
 - name: Size budget
   run: moonsize _build/wasm/release/build/app/app.wasm --max-size 250KB
