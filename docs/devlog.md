@@ -57,3 +57,15 @@ AI 工具参与了实现、测试与文档的编写，以及符号规则的探�
 调用图 JSON 保留已有字段，新增 `schema_version: 1`、`graph_complete`、`modeling_scope`、`diagnostics`。诊断记录字段为 `code`、`caller`、`offset`、`opcode`、`type_index`、`table_index`；稳定代码为 `no_static_table_targets` 和 `unmodeled_reference_call`。无诊断时返回空数组，引用调用的表索引为 null。诊断按 caller、offset 排序，HTML 内嵌数据使用相同诊断结构；DOT 用图级标签携带警告。动态 table 和所有 Wasm 机制仍未完整建模，`graph_complete: true` 仅表示本期检测范围内未发现缺口。
 
 验证从 158 项测试基线开始，先用公开 API 测试复现引用调用遗漏，再验证结构化诊断、各输出、严格模式和 Commit 1 的尾调用结果。本地 native 测试实际结果为 172 项通过、0 项失败。`scripts/test-tail-calls.sh` 保留原有 5 个进程场景；新增 `scripts/test-graph-diagnostics.sh` 覆盖 17 个进程场景，并用 Node.js/V8 验证 9 份合法 Wasm 样本、解析 JSON 断言字段，验证严格模式不会创建或覆盖报告文件。两个脚本都接入 CLI 构建后的 CI 步骤。目标提交的 Linux CI 成功记录取得后，才能标记远程验证完成。
+
+## 7. u32 LEB128 与读取边界（2026-10-15）
+
+在 `6a9670b` 的 172 项测试、22 个 CLI 场景基线上，先增加公开 API 回归，复现第五字节非法高位将长度截断为零，以及空 start 段借用下一段字节的问题。`Reader::read_u32_leb` 改为 `Result[UInt, WasmError]`，完整保留 u32 范围；第五字节先检查高位及 continuation bit，再参与移位，最多读取五字节，保留合法非最短编码。所有长度、计数、索引和 `Array[Int]` 操作数经内部 `read_u32_as_int` 检查后转换，当前可表示范围为 `0..2147483647`。超出范围的合法编码返回 `ValueOutOfRange(offset, UInt)`，与 `LebOverflow(offset)` 编码错误区分。
+
+Reader 增加 `[start, end)` 范围和 `new_range(data, start, length)`；构造、定位及切片前先检查负数和剩余长度，避免溢出。`seek` 现在返回 `Result[Unit, WasmError]`，失败不移动游标；`read_bytes` 同样保证失败不移动。新增 `InvalidReadRange(offset, length, start, end)`。错误使用绝对偏移，`remaining()` 为 `end - pos`。
+
+段 payload、函数体和 name 子段使用独立范围；locals、指令操作数、element 常量表达式复用有界指令解码器。custom 段外层名称截断会报错；内部可选 name 元数据保留已读名称并在本子段范围内停止。导入基数与本地函数编号的相加先检查范围；计数不触发巨大预分配。signed LEB 和固定宽度读取仅同步边界，完整数值宽度设计不在本次范围，版本、段顺序、重复段和完整类型验证也未新增。
+
+新增 Reader/LEB 单元测试、段与函数体跨界回归、公开 API 黑盒测试。新增 `scripts/test-parser-boundaries.sh`，本地通过 54 个进程场景，使用 Node.js 为每次 CLI 调用设置五秒超时并区分超时、崩溃与预期退出码。V8 交叉确认 19 个畸形完整模块和 4 个合法完整模块（含非最短编码、原始尾调用、引用调用和正常示例）；Reader 专用与可选元数据测试不作为完整模块送去比较。合法大 u32 作为 Reader 值成功返回，不能因相应畸形模块被验证器拒绝就将编码本身称为非法。
+
+本地 native 测试实际结果为 206 项通过、0 项失败；三个过程级脚本合计 76 个场景，保持前两个提交的 retained、死代码和统一诊断行为。解析失败（含实现范围错误）返回输入错误码 `1`，加 `--strict` 仍为 `1`，不生成或覆盖报告文件；调用图分析缺口仍按原规则处理。CI 在现有两个脚本后追加新脚本；目标提交推送并取得 Linux CI 成功记录后才能标记远程验证完成。

@@ -1159,7 +1159,7 @@ const MEMARG_HAS_MEMORY : Int = 0x40
 ///|
 /// Read an unsigned index immediate and record it.
 fn take_index(reader : Reader, out : Array[Int]) -> Result[Unit, WasmError] {
-  match reader.read_u32_leb() {
+  match read_u32_as_int(reader) {
     Ok(value) => {
       out.push(value)
       Ok(())
@@ -1226,7 +1226,10 @@ fn read_operands(
           Err(error) => return Err(error)
         }
       } else {
-        reader.seek(at)
+        match reader.seek(at) {
+          Ok(_) => ()
+          Err(error) => return Err(error)
+        }
         match reader.read_signed_leb(33) {
           Ok(value) => out.push(value)
           Err(error) => return Err(error)
@@ -1235,19 +1238,21 @@ fn read_operands(
     }
     Label => return take_index(reader, out)
     LabelTable => {
-      let count = match reader.read_u32_leb() {
+      let count = match read_u32_as_int(reader) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
       out.push(count)
       let mut i = 0
-      while i <= count {
+      while i < count {
         match take_index(reader, out) {
           Ok(_) => ()
           Err(error) => return Err(error)
         }
         i = i + 1
       }
+      // Default label is separate so count + 1 never overflows.
+      return take_index(reader, out)
     }
     FunctionIndex
     | LocalIndex
@@ -1271,7 +1276,7 @@ fn read_operands(
         Err(error) => return Err(error)
       }
     MemoryArg => {
-      let align = match reader.read_u32_leb() {
+      let align = match read_u32_as_int(reader) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
@@ -1338,7 +1343,7 @@ fn read_operands(
     TypeVector => {
       // Each element is a value type, and a GC reference type among them is
       // two bytes wide, not one.
-      let count = match reader.read_u32_leb() {
+      let count = match read_u32_as_int(reader) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
@@ -1367,14 +1372,26 @@ pub fn decode_instruction(
   offset : Int,
 ) -> Result[Instruction, WasmError] {
   let reader = Reader::new(bytes)
-  reader.seek(offset)
+  match reader.seek(offset) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  decode_instruction_from_reader(reader)
+}
+
+///|
+/// Decode and advance within the caller's range, including every immediate.
+fn decode_instruction_from_reader(
+  reader : Reader,
+) -> Result[Instruction, WasmError] {
+  let offset = reader.position()
   let first = match reader.read_byte() {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let opcode = match first {
     PREFIX_GC => {
-      let sub = match reader.read_u32_leb() {
+      let sub = match read_u32_as_int(reader) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
@@ -1385,7 +1402,7 @@ pub fn decode_instruction(
       }
     }
     PREFIX_MISC => {
-      let sub = match reader.read_u32_leb() {
+      let sub = match read_u32_as_int(reader) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
@@ -1450,7 +1467,10 @@ pub fn Reader::read_valtype(self : Reader) -> Result[Unit, WasmError] {
       Err(error) => Err(error)
     }
   } else {
-    self.seek(at)
+    match self.seek(at) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
     match self.read_signed_leb(33) {
       Ok(_) => Ok(())
       Err(error) => Err(error)

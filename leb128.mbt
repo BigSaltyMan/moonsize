@@ -7,8 +7,12 @@ pub enum WasmError {
   BadMagic
   /// A section id outside the range assigned by the core specification.
   InvalidSectionId(Int)
-  /// A LEB128 integer that does not terminate within its encoded width.
+  /// A LEB128 integer with invalid high bits or excessive encoded width.
   LebOverflow(Int)
+  /// Requested offset/length and the allowed half-open byte range.
+  InvalidReadRange(Int, Int, Int, Int)
+  /// Valid unsigned encoding outside the implementation's Int range.
+  ValueOutOfRange(Int, UInt)
   /// An import descriptor whose kind byte is outside the assigned range.
   InvalidImportKind(Int)
   /// A byte where an opcode was expected that no instruction uses.
@@ -19,19 +23,37 @@ pub enum WasmError {
 }
 
 ///|
-/// A forward-only cursor over a byte buffer.
+/// An absolute cursor restricted to [start, end) within a byte buffer.
 ///
 /// The shape follows `jtenner/starshine`'s `src/binary` decoder, where a decode
 /// step takes `(bytes, offset)` and reports how far it advanced, so callers can
 /// walk a stream without hidden global state.
 pub struct Reader {
   data : Bytes
+  start : Int
+  end : Int
   mut pos : Int
 }
 
 ///|
 pub fn Reader::new(data : Bytes) -> Reader {
-  { data, pos: 0, }
+  { data, start: 0, end: data.length(), pos: 0, }
+}
+
+///|
+/// Construct a bounded reader, checking subtraction before any addition.
+pub fn Reader::new_range(
+  data : Bytes,
+  start : Int,
+  length : Int,
+) -> Result[Reader, WasmError] {
+  if start < 0 ||
+    length < 0 ||
+    start > data.length() ||
+    length > data.length() - start {
+    return Err(WasmError::InvalidReadRange(start, length, 0, data.length()))
+  }
+  Ok({ data, start, end: start + length, pos: start, })
 }
 
 ///|
@@ -41,24 +63,28 @@ pub fn Reader::position(self : Reader) -> Int {
 
 ///|
 pub fn Reader::remaining(self : Reader) -> Int {
-  self.data.length() - self.pos
+  self.end - self.pos
 }
 
 ///|
 pub fn Reader::at_end(self : Reader) -> Bool {
-  self.pos >= self.data.length()
+  self.pos == self.end
 }
 
 ///|
-/// Move the cursor to an absolute offset.
-pub fn Reader::seek(self : Reader, offset : Int) -> Unit {
+/// Move to [start, end], including the end. Failure leaves the cursor unchanged.
+pub fn Reader::seek(self : Reader, offset : Int) -> Result[Unit, WasmError] {
+  if offset < self.start || offset > self.end {
+    return Err(WasmError::InvalidReadRange(offset, 0, self.start, self.end))
+  }
   self.pos = offset
+  Ok(())
 }
 
 ///|
 /// Read a single byte, or report the offset that ran out of input.
 pub fn Reader::read_byte(self : Reader) -> Result[Int, WasmError] {
-  if self.pos >= self.data.length() {
+  if self.pos >= self.end {
     return Err(WasmError::UnexpectedEnd(self.pos, 1))
   }
   let value = self.data[self.pos].to_int()
@@ -69,12 +95,18 @@ pub fn Reader::read_byte(self : Reader) -> Result[Int, WasmError] {
 ///|
 /// Read `count` raw bytes and advance past them.
 ///
-/// A view is enough for every caller here: names are decoded straight from it
+/// Negative or excessive counts leave the cursor unchanged. A view is enough:
+/// names are decoded straight from it
 /// and section payloads are skipped by size rather than copied.
 pub fn Reader::read_bytes(
   self : Reader,
   count : Int,
 ) -> Result[BytesView, WasmError] {
+  if count < 0 {
+    return Err(
+      WasmError::InvalidReadRange(self.pos, count, self.start, self.end),
+    )
+  }
   if self.remaining() < count {
     return Err(WasmError::UnexpectedEnd(self.pos, count))
   }
@@ -88,29 +120,43 @@ pub fn Reader::read_bytes(
 ///
 /// WebAssembly encodes section payload lengths, vector counts and custom
 /// section name lengths this way. Five groups of seven bits cover `u32`, so a
-/// sixth continuation bit means the value is malformed.
-pub fn Reader::read_u32_leb(self : Reader) -> Result[Int, WasmError] {
+/// fifth byte must terminate and may carry only four payload bits. Non-shortest
+/// encodings are accepted within these limits.
+pub fn Reader::read_u32_leb(self : Reader) -> Result[UInt, WasmError] {
   let start = self.pos
-  let mut result = 0
+  let mut result : UInt = 0
   let mut shift = 0
-  let mut more = true
-  while more {
-    if self.pos >= self.data.length() {
-      return Err(WasmError::UnexpectedEnd(start, 1))
+  while shift <= 28 {
+    let byte = match self.read_byte() {
+      Ok(byte) => byte
+      Err(_) => return Err(WasmError::UnexpectedEnd(start, 1))
     }
-    let byte = self.data[self.pos].to_int()
-    self.pos = self.pos + 1
-    result = result | ((byte & 0x7F) << shift)
+    // Validate before the shift can discard illegal high bits.
+    if shift == 28 && (byte & 0xF0) != 0 {
+      return Err(WasmError::LebOverflow(start))
+    }
+    result = result | ((byte & 0x7F).reinterpret_as_uint() << shift)
     if (byte & 0x80) == 0 {
-      more = false
-    } else {
-      shift = shift + 7
-      if shift >= 35 {
-        return Err(WasmError::LebOverflow(start))
-      }
+      return Ok(result)
     }
+    shift = shift + 7
   }
-  Ok(result)
+  Err(WasmError::LebOverflow(start))
+}
+
+///|
+/// Lengths, counts, indices and Array[Int] operands share this checked conversion.
+fn read_u32_as_int(reader : Reader) -> Result[Int, WasmError] {
+  let start = reader.position()
+  let value = match reader.read_u32_leb() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let maximum : UInt = 2147483647
+  if value > maximum {
+    return Err(WasmError::ValueOutOfRange(start, value))
+  }
+  Ok(value.reinterpret_as_int())
 }
 
 ///|
@@ -131,7 +177,7 @@ pub fn Reader::read_signed_leb(
   let mut byte = 0
   let mut more = true
   while more {
-    if self.pos >= self.data.length() {
+    if self.pos >= self.end {
       return Err(WasmError::UnexpectedEnd(start, 1))
     }
     byte = self.data[self.pos].to_int()

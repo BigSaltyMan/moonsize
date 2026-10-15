@@ -122,6 +122,16 @@ Dead-code and retained-size results may be inaccurate; do not use them as proof 
 
 如果外部世界能到达一个函数，它就是**根**：它被导出、它是 start 函数，或者被 element 段引用。可达性与 retained size 描述的是当前调用图模型中的路径。
 
+### 解析边界与 Reader API
+
+`Reader::read_u32_leb()` 改为返回 `Result[UInt, WasmError]`，保留 `0..4294967295` 的完整无符号范围。五字节限制内的合法非最短编码仍可使用；第五字节非法高位或 continuation bit 会返回 `LebOverflow(offset)`。长度、计数、索引和整数指令操作数统一经内部入口检查，目前支持 `0..2147483647`。更大的合法 u32 编码返回 `ValueOutOfRange(offset, value)`，表示实现范围限制，不是将这种无符号编码判为非法 Wasm。
+
+`Reader::new(data)` 仍覆盖全文件。新增 `Reader::new_range(data, start, length) -> Result[Reader, WasmError]`，读取范围为 `[start, start + length)`；负数或文件外范围返回 `InvalidReadRange(offset, length, start, end)`。`seek(offset)` 现在返回 `Result[Unit, WasmError]`，调用方迁移时必须处理错误。允许定位到末尾，之后读取返回 `UnexpectedEnd`；失败的 seek 和 `read_bytes` 不改变游标。所有错误位置均为文件绝对偏移。
+
+段 payload、函数体、locals、指令立即数和 name 子段分别受真实边界约束。custom 段外层名称属于结构，长度必须落在 payload 内；可选 name 调试信息保留容错，损坏条目不能借用后续字节，也不抹掉先前成功读取的名称。解析失败和范围错误的 CLI 退出码为 `1`，加 `--strict` 仍为 `1`，不会生成或覆盖 JSON、DOT、HTML 报告；它们与退出码为 `3` 的调用图缺口不同。
+
+这里是供分析使用的结构解析，并非完整 Wasm 验证。本次未修复 signed LEB 的完整数值语义或 64 位常量存储，也未新增版本检查、段顺序和重复段验证。
+
 ### 诊断 API 与导出迁移
 
 这是有意的 API 扩展。`CallGraph` 新增 `diagnostics : Array[GraphDiagnostic]`，`GraphDiagnosticKind` 分为 `NoStaticTableTargets` 与 `UnmodeledReferenceCall`。总缺口数从该数组读取；`Analysis.unresolved_count` 仍只统计没有静态候选的表调用，因此引用调用存在时它仍可能是零。
@@ -322,9 +332,10 @@ moon test
 moon build --target native --release
 bash scripts/test-tail-calls.sh _build/native/release/build/cmd/main/main.exe
 bash scripts/test-graph-diagnostics.sh _build/native/release/build/cmd/main/main.exe
+bash scripts/test-parser-boundaries.sh _build/native/release/build/cmd/main/main.exe
 ```
 
-新增诊断 CLI 脚本需要 Node.js，使用 V8 独立验证 Wasm 样本，并解析 JSON 后断言字段。两个过程级脚本都可在 Git Bash 或 Linux 上对已构建的 native 可执行文件运行。
+诊断 CLI 脚本需要 Node.js，使用 V8 独立验证 Wasm 样本，并解析 JSON 后断言字段。解析边界脚本还用 Node.js 为每个 CLI 进程设置五秒超时，分别识别超时、崩溃和预期输入错误。三个脚本都可在 Git Bash 或 Linux 上对已构建的 native 可执行文件运行。完整模块样本与 V8 交叉验证；Reader 专用和可选调试信息测试另行标注。
 
 测试逐条覆盖指令表——每条指令带一个规范编码和规范给出的长度——并固定了三个真实的 MoonBit 函数体，其中一个是 locals 使用两字节 GC 引用类型的，这样一旦某个立即数宽度写错，失败的是一个测试，而不是悄悄产生一张错误的调用图。
 

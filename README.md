@@ -184,6 +184,37 @@ A function is a **root** if the outside world can reach it: it is exported, it i
 the start function, or it is referenced by an element segment. Reachability and
 retained sizes describe paths in the current graph model.
 
+### Parser bounds and Reader API
+
+`Reader::read_u32_leb()` returns `Result[UInt, WasmError]` across the full
+`0..4294967295` range. Non-shortest encodings remain accepted within five bytes;
+illegal fifth-byte high bits or continuation produce `LebOverflow(offset)`.
+Lengths, counts, indices and integer instruction operands pass through one
+checked internal conversion and currently support `0..2147483647`. Larger
+valid u32 encodings produce `ValueOutOfRange(offset, value)`, an implementation
+limit rather than a claim that the unsigned encoding is invalid Wasm.
+
+`Reader::new(data)` still covers the whole buffer. The new
+`Reader::new_range(data, start, length)` returns `Result[Reader, WasmError]`
+and restricts reads to `[start, start + length)`. Negative or out-of-buffer
+requests return `InvalidReadRange(offset, length, start, end)`.
+`seek(offset)` now returns `Result[Unit, WasmError]`; handle that result when
+migrating callers. Seeking to the end is allowed; reading there returns
+`UnexpectedEnd`. Failed seek and `read_bytes` operations leave the cursor
+unchanged. Every reported offset is absolute within the file.
+
+Section payloads, function bodies, locals, instruction immediates and optional
+name subsections use bounded readers. The outer custom-section name is
+structural and must fit its payload. Optional name metadata remains tolerant of
+damaged entries, preserving earlier names without borrowing following bytes.
+Parsing and range failures return CLI exit code `1`, including with `--strict`,
+and never create or overwrite JSON, DOT or HTML reports. They are distinct from
+call-graph gaps refused with code `3`.
+
+This is structural parsing for analysis, not full Wasm validation. Signed LEB
+numeric semantics, full 64-bit constant storage, version checks, section order
+and duplicate-section validation remain outside this change.
+
 ### Diagnostic API and export migration
 
 This is an intentional API extension. `CallGraph` now has
@@ -500,11 +531,15 @@ moon test
 moon build --target native --release
 bash scripts/test-tail-calls.sh _build/native/release/build/cmd/main/main.exe
 bash scripts/test-graph-diagnostics.sh _build/native/release/build/cmd/main/main.exe
+bash scripts/test-parser-boundaries.sh _build/native/release/build/cmd/main/main.exe
 ```
 
 The diagnostic CLI script requires Node.js to validate its Wasm fixtures with
-V8 and assert fields in parsed JSON. Both CLI scripts run in Git Bash or Linux
-after building the native executable.
+V8 and assert fields in parsed JSON. The parser script also uses Node.js for a
+five-second timeout per CLI process, distinguishing timeouts, crashes and
+expected input errors. All three scripts run in Git Bash or Linux after building
+the native executable. Complete-module fixtures are cross-checked with V8;
+Reader-only and optional metadata tests are kept separate.
 
 The test suite covers the instruction table one opcode at a time — every entry
 carries a canonical encoding and the length the specification gives it — and pins

@@ -153,7 +153,10 @@ pub fn parse_module(data : Bytes) -> Result[WasmModule, WasmError] {
     (data[6].to_int() << 16) |
     (data[7].to_int() << 24)
   let reader = Reader::new(data)
-  reader.seek(8)
+  match reader.seek(8) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
   let sections : Array[Section] = []
   while !reader.at_end() {
     let offset = reader.position()
@@ -165,7 +168,7 @@ pub fn parse_module(data : Bytes) -> Result[WasmModule, WasmError] {
       Some(kind) => kind
       None => return Err(WasmError::InvalidSectionId(id))
     }
-    let payload_size = match reader.read_u32_leb() {
+    let payload_size = match read_u32_as_int(reader) {
       Ok(value) => value
       Err(error) => return Err(error)
     }
@@ -175,13 +178,22 @@ pub fn parse_module(data : Bytes) -> Result[WasmModule, WasmError] {
     }
     let payload_start = reader.position()
     let custom_name = if kind.is_custom() {
-      read_custom_name(reader)
+      let payload = match Reader::new_range(data, payload_start, payload_size) {
+        Ok(reader) => reader
+        Err(error) => return Err(error)
+      }
+      match read_custom_name(payload) {
+        Ok(name) => Some(name)
+        Err(error) => return Err(error)
+      }
     } else {
       None
     }
-    // The name is read for display only, so rewind to the payload end rather
-    // than depending on how far the name happened to advance.
-    reader.seek(payload_start + payload_size)
+    // The bounded name reader does not advance the section-table reader.
+    match reader.read_bytes(payload_size) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
     sections.push({
       id,
       kind,
@@ -196,19 +208,16 @@ pub fn parse_module(data : Bytes) -> Result[WasmModule, WasmError] {
 
 ///|
 /// Custom sections begin with a name, which tells producer metadata, debug info
-/// and `name` sections apart. A malformed name never fails the parse: the size
-/// of the section is the fact this tool is after.
-fn read_custom_name(reader : Reader) -> String? {
-  let name_length = match reader.read_u32_leb() {
+/// and `name` sections apart. This outer name is structural, so a malformed
+/// length fails the parse even though optional name subsections remain tolerant.
+fn read_custom_name(reader : Reader) -> Result[String, WasmError] {
+  let name_length = match read_u32_as_int(reader) {
     Ok(length) => length
-    Err(_) => return None
-  }
-  if reader.remaining() < name_length {
-    return None
+    Err(error) => return Err(error)
   }
   match reader.read_bytes(name_length) {
-    Ok(name) => Some(@utf8.decode_lossy(name))
-    Err(_) => None
+    Ok(name) => Ok(@utf8.decode_lossy(name))
+    Err(error) => Err(error)
   }
 }
 
@@ -226,6 +235,22 @@ pub fn describe_error(error : WasmError) -> String {
     InvalidSectionId(id) => "unknown section id " + id.to_string()
     LebOverflow(offset) =>
       "malformed LEB128 integer at offset " + offset.to_string()
+    InvalidReadRange(offset, length, start, end) =>
+      "invalid read range at offset " +
+      offset.to_string() +
+      " (length " +
+      length.to_string() +
+      ", allowed [" +
+      start.to_string() +
+      ", " +
+      end.to_string() +
+      "))"
+    ValueOutOfRange(offset, value) =>
+      "unsigned value at offset " +
+      offset.to_string() +
+      " exceeds the supported integer range (value " +
+      value.to_string() +
+      ")"
     InvalidImportKind(kind) =>
       "unknown import kind " + kind.to_string() + " (expected 0..4)"
     UnknownOpcode(offset, byte) =>
@@ -265,24 +290,43 @@ pub struct FunctionBody {
 const NAME_SUBSECTION_FUNCTION : Int = 1
 
 ///|
-/// Byte offset at which a section's payload begins, derived from the header
-/// size the section table already recorded.
-fn payload_start(section : Section) -> Int {
-  section.offset + section.total_size - section.payload_size
-}
-
-///|
-/// Create a cursor parked on the first payload byte of `section`.
-fn reader_at_payload(data : Bytes, section : Section) -> Reader {
-  let reader = Reader::new(data)
-  reader.seek(payload_start(section))
-  reader
+/// Create a reader restricted to the section payload. Validate header arithmetic
+/// before adding offsets, including when a section is reused with another buffer.
+fn reader_at_payload(
+  data : Bytes,
+  section : Section,
+) -> Result[Reader, WasmError] {
+  if section.offset < 0 ||
+    section.offset > data.length() ||
+    section.payload_size < 0 ||
+    section.total_size < section.payload_size {
+    return Err(
+      WasmError::InvalidReadRange(
+        section.offset,
+        section.total_size,
+        0,
+        data.length(),
+      ),
+    )
+  }
+  let header = section.total_size - section.payload_size
+  if header > data.length() - section.offset {
+    return Err(
+      WasmError::InvalidReadRange(
+        section.offset,
+        section.total_size,
+        0,
+        data.length(),
+      ),
+    )
+  }
+  Reader::new_range(data, section.offset + header, section.payload_size)
 }
 
 ///|
 /// Advance past a WebAssembly name: a LEB128 byte count and that many bytes.
 fn skip_name(reader : Reader) -> Result[Unit, WasmError] {
-  let length = match reader.read_u32_leb() {
+  let length = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -303,12 +347,12 @@ fn skip_limits(reader : Reader) -> Result[Unit, WasmError] {
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  match reader.read_u32_leb() {
+  match read_u32_as_int(reader) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
   if (flags & 0x01) != 0 {
-    match reader.read_u32_leb() {
+    match read_u32_as_int(reader) {
       Ok(_) => ()
       Err(error) => return Err(error)
     }
@@ -327,12 +371,12 @@ fn parse_limits(reader : Reader) -> Result[(Int, Int?), WasmError] {
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  let minimum = match reader.read_u32_leb() {
+  let minimum = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   if (flags & 0x01) != 0 {
-    let maximum = match reader.read_u32_leb() {
+    let maximum = match read_u32_as_int(reader) {
       Ok(value) => value
       Err(error) => return Err(error)
     }
@@ -355,7 +399,7 @@ fn skip_import_desc(reader : Reader) -> Result[Bool, WasmError] {
   match kind {
     // func: typeidx
     0 =>
-      match reader.read_u32_leb() {
+      match read_u32_as_int(reader) {
         Ok(_) => Ok(true)
         Err(error) => Err(error)
       }
@@ -393,7 +437,7 @@ fn skip_import_desc(reader : Reader) -> Result[Bool, WasmError] {
         Ok(_) => ()
         Err(error) => return Err(error)
       }
-      match reader.read_u32_leb() {
+      match read_u32_as_int(reader) {
         Ok(_) => Ok(false)
         Err(error) => Err(error)
       }
@@ -412,15 +456,17 @@ pub fn count_imported_functions(
   data : Bytes,
   section : Section,
 ) -> Result[Int, WasmError] {
-  let reader = reader_at_payload(data, section)
-  let end = payload_start(section) + section.payload_size
-  let count = match reader.read_u32_leb() {
+  let reader = match reader_at_payload(data, section) {
+    Ok(reader) => reader
+    Err(error) => return Err(error)
+  }
+  let count = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let mut functions = 0
   for i = 0; i < count; i = i + 1 {
-    if reader.position() >= end {
+    if reader.at_end() {
       return Err(WasmError::UnexpectedEnd(reader.position(), 1))
     }
     // Each import is "module name" then "field name" then a descriptor.
@@ -452,24 +498,42 @@ pub fn parse_code_section(
   section : Section,
   base_index? : Int = 0,
 ) -> Result[Array[FunctionBody], WasmError] {
-  let reader = reader_at_payload(data, section)
-  let end = payload_start(section) + section.payload_size
-  let count = match reader.read_u32_leb() {
+  if base_index < 0 {
+    return Err(
+      WasmError::InvalidReadRange(section.offset, base_index, 0, 2147483647),
+    )
+  }
+  let reader = match reader_at_payload(data, section) {
+    Ok(reader) => reader
+    Err(error) => return Err(error)
+  }
+  let count = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let bodies : Array[FunctionBody] = []
   for i = 0; i < count; i = i + 1 {
     let offset = reader.position()
-    let body_size = match reader.read_u32_leb() {
+    let body_size = match read_u32_as_int(reader) {
       Ok(value) => value
       Err(error) => return Err(error)
     }
     let prefix_size = reader.position() - offset
-    if reader.position() + body_size > end {
+    if body_size > reader.remaining() {
       return Err(WasmError::UnexpectedEnd(reader.position(), body_size))
     }
-    reader.seek(reader.position() + body_size)
+    if i > 2147483647 - base_index {
+      return Err(
+        WasmError::ValueOutOfRange(
+          offset,
+          base_index.reinterpret_as_uint() + i.reinterpret_as_uint(),
+        ),
+      )
+    }
+    match reader.read_bytes(body_size) {
+      Ok(_) => ()
+      Err(error) => return Err(error)
+    }
     bodies.push({
       index: base_index + i,
       body_size,
@@ -483,24 +547,20 @@ pub fn parse_code_section(
 ///|
 /// Read one function name map (`namemap`) into `names`, stopping early on a
 /// malformed entry so a damaged suffix cannot discard the names before it.
-fn read_function_names(
-  reader : Reader,
-  sub_end : Int,
-  names : Map[Int, String],
-) -> Unit {
-  let count = match reader.read_u32_leb() {
+fn read_function_names(reader : Reader, names : Map[Int, String]) -> Unit {
+  let count = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(_) => return
   }
   for i = 0; i < count; i = i + 1 {
-    if reader.position() >= sub_end {
+    if reader.at_end() {
       return
     }
-    let index = match reader.read_u32_leb() {
+    let index = match read_u32_as_int(reader) {
       Ok(value) => value
       Err(_) => return
     }
-    let length = match reader.read_u32_leb() {
+    let length = match read_u32_as_int(reader) {
       Ok(value) => value
       Err(_) => return
     }
@@ -529,30 +589,39 @@ pub fn parse_name_section(data : Bytes, section : Section) -> Map[Int, String]? 
     return None
   }
   let names : Map[Int, String] = Map([])
-  let reader = reader_at_payload(data, section)
-  let end = payload_start(section) + section.payload_size
+  let reader = match reader_at_payload(data, section) {
+    Ok(reader) => reader
+    Err(_) => return Some(names)
+  }
   // A custom section opens with its own name, which is "name" here.
   match skip_name(reader) {
     Ok(_) => ()
     Err(_) => return Some(names)
   }
-  while reader.position() < end {
+  while !reader.at_end() {
     let sub_id = match reader.read_byte() {
       Ok(value) => value
       Err(_) => break
     }
-    let sub_size = match reader.read_u32_leb() {
+    let sub_size = match read_u32_as_int(reader) {
       Ok(value) => value
       Err(_) => break
     }
-    let sub_end = reader.position() + sub_size
-    if sub_end > end {
+    if sub_size > reader.remaining() {
       break
     }
-    if sub_id == NAME_SUBSECTION_FUNCTION {
-      read_function_names(reader, sub_end, names)
+    let subsection = match
+      Reader::new_range(data, reader.position(), sub_size) {
+      Ok(reader) => reader
+      Err(_) => break
     }
-    reader.seek(sub_end)
+    if sub_id == NAME_SUBSECTION_FUNCTION {
+      read_function_names(subsection, names)
+    }
+    match reader.read_bytes(sub_size) {
+      Ok(_) => ()
+      Err(_) => break
+    }
   }
   Some(names)
 }
@@ -629,8 +698,8 @@ pub struct CallSite {
 /// Skip a function body's local declaration and decode the expression.
 ///
 /// `body_offset` is the first byte after the body's size prefix, so the locals
-/// vector comes first. The declared `body_size` is a hard bound: an instruction
-/// that would run past it is reported rather than read out of the next body,
+/// vector comes first. Locals and instructions share a bounded reader, so no
+/// immediate can consume bytes from the next body before reporting an error,
 /// which is what keeps a wrong immediate width from quietly becoming a wrong
 /// call graph.
 pub fn decode_instructions(
@@ -638,16 +707,17 @@ pub fn decode_instructions(
   body_offset : Int,
   body_size : Int,
 ) -> Result[Array[Instruction], WasmError] {
-  let reader = Reader::new(bytes)
-  reader.seek(body_offset)
-  let end = body_offset + body_size
-  let local_groups = match reader.read_u32_leb() {
+  let reader = match Reader::new_range(bytes, body_offset, body_size) {
+    Ok(reader) => reader
+    Err(error) => return Err(error)
+  }
+  let local_groups = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let mut group = 0
   while group < local_groups {
-    match reader.read_u32_leb() {
+    match read_u32_as_int(reader) {
       Ok(_) => ()
       Err(error) => return Err(error)
     }
@@ -657,20 +727,12 @@ pub fn decode_instructions(
     }
     group = group + 1
   }
-  if reader.position() > end {
-    return Err(WasmError::UnexpectedEnd(body_offset, body_size))
-  }
   let instructions : Array[Instruction] = []
-  while reader.position() < end {
-    let offset = reader.position()
-    let instruction = match decode_instruction(bytes, offset) {
+  while !reader.at_end() {
+    let instruction = match decode_instruction_from_reader(reader) {
       Ok(instruction) => instruction
       Err(error) => return Err(error)
     }
-    if offset + instruction.size > end {
-      return Err(WasmError::UnexpectedEnd(offset, instruction.size))
-    }
-    reader.seek(offset + instruction.size)
     instructions.push(instruction)
   }
   Ok(instructions)
@@ -734,16 +796,18 @@ pub fn parse_export_section(
   data : Bytes,
   section : Section,
 ) -> Result[Array[Export], WasmError] {
-  let reader = reader_at_payload(data, section)
-  let end = payload_start(section) + section.payload_size
-  let count = match reader.read_u32_leb() {
+  let reader = match reader_at_payload(data, section) {
+    Ok(reader) => reader
+    Err(error) => return Err(error)
+  }
+  let count = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let exports : Array[Export] = []
   let mut i = 0
   while i < count {
-    let length = match reader.read_u32_leb() {
+    let length = match read_u32_as_int(reader) {
       Ok(value) => value
       Err(error) => return Err(error)
     }
@@ -755,12 +819,9 @@ pub fn parse_export_section(
       Ok(value) => value
       Err(error) => return Err(error)
     }
-    let index = match reader.read_u32_leb() {
+    let index = match read_u32_as_int(reader) {
       Ok(value) => value
       Err(error) => return Err(error)
-    }
-    if reader.position() > end {
-      return Err(WasmError::UnexpectedEnd(reader.position(), 1))
     }
     exports.push({ name, kind, index, })
     i = i + 1
@@ -774,8 +835,11 @@ pub fn parse_start_section(
   data : Bytes,
   section : Section,
 ) -> Result[Int, WasmError] {
-  let reader = reader_at_payload(data, section)
-  reader.read_u32_leb()
+  let reader = match reader_at_payload(data, section) {
+    Ok(reader) => reader
+    Err(error) => return Err(error)
+  }
+  read_u32_as_int(reader)
 }
 
 ///|
@@ -795,8 +859,11 @@ pub fn parse_table_section(
   data : Bytes,
   section : Section,
 ) -> Result[Array[TableType], WasmError] {
-  let reader = reader_at_payload(data, section)
-  let count = match reader.read_u32_leb() {
+  let reader = match reader_at_payload(data, section) {
+    Ok(reader) => reader
+    Err(error) => return Err(error)
+  }
+  let count = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -861,9 +928,11 @@ pub fn parse_element_section(
   data : Bytes,
   section : Section,
 ) -> Result[Array[ElementSegment], WasmError] {
-  let reader = reader_at_payload(data, section)
-  let end = payload_start(section) + section.payload_size
-  let count = match reader.read_u32_leb() {
+  let reader = match reader_at_payload(data, section) {
+    Ok(reader) => reader
+    Err(error) => return Err(error)
+  }
+  let count = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -878,7 +947,7 @@ pub fn parse_element_section(
     let mut passive = false
     // Modes 2 and 6 name their table; 0 and 4 always mean table 0.
     if mode == 0x02 || mode == 0x06 {
-      table_index = match reader.read_u32_leb() {
+      table_index = match read_u32_as_int(reader) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
@@ -887,7 +956,7 @@ pub fn parse_element_section(
     }
     // Active modes carry an offset expression that has to be stepped over.
     if mode == 0x00 || mode == 0x02 || mode == 0x04 || mode == 0x06 {
-      match skip_constant_expression(data, reader) {
+      match skip_constant_expression(reader) {
         Ok(_) => ()
         Err(error) => return Err(error)
       }
@@ -915,28 +984,25 @@ pub fn parse_element_section(
       }
     }
     let functions = if mode >= 0x04 {
-      match read_element_expressions(data, reader) {
+      match read_element_expressions(reader) {
         Ok(functions) => functions
         Err(error) => return Err(error)
       }
     } else {
-      let length = match reader.read_u32_leb() {
+      let length = match read_u32_as_int(reader) {
         Ok(value) => value
         Err(error) => return Err(error)
       }
       let functions : Array[Int] = []
       let mut slot = 0
       while slot < length {
-        match reader.read_u32_leb() {
+        match read_u32_as_int(reader) {
           Ok(value) => functions.push(value)
           Err(error) => return Err(error)
         }
         slot = slot + 1
       }
       functions
-    }
-    if reader.position() > end {
-      return Err(WasmError::UnexpectedEnd(reader.position(), 1))
     }
     segments.push({ table_index, passive, functions, })
     i = i + 1
@@ -966,18 +1032,14 @@ fn closes_expression(opcode : Opcode, depth : Int) -> Bool {
 
 ///|
 /// Step over a constant expression, which ends at its matching `end`.
-fn skip_constant_expression(
-  data : Bytes,
-  reader : Reader,
-) -> Result[Unit, WasmError] {
+fn skip_constant_expression(reader : Reader) -> Result[Unit, WasmError] {
   let mut depth = 0
   let mut done = false
   while !done {
-    let instruction = match decode_instruction(data, reader.position()) {
+    let instruction = match decode_instruction_from_reader(reader) {
       Ok(instruction) => instruction
       Err(error) => return Err(error)
     }
-    reader.seek(instruction.offset + instruction.size)
     if closes_expression(instruction.opcode, depth) {
       done = true
     } else {
@@ -989,11 +1051,8 @@ fn skip_constant_expression(
 
 ///|
 /// Read a vector of element expressions and keep the functions they reference.
-fn read_element_expressions(
-  data : Bytes,
-  reader : Reader,
-) -> Result[Array[Int], WasmError] {
-  let length = match reader.read_u32_leb() {
+fn read_element_expressions(reader : Reader) -> Result[Array[Int], WasmError] {
+  let length = match read_u32_as_int(reader) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -1003,11 +1062,10 @@ fn read_element_expressions(
     let mut depth = 0
     let mut done = false
     while !done {
-      let instruction = match decode_instruction(data, reader.position()) {
+      let instruction = match decode_instruction_from_reader(reader) {
         Ok(instruction) => instruction
         Err(error) => return Err(error)
       }
-      reader.seek(instruction.offset + instruction.size)
       match instruction.opcode {
         RefFunc => functions.push(instruction.operands[0])
         _ => ()
