@@ -170,12 +170,8 @@ test "reports a body that overruns the section payload" {
   // One body declaring five bytes while the payload supplies two.
   let data = b"\x00\x61\x73\x6d\x01\x00\x00\x00\x0a\x04\x01\x05\x00\x0b"
   match parse_module(data) {
-    Ok(parsed) =>
-      match parse_code_section(data, parsed.sections[0]) {
-        Err(WasmError::UnexpectedEnd(_, 5)) => ()
-        Ok(_) => fail("expected UnexpectedEnd")
-        Err(_) => fail("expected UnexpectedEnd")
-      }
+    Err(WasmError::UnexpectedEnd(12, 5)) => ()
+    Ok(_) => fail("expected UnexpectedEnd during module structure checks")
     Err(error) => fail(decode_failure(error))
   }
 }

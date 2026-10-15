@@ -69,3 +69,19 @@ Reader 增加 `[start, end)` 范围和 `new_range(data, start, length)`；构造
 新增 Reader/LEB 单元测试、段与函数体跨界回归、公开 API 黑盒测试。新增 `scripts/test-parser-boundaries.sh`，本地通过 54 个进程场景，使用 Node.js 为每次 CLI 调用设置五秒超时并区分超时、崩溃与预期退出码。V8 交叉确认 19 个畸形完整模块和 4 个合法完整模块（含非最短编码、原始尾调用、引用调用和正常示例）；Reader 专用与可选元数据测试不作为完整模块送去比较。合法大 u32 作为 Reader 值成功返回，不能因相应畸形模块被验证器拒绝就将编码本身称为非法。
 
 本地 native 测试实际结果为 206 项通过、0 项失败；三个过程级脚本合计 76 个场景，保持前两个提交的 retained、死代码和统一诊断行为。解析失败（含实现范围错误）返回输入错误码 `1`，加 `--strict` 仍为 `1`，不生成或覆盖报告文件；调用图分析缺口仍按原规则处理。CI 在现有两个脚本后追加新脚本；目标提交推送并取得 Linux CI 成功记录后才能标记远程验证完成。
+
+## 8. Wasm 版本与基础段结构（2026-10-15）
+
+在 `c444a48` 的 206 项测试、76 个 CLI 场景基线上，先用三个公开接口测试复现版本 `2`、重复 type 段被接受，以及 `analyze` 信任旧段表而漏掉实际输入乱序的问题；修复前这三个测试均失败。现在 `parse_module` 在魔数之后、解释段之前检查 Core Wasm 二进制版本，仅接受 `1`。错误保留偏移 `4` 与原始 `UInt` 值，全 `FF` 显示为 `4294967295`。
+
+标准段只允许出现一次；重复或乱序错误指向当前违规段的 id 字节。顺序独立于 section id：Type、Import、Function、Table、Memory、Tag、Global、Export、Start、Element、DataCount、Code、Data，依据 [Core 二进制模块规范](https://webassembly.github.io/spec/core/binary/modules.html)。custom 段可同名重复、穿插出现，不改变顺序状态。
+
+新增内部 `wasm_structure.mbt`，读取 function 段全部本地类型索引并完整消费 payload；code 段与公开 `parse_code_section` 复用同一个有界长度遍历器，逐个验证函数体长度，再检查剩余字节。两段缺失分别按零项处理，本地声明数必须等于函数体数，导入函数不参与比较。结构检查不构建调用图，也不分配函数体记录。`analyze(data, parsed)` 为兼容保留参数，但重新解析实际字节，避免旧段表或被修改的段表绕过检查；当前文件与 baseline 都先完成 `parse_module`，不会先打印半份报告。
+
+公开解析函数签名保持不变，`WasmError` 新增 `UnsupportedVersion(offset, UInt)`、`DuplicateSection(offset, kind)`、`InvalidSectionOrder(offset, kind, previous)`、`FunctionCodeCountMismatch(offset, kind, declarations, bodies)`、`TrailingSectionBytes(offset, kind)`。外部穷举匹配需要处理这些分支；`.mbti` 与修复前的比较仅有这五项扩展。数量错误优先指向 code 段，缺失时指向 function 段；多余字节指向第一个未消费位置。输入结构错误统一返回 `1`，`--strict` 不改变它，也不将它转换为图缺口诊断。
+
+新增白盒与公开 API 测试，覆盖版本、标准段重复、Tag/DataCount 顺序、custom 插入、缺失/空段与数量矩阵、导入索引、payload 完整消费及旧元数据。三处既有畸形测试改为断言解析阶段更早返回的同一越界错误，仍保留底层函数体解析器的边界断言。Commit 1 的 39 字节尾调用 retained `8`、Commit 2 引用诊断和 Commit 3 合法非最短编码继续通过。本地 native 测试为 **226 项通过、0 项失败**。
+
+新增 `scripts/test-module-structure.sh`，通过 **235 个进程场景**，检查普通/严格模式、当前文件/坏 baseline、精确退出码、无正常表格或图警告，以及 JSON/DOT/HTML 新文件与已有文件保护。每个 CLI 调用有五秒超时，超时、崩溃、启动失败均不当作预期输入错误。Node.js/V8 独立验证 20 个畸形完整模块和 11 个合法完整模块；本机具备 Tag 验证能力，Tag、DataCount、同名 custom、导入函数和真实 MoonBit 示例均通过。CI 保留前三个脚本并追加该脚本；四个脚本合计 311 个进程场景。
+
+本工具执行体积分析所需的基础结构检查，尚未提供完整的 WebAssembly 类型和指令语义验证。类型/调用索引合法性、指令栈类型及动态 table 完整性继续单独处理。上述是本地验证；目标提交尚未推送，Linux CI 成功记录仍待取得。

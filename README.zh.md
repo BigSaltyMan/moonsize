@@ -130,7 +130,23 @@ Dead-code and retained-size results may be inaccurate; do not use them as proof 
 
 段 payload、函数体、locals、指令立即数和 name 子段分别受真实边界约束。custom 段外层名称属于结构，长度必须落在 payload 内；可选 name 调试信息保留容错，损坏条目不能借用后续字节，也不抹掉先前成功读取的名称。解析失败和范围错误的 CLI 退出码为 `1`，加 `--strict` 仍为 `1`，不会生成或覆盖 JSON、DOT、HTML 报告；它们与退出码为 `3` 的调用图缺口不同。
 
-这里是供分析使用的结构解析，并非完整 Wasm 验证。本次未修复 signed LEB 的完整数值语义或 64 位常量存储，也未新增版本检查、段顺序和重复段验证。
+`parse_module` 仅接受 Core Wasm 二进制版本 `1`，检查标准段唯一性和顺序。custom 段可以同名重复，也可插在不同标准段之间。顺序采用显式规则：Type、Import、Function、Table、Memory、Tag、Global、Export、Start、Element、DataCount、Code、Data，不能按 section id 大小排序。
+
+function 段的本地声明数必须等于 code 段函数体数，导入函数不参与比较，缺失段按零项处理。两段 payload 都必须完整消费，每个函数体的长度也必须落在 code payload 内。当前输入和 `--baseline` 在输出报告前执行相同检查；`analyze(data, parsed)` 同样重新校验实际字节并据此读取段表，旧的或被修改的段表不能绕过检查。
+
+本工具执行体积分析所需的基础结构检查，尚未提供完整的 WebAssembly 类型和指令语义验证。类型和调用索引合法性、signed LEB 完整数值语义、64 位常量存储及动态 table 分析仍有限制。
+
+解析函数签名保持不变。外部穷举匹配 `WasmError` 时，需要处理以下五个新增分支：
+
+| 分支 | 字段顺序 |
+|---|---|
+| `UnsupportedVersion` | 版本字段偏移、原始无符号 `UInt` 版本值 |
+| `DuplicateSection` | 第二次出现的段 id 字节偏移、段种类 |
+| `InvalidSectionOrder` | 当前段 id 字节偏移、当前段种类、前一标准段种类 |
+| `FunctionCodeCountMismatch` | 相关段 id 字节偏移、段种类、本地声明数、函数体数 |
+| `TrailingSectionBytes` | 第一个未消费 payload 字节偏移、段种类 |
+
+版本错误位于偏移 `4`；数量不一致优先指向 code 段，缺失时指向 function 段。这些错误返回输入错误码 `1`，加 `--strict` 仍为 `1`，不会变成图不完整的退出码 `3`。
 
 ### 诊断 API 与导出迁移
 

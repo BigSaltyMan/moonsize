@@ -33,6 +33,8 @@ jobs:
         run: bash scripts/test-graph-diagnostics.sh _build/native/release/build/cmd/main/main.exe
       - name: Parser-boundary CLI regressions
         run: bash scripts/test-parser-boundaries.sh _build/native/release/build/cmd/main/main.exe
+      - name: Module-structure CLI regressions
+        run: bash scripts/test-module-structure.sh _build/native/release/build/cmd/main/main.exe
 
   size-budget:
     name: Size budget

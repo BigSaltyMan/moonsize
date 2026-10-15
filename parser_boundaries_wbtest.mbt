@@ -71,13 +71,21 @@ test "code body lengths cannot wrap or leave their code section" {
     let data = parser_fixture(
       b"\x01\x04\x01\x60\x00\x00\x03\x02\x01\x00" + code + b"\x00\x01\x00",
     )
-    let parsed = parsed_fixture(data)
+    let parsed = parsed_fixture(parser_fixture(b""))
     let body_start = if needed == 3 { 22 } else { 26 }
-    assert_input_end(
-      parse_code_section(data, section_of(parsed, Code)),
-      body_start,
-      needed,
-    )
+    assert_input_end(parse_module(data), body_start, needed)
+    // The module parser now fails first. Keep the lower-level public parser
+    // regression as well, using the known header of this malformed section.
+    let payload_size = if needed == 3 { 3 } else { 6 }
+    let section = {
+      id: 10,
+      kind: Code,
+      offset: 18,
+      payload_size,
+      total_size: payload_size + 2,
+      custom_name: None,
+    }
+    assert_input_end(parse_code_section(data, section), body_start, needed)
     assert_input_end(analyze(data, parsed), body_start, needed)
   }
 }
@@ -210,7 +218,8 @@ test "large counts on short input consume input or return errors promptly" {
   let imports = parser_fixture(b"\x02\x05" + maximum)
   assert_input_end(analyze(imports, parsed_fixture(imports)), 15, 1)
   let code = parser_fixture(b"\x0a\x05" + maximum)
-  assert_input_end(analyze(code, parsed_fixture(code)), 15, 1)
+  assert_input_end(parse_module(code), 15, 1)
+  assert_input_end(analyze(code, parsed_fixture(parser_fixture(b""))), 15, 1)
   // br_table and select_t vectors are bounded instruction-reader tests.
   assert_input_end(decode_instructions(b"\x00\x0e" + maximum, 0, 7), 7, 1)
   assert_input_end(decode_instructions(b"\x00\x1c" + maximum, 0, 7), 7, 1)

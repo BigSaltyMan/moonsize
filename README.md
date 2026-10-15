@@ -211,9 +211,39 @@ Parsing and range failures return CLI exit code `1`, including with `--strict`,
 and never create or overwrite JSON, DOT or HTML reports. They are distinct from
 call-graph gaps refused with code `3`.
 
-This is structural parsing for analysis, not full Wasm validation. Signed LEB
-numeric semantics, full 64-bit constant storage, version checks, section order
-and duplicate-section validation remain outside this change.
+`parse_module` accepts Core Wasm binary version `1` only and checks standard
+section uniqueness and order. Custom sections may repeat, including with the
+same name, anywhere between standard sections. The explicit order is Type,
+Import, Function, Table, Memory, Tag, Global, Export, Start, Element, DataCount,
+Code, Data; numeric section ids alone do not give this order.
+
+Local function declarations and code bodies must have equal counts; imports
+are excluded. Both payloads must be consumed completely, and every code body
+must fit its declared range. Missing sections count as zero. Current inputs
+and `--baseline` use the same checks before reports are printed or written.
+`analyze(data, parsed)` also revalidates the bytes and derives its section table
+from them, so stale or modified metadata cannot bypass these checks.
+
+These are the basic structure checks needed for size analysis. The tool does
+not yet provide full WebAssembly type and instruction-semantic validation.
+Type/call index validity, signed LEB numeric semantics and full 64-bit constant
+storage remain limited; dynamic table analysis also retains its documented
+limitations.
+
+Parsing function signatures are unchanged. External exhaustive matches on
+`WasmError` must handle five new variants:
+
+| Variant | Fields |
+|---|---|
+| `UnsupportedVersion` | version-field offset, raw unsigned `UInt` value |
+| `DuplicateSection` | second section's id-byte offset, kind |
+| `InvalidSectionOrder` | current id-byte offset, kind, preceding standard kind |
+| `FunctionCodeCountMismatch` | related section's id-byte offset, kind, local declaration count, body count |
+| `TrailingSectionBytes` | first unconsumed payload byte offset, kind |
+
+Version errors point to offset `4`; mismatch errors use the code section when
+present, otherwise the function section. These failures return input error
+`1`, including under `--strict`, rather than graph-incompleteness code `3`.
 
 ### Diagnostic API and export migration
 

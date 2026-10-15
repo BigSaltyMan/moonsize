@@ -136,8 +136,8 @@ const MAGIC_3 : Int = 0x6D
 ///|
 /// Decode the module preamble and walk every section header.
 ///
-/// Payloads are measured but not interpreted, which keeps this step a pure
-/// structural pass over the file.
+/// Check version, standard-section uniqueness/order and function/code structure.
+/// Other payloads remain outside full type and instruction-semantic validation.
 pub fn parse_module(data : Bytes) -> Result[WasmModule, WasmError] {
   if data.length() < 8 {
     return Err(WasmError::UnexpectedEnd(0, 8))
@@ -148,16 +148,22 @@ pub fn parse_module(data : Bytes) -> Result[WasmModule, WasmError] {
     data[3].to_int() != MAGIC_3 {
     return Err(WasmError::BadMagic)
   }
-  let version = data[4].to_int() |
-    (data[5].to_int() << 8) |
-    (data[6].to_int() << 16) |
-    (data[7].to_int() << 24)
+  let version = data[4].to_int().reinterpret_as_uint() |
+    (data[5].to_int().reinterpret_as_uint() << 8) |
+    (data[6].to_int().reinterpret_as_uint() << 16) |
+    (data[7].to_int().reinterpret_as_uint() << 24)
+  if version != 1U {
+    return Err(WasmError::UnsupportedVersion(4, version))
+  }
   let reader = Reader::new(data)
   match reader.seek(8) {
     Ok(_) => ()
     Err(error) => return Err(error)
   }
   let sections : Array[Section] = []
+  let seen : Set[Int] = Set([])
+  let mut previous = Custom
+  let mut order = 0
   while !reader.at_end() {
     let offset = reader.position()
     let id = match reader.read_byte() {
@@ -167,6 +173,18 @@ pub fn parse_module(data : Bytes) -> Result[WasmModule, WasmError] {
     let kind = match SectionId::from_id(id) {
       Some(kind) => kind
       None => return Err(WasmError::InvalidSectionId(id))
+    }
+    if !kind.is_custom() {
+      if seen.contains(id) {
+        return Err(WasmError::DuplicateSection(offset, kind))
+      }
+      let current = section_order(kind)
+      if current < order {
+        return Err(WasmError::InvalidSectionOrder(offset, kind, previous))
+      }
+      seen.add(id)
+      previous = kind
+      order = current
     }
     let payload_size = match read_u32_as_int(reader) {
       Ok(value) => value
@@ -203,7 +221,11 @@ pub fn parse_module(data : Bytes) -> Result[WasmModule, WasmError] {
       custom_name,
     })
   }
-  Ok({ version, file_size: data.length(), sections, })
+  match validate_function_code(data, sections) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  Ok({ version: 1, file_size: data.length(), sections, })
 }
 
 ///|
@@ -251,6 +273,35 @@ pub fn describe_error(error : WasmError) -> String {
       " exceeds the supported integer range (value " +
       value.to_string() +
       ")"
+    UnsupportedVersion(offset, version) =>
+      "unsupported WebAssembly version " +
+      version.to_string() +
+      " at offset " +
+      offset.to_string()
+    DuplicateSection(offset, kind) =>
+      "duplicate " + kind.name() + " section at offset " + offset.to_string()
+    InvalidSectionOrder(offset, kind, previous) =>
+      kind.name() +
+      " section appears after " +
+      previous.name() +
+      " section at offset " +
+      offset.to_string()
+    FunctionCodeCountMismatch(offset, kind, declarations, bodies) =>
+      "function/code count mismatch: " +
+      plural(declarations, "declaration") +
+      ", " +
+      bodies.to_string() +
+      (if bodies == 1 { " body" } else { " bodies" }) +
+      " (" +
+      kind.name() +
+      " section at offset " +
+      offset.to_string() +
+      ")"
+    TrailingSectionBytes(offset, kind) =>
+      "unexpected trailing bytes in " +
+      kind.name() +
+      " section at offset " +
+      offset.to_string()
     InvalidImportKind(kind) =>
       "unknown import kind " + kind.to_string() + " (expected 0..4)"
     UnknownOpcode(offset, byte) =>
@@ -498,6 +549,22 @@ pub fn parse_code_section(
   section : Section,
   base_index? : Int = 0,
 ) -> Result[Array[FunctionBody], WasmError] {
+  let bodies : Array[FunctionBody] = []
+  match walk_code_section(data, section, base_index, Some(bodies)) {
+    Ok(_) => Ok(bodies)
+    Err(error) => Err(error)
+  }
+}
+
+///|
+/// One bounded length walker for structure validation and body collection.
+/// Validation passes None and allocates no FunctionBody array.
+fn walk_code_section(
+  data : Bytes,
+  section : Section,
+  base_index : Int,
+  bodies : Array[FunctionBody]?,
+) -> Result[Int, WasmError] {
   if base_index < 0 {
     return Err(
       WasmError::InvalidReadRange(section.offset, base_index, 0, 2147483647),
@@ -511,7 +578,6 @@ pub fn parse_code_section(
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  let bodies : Array[FunctionBody] = []
   for i = 0; i < count; i = i + 1 {
     let offset = reader.position()
     let body_size = match read_u32_as_int(reader) {
@@ -534,14 +600,21 @@ pub fn parse_code_section(
       Ok(_) => ()
       Err(error) => return Err(error)
     }
-    bodies.push({
-      index: base_index + i,
-      body_size,
-      total_size: prefix_size + body_size,
-      offset,
-    })
+    match bodies {
+      Some(bodies) =>
+        bodies.push({
+          index: base_index + i,
+          body_size,
+          total_size: prefix_size + body_size,
+          offset,
+        })
+      None => ()
+    }
   }
-  Ok(bodies)
+  match finish_section(reader, Code) {
+    Ok(_) => Ok(count)
+    Err(error) => Err(error)
+  }
 }
 
 ///|
@@ -629,9 +702,8 @@ pub fn parse_name_section(data : Bytes, section : Section) -> Map[Int, String]? 
 ///|
 /// The sections the analysis passes need, picked out of the section table once.
 ///
-/// A well-formed module holds at most one of each numbered section, so the last
-/// one seen wins. Several custom sections are legal, and `name` is the only one
-/// this tool reads.
+/// parse_module validates standard-section uniqueness before returning a module.
+/// Several custom sections are legal; the last name custom section is selected.
 pub struct Sections {
   mut code : Section?
   mut imports : Section?

@@ -13,6 +13,16 @@ pub enum WasmError {
   InvalidReadRange(Int, Int, Int, Int)
   /// Valid unsigned encoding outside the implementation's Int range.
   ValueOutOfRange(Int, UInt)
+  /// Version-field offset and raw unsigned version value.
+  UnsupportedVersion(Int, UInt)
+  /// Second occurrence's id-byte offset and section kind.
+  DuplicateSection(Int, SectionId)
+  /// Current id-byte offset, current kind, previous standard section kind.
+  InvalidSectionOrder(Int, SectionId, SectionId)
+  /// Related section offset/kind, local declarations and bodies (imports excluded).
+  FunctionCodeCountMismatch(Int, SectionId, Int, Int)
+  /// First unconsumed payload byte and section kind.
+  TrailingSectionBytes(Int, SectionId)
   /// An import descriptor whose kind byte is outside the assigned range.
   InvalidImportKind(Int)
   /// A byte where an opcode was expected that no instruction uses.

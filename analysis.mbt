@@ -32,11 +32,17 @@ pub struct Analysis {
 }
 
 ///|
-/// Analyse a module: names and sizes, then the call graph and what it implies.
+/// Analyse actual bytes after revalidating their structure. The parsed argument
+/// is retained for API compatibility; stale or mutated metadata cannot bypass
+/// checks. Revalidation builds no analysis or call graph and no body records.
 pub fn analyze(
   data : Bytes,
-  parsed : WasmModule,
+  _parsed : WasmModule,
 ) -> Result[Analysis, WasmError] {
+  let parsed = match parse_module(data) {
+    Ok(parsed) => parsed
+    Err(error) => return Err(error)
+  }
   let sections = find_sections(parsed)
   let imported = match sections.imports {
     Some(section) =>
