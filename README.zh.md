@@ -97,18 +97,20 @@ fn main {
 
 解码器逐条指令遍历每个函数体——完整的 MVP 指令集、`0xFC` 的饱和转换与批量内存操作码、MoonBit 会发出的异常处理与尾调用操作码，以及其 `wasm-gc` 后端使用的 `0xFB` 垃圾回收操作码。每个函数体贡献：
 
-- `call x` —— 指向 `x` 的精确边；
+- `call x`、`return_call x` —— 指向 `x` 的精确边；
 - `ref.func x` —— 一次引用，算作可达，因为该函数之后可能作为闭包被运行；
-- `call_indirect` —— 指向 element 段放进该 table 的**每个**函数的保守边。table 的内容静态不可知，而漏一条边就等于漏一个函数、把一个还在用的函数报成死代码，这是这里唯一值得避免的错误。
+- `call_indirect`、`return_call_indirect` —— 根据静态候选，向 element 段放进该 table 的**每个**函数建立保守边。table 的内容静态不可知，而漏一条边就等于漏一个函数、把一个还在用的函数报成死代码。
 
-有一个解码器补不上的洞。模块可以在运行时填充 table——`table.set`、`table.init`，或者由宿主塞进去——而**完全没有 element 段**的 table 就等于什么也没说。这些 `call_indirect` 调用点贡献不了任何边，于是可达性和支配树给出的是下界而不是答案。报告会在最前面说明这一点：
+静态候选有其局限。模块可以在运行时填充 table——`table.set`、`table.init`，或者由宿主塞进去——而**完全没有 element 段**的 table 就等于什么也没说。无候选的间接调用（包括间接尾调用）贡献不了任何边，会产生不完整诊断；死代码和 retained size 结果可能不准确。报告会在最前面说明这一点：
 
 ```
-WARNING: 1 call_indirect site has no resolvable target (table filled at runtime).
-Dead-code and retained-size results may be inaccurate; treat them as lower bounds.
+WARNING: 1 indirect call site has no resolvable target.
+Dead-code and retained-size results may be inaccurate; do not use them as proof that a function can be removed.
 ```
 
-`--dead-code` 和 `--retained` 会在各自标题下重复这句；`--strict` 把警告变成拒绝——不输出报告、退出码 3——留给那些没法自己判断警告的 CI 任务。
+`--dead-code` 和 `--retained` 会在各自标题下重复不完整提示；`--strict` 对这些已识别的不完整情况拒绝输出报告，返回退出码 `3`。
+
+本次补齐直接尾调用和间接尾调用的依赖分析。引用调用（包括 `return_call_ref`）与动态 table 的完整性分析仍有限制，不能将 strict 成功解释为所有 Wasm 调用机制均已完整建模。
 
 如果外部世界能到达一个函数，它就是**根**：它被导出、它是 start 函数，或者它位于某个 table 中。从这些根可达的一切都是活的，其余都是死的。
 
@@ -189,7 +191,7 @@ Retained size
     8     43   633       633     0     5.9%       int__to__string__dec
 
   DIES counts the other functions that become unreachable with this one.
-  IND marks a function a call_indirect could reach.
+  IND marks a function an indirect call could reach.
 
 Dead code
 

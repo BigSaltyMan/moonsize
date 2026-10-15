@@ -607,9 +607,9 @@ pub fn find_sections(parsed : WasmModule) -> Sections {
 ///|
 /// How a call site reaches its target.
 pub enum CallKind {
-  /// `call x`: the target is named outright.
+  /// `call x` or `return_call x`: the target is named outright.
   Direct(Int)
-  /// `call_indirect`: the target is read from table `x` at run time.
+  /// `call_indirect` or `return_call_indirect`: table `x` supplies the target.
   Indirect(Int)
 }
 
@@ -617,7 +617,7 @@ pub enum CallKind {
 /// One call found in a function body.
 pub struct CallSite {
   kind : CallKind
-  /// The signature `call_indirect` selects on; `None` for a direct call.
+  /// Signature of an ordinary or tail indirect call; `None` for a direct call.
   type_index : Int?
   /// Offset of the instruction from the start of the file.
   offset : Int
@@ -675,10 +675,10 @@ pub fn decode_instructions(
 }
 
 ///|
-/// Collect every call a function body makes.
+/// Collect direct and table-based calls, including tail calls, from a body.
 ///
-/// Only `call` and `call_indirect` count here. `ref.func` is a reference rather
-/// than a call, and the call graph picks those up separately.
+/// Collect `call`, `return_call`, `call_indirect` and `return_call_indirect`.
+/// `ref.func` is a reference rather than a call; the graph handles it separately.
 pub fn scan_calls(
   bytes : Bytes,
   body_offset : Int,
@@ -691,13 +691,13 @@ pub fn scan_calls(
   let sites : Array[CallSite] = []
   for instruction in instructions {
     match instruction.opcode {
-      Call =>
+      Call | ReturnCall =>
         sites.push({
           kind: Direct(instruction.operands[0]),
           type_index: None,
           offset: instruction.offset,
         })
-      CallIndirect =>
+      CallIndirect | ReturnCallIndirect =>
         sites.push({
           kind: Indirect(instruction.operands[1]),
           type_index: Some(instruction.operands[0]),

@@ -650,3 +650,70 @@ test "scan_calls reports direct and indirect sites with their offsets" {
     Err(error) => fail(describe_error(error))
   }
 }
+
+///|
+test "scan_calls includes tail calls and leaves ref.func out" {
+  // Start the body after a prefix to verify file-relative, not body-relative offsets.
+  let bytes = b"\xaa\xbb\x00\x10\x03\x11\x01\x00\xd2\x05\x1a\x12\x04\x13\x02\x01\x0b"
+  let sites = match scan_calls(bytes, 2, bytes.length() - 2) {
+    Ok(sites) => sites
+    Err(error) => fail(describe_error(error))
+  }
+  assert_eq(sites.length(), 4)
+  for pair in [(0, 3), (2, 4)] {
+    match sites[pair.0].kind {
+      Direct(target) => assert_eq(target, pair.1)
+      _ => fail("expected Direct call")
+    }
+    assert_eq(sites[pair.0].type_index, None)
+  }
+  for pair in [(1, 0), (3, 1)] {
+    match sites[pair.0].kind {
+      Indirect(table) => assert_eq(table, pair.1)
+      _ => fail("expected Indirect call")
+    }
+    assert_eq(sites[pair.0].type_index, Some(pair.0 / 2 + 1))
+  }
+  assert_eq(sites.map(site => site.offset), [3, 5, 11, 13])
+}
+
+///|
+test "scan_calls reads legal multibyte tail call indices" {
+  let body = b"\x00\x12\xac\x02\x13\x81\x01\x82\x01\x0b"
+  let sites = match scan_calls(body, 0, body.length()) {
+    Ok(sites) => sites
+    Err(error) => fail(describe_error(error))
+  }
+  assert_eq(sites.length(), 2)
+  match sites[0].kind {
+    Direct(target) => assert_eq(target, 300)
+    _ => fail("expected Direct call")
+  }
+  assert_eq(sites[0].type_index, None)
+  assert_eq(sites[0].offset, 1)
+  match sites[1].kind {
+    Indirect(table) => assert_eq(table, 130)
+    _ => fail("expected Indirect call")
+  }
+  assert_eq(sites[1].type_index, Some(129))
+  assert_eq(sites[1].offset, 4)
+}
+
+///|
+test "scan_calls rejects truncated tail immediates without returning partial sites" {
+  for
+    suffix in [
+      b"\x12", b"\x12\x80", b"\x13", b"\x13\x80", b"\x13\x00", b"\x13\x00\x80",
+    ] {
+    let body = b"\x00\x10\x01" + suffix
+    match scan_calls(body, 0, body.length()) {
+      Err(WasmError::UnexpectedEnd(_, _)) => ()
+      _ => fail("expected UnexpectedEnd, with no partial call list")
+    }
+    // Bytes in the following body must not complete the truncated immediate.
+    match scan_calls(body + b"\x00\x0b", 0, body.length()) {
+      Err(WasmError::UnexpectedEnd(_, _)) => ()
+      _ => fail("expected body boundary error, with no partial call list")
+    }
+  }
+}

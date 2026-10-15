@@ -1,0 +1,2 @@
+# Keep the CLI regression script runnable in both Git Bash and Linux checkouts.
+scripts/test-tail-calls.sh text eol=lf

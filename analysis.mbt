@@ -22,13 +22,13 @@ pub struct Analysis {
   reachable : Set[Int]
   /// What deleting each reachable function would free.
   retained : Array[RetainedSize]
-  /// Functions a `call_indirect` could reach.
+  /// Functions an ordinary or tail indirect call could reach.
   indirect : Set[Int]
-  /// Whether the graph followed every call the module can make. `false` means a
-  /// table is filled at run time, so `reachable` and `retained` are lower bounds.
+  /// Whether every recognised indirect call has static candidates. A false
+  /// result means reachability and retained sizes may be inaccurate; true does
+  /// not guarantee complete modelling of reference calls or dynamic tables.
   graph_complete : Bool
-  /// How many `call_indirect` sites had no resolvable target, for the reports to
-  /// quote.
+  /// Ordinary and tail indirect sites with no resolvable target, for reports.
   unresolved_count : Int
 }
 

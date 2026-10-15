@@ -512,10 +512,11 @@ pub fn render_graph_warning(unresolved : Int) -> String {
   }
   "WARNING: " +
   unresolved.to_string() +
-  " call_indirect " +
+  " indirect call " +
   (if unresolved == 1 { "site has" } else { "sites have" }) +
-  " no resolvable target (table filled at runtime).\n" +
-  "Dead-code and retained-size results may be inaccurate; treat them as lower bounds."
+  " no resolvable target.\n" +
+  "Dead-code and retained-size results may be inaccurate; " +
+  "do not use them as proof that a function can be removed."
 }
 
 ///|
@@ -603,7 +604,7 @@ pub fn render_retained(
   }
   out = out +
     "\n  DIES counts the other functions that become unreachable with this one.\n" +
-    "  IND marks a function a call_indirect could reach."
+    "  IND marks a function an indirect call could reach."
   out
 }
 

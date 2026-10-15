@@ -417,7 +417,7 @@ test "retained size is reported as a table of two numbers" {
       #|    2      2   201       201     0    20.1%       app::helper
       #|
       #|  DIES counts the other functions that become unreachable with this one.
-      #|  IND marks a function a call_indirect could reach.
+      #|  IND marks a function an indirect call could reach.
     ),
   )
 }
@@ -483,16 +483,14 @@ test "an incomplete graph says so, in the report and in each section it touches"
   let analysis = analysis_of_module(dynamic_table_module())
   let warning = render_graph_warning(analysis.unresolved_count)
   assert_true(
-    warning.contains(
-      "WARNING: 1 call_indirect site has no resolvable target (table filled at runtime).",
-    ),
+    warning.contains("WARNING: 1 indirect call site has no resolvable target."),
   )
   assert_true(
     warning.contains(
-      "Dead-code and retained-size results may be inaccurate; treat them as lower bounds.",
+      "Dead-code and retained-size results may be inaccurate; do not use them as proof that a function can be removed.",
     ),
   )
-  // The two sections whose numbers are lower bounds repeat it under their titles.
+  // Both affected sections repeat the incompleteness note under their titles.
   let dead = render_dead_code(
     analysis.stats,
     analysis.reachable,
@@ -560,4 +558,209 @@ test "--strict refuses an incomplete graph, and only then" {
   inspect(strict_exit_code(strict, true), content="0")
   inspect(strict_exit_code(lax, false), content="0")
   inspect(strict_exit_code(lax, true), content="0")
+}
+
+///|
+/// Encode small, valid fixtures with one () -> () type and an exported root.
+/// Bodies include locals and end; imports occupy function index 0 when present.
+fn tail_module(
+  bodies : Array[Bytes],
+  imported? : Bool = false,
+  tables? : Bytes = b"",
+  elements? : Bytes = b"",
+) -> Bytes raise {
+  let count = bodies.length()
+  let imports = if imported { b"\x02\x07\x01\x01m\x01f\x00\x00" } else { b"" }
+  let functions = Bytes::from_array([(count + 1).to_byte(), count.to_byte()]) +
+    Bytes::new(count)
+  let mut code = Bytes::from_array([count.to_byte()])
+  for body in bodies {
+    assert_true(body.length() < 128)
+    code = code + Bytes::from_array([body.length().to_byte()]) + body
+  }
+  assert_true(code.length() < 128)
+  b"\x00asm\x01\x00\x00\x00\x01\x04\x01\x60\x00\x00" +
+  imports +
+  b"\x03" +
+  functions +
+  tables +
+  b"\x07\x07\x01\x03run\x00" +
+  Bytes::from_array([(if imported { 1 } else { 0 }).to_byte()]) +
+  elements +
+  b"\x0a" +
+  Bytes::from_array([code.length().to_byte()]) +
+  code
+}
+
+///|
+fn assert_direct_tail_edge(
+  analysis : Analysis,
+  edge : Int,
+  caller : Int,
+  callee : Int,
+) -> Unit raise {
+  let edge = analysis.graph.edges[edge]
+  assert_eq(edge.caller, caller)
+  assert_eq(edge.callee, callee)
+  match edge.kind {
+    Direct => ()
+    _ => fail("expected Direct edge")
+  }
+  assert_true(analysis.graph.calls.get(caller).unwrap().contains(callee))
+  assert_true(analysis.graph.called_by.get(callee).unwrap().contains(caller))
+  assert_true(analysis.reachable.contains(callee))
+}
+
+///|
+test "tail direct call fixes the 39 byte dead code regression" {
+  let data = tail_module([b"\x00\x12\x01\x0b", b"\x00\x0b"])
+  assert_eq(data.length(), 39)
+  let analysis = analysis_of(data)
+  assert_eq(analysis.graph.edges.length(), 1)
+  assert_direct_tail_edge(analysis, 0, 0, 1)
+  assert_eq(analysis.graph.edges[0].offset, 33)
+  assert_eq(analysis.stats[0].total_size, 5)
+  assert_eq(analysis.stats[1].total_size, 3)
+  assert_eq(analysis.reachable.length(), 2)
+  assert_eq(retained_of(analysis.retained, 0), 8)
+  assert_eq(dies_of(analysis.retained, 0), 1)
+  assert_true(analysis.graph_complete)
+}
+
+///|
+test "tail chain retains the actual encoded function sizes" {
+  let analysis = analysis_of(
+    tail_module([b"\x00\x12\x01\x0b", b"\x00\x12\x02\x0b", b"\x00\x0b"]),
+  )
+  assert_eq(analysis.graph.edges.length(), 2)
+  assert_direct_tail_edge(analysis, 0, 0, 1)
+  assert_direct_tail_edge(analysis, 1, 1, 2)
+  assert_eq(analysis.reachable.length(), 3)
+  assert_eq(retained_of(analysis.retained, 0), 13)
+  assert_eq(retained_of(analysis.retained, 1), 8)
+  assert_eq(retained_of(analysis.retained, 2), 3)
+  assert_eq(dies_of(analysis.retained, 0), 2)
+}
+
+///|
+test "tail and ordinary direct calls share graph bookkeeping" {
+  let analysis = analysis_of(
+    tail_module([b"\x00\x10\x01\x12\x02\x0b", b"\x00\x0b", b"\x00\x0b"]),
+  )
+  assert_eq(analysis.graph.edges.length(), 2)
+  assert_direct_tail_edge(analysis, 0, 0, 1)
+  assert_direct_tail_edge(analysis, 1, 0, 2)
+  assert_eq(analysis.graph.edges[1].offset - analysis.graph.edges[0].offset, 2)
+  assert_eq(analysis.reachable.length(), 3)
+}
+
+///|
+test "tail cycles and self loops terminate with correct reachability" {
+  let cycle = analysis_of(
+    tail_module([b"\x00\x12\x01\x0b", b"\x00\x12\x00\x0b"]),
+  )
+  assert_eq(cycle.graph.edges.length(), 2)
+  assert_direct_tail_edge(cycle, 0, 0, 1)
+  assert_direct_tail_edge(cycle, 1, 1, 0)
+  assert_eq(cycle.reachable.length(), 2)
+  assert_eq(retained_of(cycle.retained, 0), 10)
+  let self_loop = analysis_of(tail_module([b"\x00\x12\x00\x0b"]))
+  assert_eq(self_loop.graph.edges.length(), 1)
+  assert_direct_tail_edge(self_loop, 0, 0, 0)
+  assert_eq(self_loop.reachable.length(), 1)
+  assert_eq(retained_of(self_loop.retained, 0), 5)
+}
+
+///|
+test "tail indirect calls record nonzero table index candidates and edges" {
+  let analysis = analysis_of(
+    tail_module(
+      [b"\x00\x41\x00\x13\x00\x01\x0b", b"\x00\x0b"],
+      tables=b"\x04\x07\x02\x70\x00\x01\x70\x00\x01",
+      elements=b"\x09\x09\x01\x02\x01\x41\x00\x0b\x00\x01\x01",
+    ),
+  )
+  assert_eq(analysis.graph.indirect_sites.length(), 1)
+  let site = analysis.graph.indirect_sites[0]
+  assert_eq(site.caller, 0)
+  assert_eq(site.type_index, 0)
+  assert_eq(site.table_index, 1)
+  assert_eq(site.offset, 55)
+  assert_eq(site.candidates, [1])
+  assert_eq(analysis.graph.edges.length(), 1)
+  let edge = analysis.graph.edges[0]
+  assert_eq(edge.caller, 0)
+  assert_eq(edge.callee, 1)
+  assert_eq(edge.offset, site.offset)
+  match edge.kind {
+    Indirect => ()
+    _ => fail("expected Indirect edge")
+  }
+  assert_true(analysis.graph.calls.get(0).unwrap().contains(1))
+  assert_true(analysis.graph.called_by.get(1).unwrap().contains(0))
+  assert_true(analysis.indirect.contains(1))
+  assert_eq(analysis.unresolved_count, 0)
+  assert_true(analysis.graph_complete)
+}
+
+///|
+test "tail indirect calls without candidates make the graph incomplete" {
+  let analysis = analysis_of(
+    tail_module(
+      [b"\x00\x41\x00\x13\x00\x00\x0b"],
+      tables=b"\x04\x04\x01\x70\x00\x01",
+    ),
+  )
+  assert_eq(analysis.graph.edges.length(), 0)
+  assert_eq(analysis.graph.indirect_sites.length(), 1)
+  assert_eq(analysis.graph.unresolved_indirect.length(), 1)
+  let site = analysis.graph.unresolved_indirect[0]
+  assert_eq(site.caller, 0)
+  assert_eq(site.type_index, 0)
+  assert_eq(site.table_index, 0)
+  assert_eq(site.offset, 40)
+  assert_eq(site.candidates.length(), 0)
+  assert_eq(analysis.unresolved_count, 1)
+  assert_true(!analysis.graph_complete)
+  assert_true(!is_graph_complete(analysis.graph))
+}
+
+///|
+test "tail and ordinary unresolved indirect sites are each counted once" {
+  let analysis = analysis_of(
+    tail_module(
+      [b"\x00\x41\x00\x11\x00\x00\x41\x00\x13\x00\x00\x0b"],
+      tables=b"\x04\x04\x01\x70\x00\x01",
+    ),
+  )
+  assert_eq(analysis.graph.edges.length(), 0)
+  assert_eq(analysis.graph.indirect_sites.length(), 2)
+  assert_eq(analysis.graph.unresolved_indirect.length(), 2)
+  assert_eq(analysis.unresolved_count, 2)
+  assert_true(!analysis.graph_complete)
+  assert_eq(analysis.graph.unresolved_indirect[0].offset, 40)
+  assert_eq(analysis.graph.unresolved_indirect[1].offset, 45)
+  assert_true(
+    render_graph_warning(analysis.unresolved_count).contains(
+      "WARNING: 2 indirect call sites have no resolvable target.",
+    ),
+  )
+}
+
+///|
+test "tail calls use full function indices in the presence of imports" {
+  let analysis = analysis_of(
+    tail_module(
+      [b"\x00\x10\x00\x12\x02\x0b", b"\x00\x12\x00\x0b"],
+      imported=true,
+    ),
+  )
+  assert_eq(analysis.stats[0].index, 1)
+  assert_eq(analysis.stats[1].index, 2)
+  assert_eq(analysis.graph.edges.length(), 3)
+  assert_direct_tail_edge(analysis, 0, 1, 0)
+  assert_direct_tail_edge(analysis, 1, 1, 2)
+  assert_direct_tail_edge(analysis, 2, 2, 0)
+  assert_eq(analysis.reachable.length(), 3)
+  assert_eq(retained_of(analysis.retained, 1), 12)
 }

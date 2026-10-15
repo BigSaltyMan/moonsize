@@ -10,9 +10,9 @@
 ///|
 /// How one function refers to another.
 pub enum EdgeKind {
-  /// `call x`: the target is named outright.
+  /// `call x` or `return_call x`: the target is named outright.
   Direct
-  /// `call_indirect`: the target comes out of a table at run time.
+  /// `call_indirect` or `return_call_indirect`: a table supplies the target.
   Indirect
   /// `ref.func x`: a reference taken without calling, as when building a
   /// closure. The function may well run later, so it counts as reachable.
@@ -30,14 +30,14 @@ pub struct CallEdge {
 }
 
 ///|
-/// A `call_indirect`, with the targets its table could supply.
+/// A `call_indirect` or `return_call_indirect`, with its table's candidates.
 pub struct IndirectSite {
   caller : Int
   /// Table the call reads.
   table_index : Int
   /// Signature the call selects on.
   type_index : Int
-  /// Offset of the `call_indirect` instruction.
+  /// Offset of the ordinary or tail indirect call instruction.
   offset : Int
   /// Every function any element segment places in that table. Conservative by
   /// construction: the table's contents are not known statically, so a missing
@@ -53,12 +53,12 @@ pub struct CallGraph {
   calls : Map[Int, Set[Int]]
   /// Incoming references by function index.
   called_by : Map[Int, Set[Int]]
-  /// Every `call_indirect`, with the candidates its table allows.
+  /// Every ordinary or tail indirect call, with its table's candidates.
   indirect_sites : Array[IndirectSite]
   /// The subset of those sites whose table gave no candidates at all.
   ///
-  /// This is the one hole the decoder cannot close. A module may fill a table at
-  /// run time — `table.set`, `table.init`, or the host handing it functions —
+  /// A module may fill a table at run time — `table.set`, `table.init`, or the
+  /// host handing it functions —
   /// and a table with no element segment tells this tool nothing about who sits
   /// in it. Dropping the site would mean dropping every edge it stands for, and
   /// a missing edge is a function wrongly called dead, so the sites are kept
@@ -69,12 +69,12 @@ pub struct CallGraph {
 }
 
 ///|
-/// Whether the graph accounts for every call the module can make.
+/// Whether every recognised indirect call site has static candidates.
 ///
-/// When it does not, reachability and the dominator tree are lower bounds rather
-/// than answers: some function this graph never reaches may in fact run. The
-/// callers that care — `--dead-code`, `--retained`, `--strict` — say so rather
-/// than presenting a bound as a fact.
+/// Missing edges can make dead-code and retained-size results inaccurate.
+/// Callers such as `--dead-code`, `--retained` and `--strict` report this hole.
+/// A true result does not establish completeness for reference calls or dynamic
+/// table contents.
 pub fn is_graph_complete(graph : CallGraph) -> Bool {
   graph.unresolved_indirect.length() == 0
 }
@@ -97,9 +97,10 @@ fn table_functions(elements : Array[ElementSegment], table : Int) -> Array[Int] 
 ///|
 /// Build the call graph of a module.
 ///
-/// Every body is decoded once: `call` gives a precise edge, `ref.func` gives a
-/// reference edge, and `call_indirect` gives one conservative edge per function
-/// its table can hold plus a record of the site itself.
+/// Every body is decoded once: `call` and `return_call` give precise edges,
+/// `ref.func` gives a reference edge, and `call_indirect` and
+/// `return_call_indirect` give conservative edges to static table candidates
+/// plus a record of each site, including sites with no candidates.
 pub fn build(
   data : Bytes,
   bodies : Array[FunctionBody],
@@ -118,7 +119,7 @@ pub fn build(
     }
     for instruction in instructions {
       match instruction.opcode {
-        Call =>
+        Call | ReturnCall =>
           add_edge(
             calls,
             called_by,
@@ -138,7 +139,7 @@ pub fn build(
             Reference,
             instruction.offset,
           )
-        CallIndirect => {
+        CallIndirect | ReturnCallIndirect => {
           let type_index = instruction.operands[0]
           let table_index = instruction.operands[1]
           let candidates = table_functions(elements, table_index)
@@ -272,7 +273,7 @@ pub fn roots_of(
 }
 
 ///|
-/// The functions any `call_indirect` could reach, for labelling report rows.
+/// The functions any ordinary or tail indirect call could reach, for reports.
 pub fn indirect_targets(graph : CallGraph) -> Set[Int] {
   let targets : Set[Int] = Set([])
   for site in graph.indirect_sites {

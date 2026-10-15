@@ -141,28 +141,34 @@ instruction set, the `0xFC` saturating and bulk-memory opcodes, the exception
 handling and tail-call opcodes MoonBit emits, and the `0xFB` garbage-collection
 opcodes its `wasm-gc` backend uses. Each body contributes:
 
-- `call x` — a precise edge to `x`;
+- `call x` and `return_call x` — precise edges to `x`;
 - `ref.func x` — a reference, which counts as reachable because the function may
   run later as a closure;
-- `call_indirect` — a *conservative* edge to every function any element segment
-  places in that table. The table's contents are not known statically, so a
+- `call_indirect` and `return_call_indirect` — *conservative* edges to every
+  function any element segment places in that table. The table's contents are
+  not known statically, so a
   missing edge would mean a missing function and a function wrongly reported
   dead, which is the one mistake worth avoiding here.
 
-There is one hole the decoder cannot close. A module may fill a table at run time
+Static candidates have limits. A module may fill a table at run time
 — `table.set`, `table.init`, or the host handing it functions — and a table with
 **no element segment at all** then says nothing about who sits in it. Those
-`call_indirect` sites contribute no edges, so reachability and the dominator tree
-are lower bounds rather than answers. The report says so above everything else:
+indirect call sites, including indirect tail calls, contribute no edges and
+produce incomplete-graph diagnostics. Dead-code and retained-size results may
+then be inaccurate. The report says so above everything else:
 
 ```
-WARNING: 1 call_indirect site has no resolvable target (table filled at runtime).
-Dead-code and retained-size results may be inaccurate; treat them as lower bounds.
+WARNING: 1 indirect call site has no resolvable target.
+Dead-code and retained-size results may be inaccurate; do not use them as proof that a function can be removed.
 ```
 
 `--dead-code` and `--retained` repeat it under their titles, and `--strict` turns
-the warning into a refusal — no report, exit code 3 — for a job that has no way to
-judge a warning itself.
+these recognised incomplete cases into a refusal — no report, exit code 3.
+
+This change adds dependency analysis for direct and indirect tail calls.
+Reference calls (including `return_call_ref`) and dynamic table completeness
+analysis remain limited. A successful `--strict` run does not establish that
+all Wasm call mechanisms are fully modelled.
 
 A function is a **root** if the outside world can reach it: it is exported, it is
 the start function, or it sits in a table. Everything reachable from those roots
@@ -285,7 +291,7 @@ Retained size
     8     43   633       633     0     5.9%       int__to__string__dec
 
   DIES counts the other functions that become unreachable with this one.
-  IND marks a function a call_indirect could reach.
+  IND marks a function an indirect call could reach.
 
 Dead code
 
