@@ -80,7 +80,7 @@ fn print_report(
   analysis : @lib.Analysis,
   options : @lib.Options,
 ) -> Unit {
-  let warning = @lib.render_graph_warning(analysis.unresolved_count)
+  let warning = @lib.render_graph_warning(analysis.graph)
   if warning.length() > 0 {
     println(warning)
     println("")
@@ -104,28 +104,11 @@ fn print_report(
   println(@lib.render_module_summary(analysis.stats, parsed.file_size))
   if options.retained {
     println("")
-    println(
-      @lib.render_retained(
-        analysis.stats,
-        analysis.retained,
-        analysis.indirect,
-        parsed.file_size,
-        options.top,
-        unresolved=analysis.unresolved_count,
-      ),
-    )
+    println(@lib.render_retained(analysis, options.top))
   }
   if options.dead_code {
     println("")
-    println(
-      @lib.render_dead_code(
-        analysis.stats,
-        analysis.reachable,
-        parsed.file_size,
-        options.top,
-        unresolved=analysis.unresolved_count,
-      ),
-    )
+    println(@lib.render_dead_code(analysis, options.top))
   }
 }
 
@@ -170,7 +153,7 @@ fn main {
   // half a report with a warning on it is exactly the failure mode this flag
   // exists to rule out for a job that cannot judge the warning itself.
   if @lib.strict_exit_code(options, analysis.graph_complete) != @lib.EXIT_OK {
-    println(@lib.render_graph_warning(analysis.unresolved_count))
+    println(@lib.render_graph_warning(analysis.graph))
     println("")
     println(
       "moonsize: --strict: refusing to report an incomplete call graph for " +

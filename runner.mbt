@@ -56,6 +56,7 @@ pub fn size_exit_code(
 ///|
 /// The exit code `--strict` earns, or `EXIT_OK` when the graph is complete or
 /// the flag is absent.
+/// Completeness includes every unified graph diagnostic, including reference calls.
 ///
 /// It lives here rather than in the entry point so the rule can be tested
 /// without a process: a job that passes `--strict` is saying it cannot judge a

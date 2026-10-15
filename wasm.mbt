@@ -611,13 +611,15 @@ pub enum CallKind {
   Direct(Int)
   /// `call_indirect` or `return_call_indirect`: table `x` supplies the target.
   Indirect(Int)
+  /// `call_ref` or `return_call_ref`: target comes from a function reference.
+  Reference
 }
 
 ///|
 /// One call found in a function body.
 pub struct CallSite {
   kind : CallKind
-  /// Signature of an ordinary or tail indirect call; `None` for a direct call.
+  /// Signature of a table or reference call; `None` for a direct call.
   type_index : Int?
   /// Offset of the instruction from the start of the file.
   offset : Int
@@ -675,9 +677,10 @@ pub fn decode_instructions(
 }
 
 ///|
-/// Collect direct and table-based calls, including tail calls, from a body.
+/// Collect direct, table and reference calls, including tail calls, from a body.
 ///
 /// Collect `call`, `return_call`, `call_indirect` and `return_call_indirect`.
+/// Also collect `call_ref` and `return_call_ref`, without resolving their targets.
 /// `ref.func` is a reference rather than a call; the graph handles it separately.
 pub fn scan_calls(
   bytes : Bytes,
@@ -700,6 +703,12 @@ pub fn scan_calls(
       CallIndirect | ReturnCallIndirect =>
         sites.push({
           kind: Indirect(instruction.operands[1]),
+          type_index: Some(instruction.operands[0]),
+          offset: instruction.offset,
+        })
+      CallRef | ReturnCallRef =>
+        sites.push({
+          kind: Reference,
           type_index: Some(instruction.operands[0]),
           offset: instruction.offset,
         })

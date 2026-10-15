@@ -18,15 +18,14 @@ pub struct Analysis {
   graph : CallGraph
   /// Where reachability starts: exports, the start function, table contents.
   roots : Set[Int]
-  /// Everything the roots can reach.
+  /// Everything the roots can reach within the current graph model.
   reachable : Set[Int]
-  /// What deleting each reachable function would free.
+  /// Retention within the current graph model; diagnostics limit its accuracy.
   retained : Array[RetainedSize]
   /// Functions an ordinary or tail indirect call could reach.
   indirect : Set[Int]
-  /// Whether every recognised indirect call has static candidates. A false
-  /// result means reachability and retained sizes may be inaccurate; true does
-  /// not guarantee complete modelling of reference calls or dynamic tables.
+  /// Whether graph.diagnostics is empty: no gaps detected within this scope.
+  /// True does not certify all Wasm mechanisms or dynamic table contents.
   graph_complete : Bool
   /// Ordinary and tail indirect sites with no resolvable target, for reports.
   unresolved_count : Int

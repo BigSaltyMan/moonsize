@@ -55,6 +55,7 @@ fn assert_public_tail_scans(analysis : @moonsize.Analysis) -> Unit raise {
           assert_eq(matching[0].table_index, table)
           assert_eq(Some(matching[0].type_index), site.type_index)
         }
+        Reference => fail("tail fixtures contain no reference calls")
       }
     }
   }

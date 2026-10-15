@@ -64,6 +64,9 @@ fn main {
           // 最重的 5 个函数：要文本就用 render_*，要数字就读
           // `analysis.stats` 与 `analysis.retained`。
           println(@moonsize.render_top_functions(analysis.stats, analysis.data.length(), 5))
+          println(@moonsize.render_graph_warning(analysis.graph))
+          println(@moonsize.render_dead_code(analysis, 5))
+          println(@moonsize.render_retained(analysis, 5))
           println(@moonsize.render_html(analysis, options.path))
         }
         Err(error) => println(@moonsize.describe_error(error))
@@ -100,19 +103,36 @@ fn main {
 - `call x`、`return_call x` —— 指向 `x` 的精确边；
 - `ref.func x` —— 一次引用，算作可达，因为该函数之后可能作为闭包被运行；
 - `call_indirect`、`return_call_indirect` —— 根据静态候选，向 element 段放进该 table 的**每个**函数建立保守边。table 的内容静态不可知，而漏一条边就等于漏一个函数、把一个还在用的函数报成死代码。
+- `call_ref`、`return_call_ref` —— 识别调用点，记录 `UnmodeledReferenceCall` 诊断。本版本尚未求解目标函数，即使前面紧邻 `ref.func` 也不猜测目标。
 
 静态候选有其局限。模块可以在运行时填充 table——`table.set`、`table.init`，或者由宿主塞进去——而**完全没有 element 段**的 table 就等于什么也没说。无候选的间接调用（包括间接尾调用）贡献不了任何边，会产生不完整诊断；死代码和 retained size 结果可能不准确。报告会在最前面说明这一点：
 
 ```
-WARNING: 1 indirect call site has no resolvable target.
+WARNING: the call graph has 1 analysis gap.
+  function 0, offset 42: call_ref: reference-call target analysis is not implemented.
+
 Dead-code and retained-size results may be inaccurate; do not use them as proof that a function can be removed.
 ```
 
 `--dead-code` 和 `--retained` 会在各自标题下重复不完整提示；`--strict` 对这些已识别的不完整情况拒绝输出报告，返回退出码 `3`。
 
-本次补齐直接尾调用和间接尾调用的依赖分析。引用调用（包括 `return_call_ref`）与动态 table 的完整性分析仍有限制，不能将 strict 成功解释为所有 Wasm 调用机制均已完整建模。
+`call_ref` 和 `return_call_ref` 会令图不完整，即使所有表调用都有候选。`analyze` 仍返回 `Ok(Analysis)`：建模缺口与二进制解析错误不同。诊断保留类别、完整 caller 索引、文件字节偏移、真实 opcode、类型索引和可选表索引。
 
-如果外部世界能到达一个函数，它就是**根**：它被导出、它是 start 函数，或者它位于某个 table 中。从这些根可达的一切都是活的，其余都是死的。
+`graph_complete` 表示本期检测范围内未发现缺口，即 `analysis.graph.diagnostics` 为空。动态 table 写入、宿主提供的表内容及所有 Wasm 调用机制仍未完整建模，不能将 strict 成功解释为完整性认证。
+
+如果外部世界能到达一个函数，它就是**根**：它被导出、它是 start 函数，或者被 element 段引用。可达性与 retained size 描述的是当前调用图模型中的路径。
+
+### 诊断 API 与导出迁移
+
+这是有意的 API 扩展。`CallGraph` 新增 `diagnostics : Array[GraphDiagnostic]`，`GraphDiagnosticKind` 分为 `NoStaticTableTargets` 与 `UnmodeledReferenceCall`。总缺口数从该数组读取；`Analysis.unresolved_count` 仍只统计没有静态候选的表调用，因此引用调用存在时它仍可能是零。
+
+`scan_calls` 为 `call_ref`、`return_call_ref` 返回 `CallKind::Reference`，携带 `type_index = Some(type)` 和原始偏移。外部代码穷举匹配 `CallKind` 时必须处理新增分支。`ref.func` 仍只建立引用边，不进入调用列表。
+
+报告接口改为 `render_graph_warning(analysis.graph)`、`render_dead_code(analysis, top)`、`render_retained(analysis, top)`。后两者内部读取诊断，移除原先分开的数组、文件大小及可选 `unresolved` 参数；上方示例与 `_probe/` 已同步更新。
+
+JSON 保留 `module`、`functions`、`roots`、`edges`、`indirect_sites`，新增 `schema_version: 1`、`graph_complete`、`modeling_scope`、`diagnostics`。每条诊断包含 `code`、`caller`、`offset`、`opcode`、`type_index`、`table_index`，引用调用的表索引为 null。稳定代码为 `no_static_table_targets`、`unmodeled_reference_call`；完整样本的诊断数组为空。诊断按 caller、offset 排序。
+
+非严格模式生成的文件自身保留限制：JSON 含结构化诊断与建模范围，DOT 含图级警告标签，HTML 顶部展示诊断并在死代码区域保留提示。文件被单独分享后，这些信息仍在。严格模式对三种格式都在写文件前拒绝；既不生成新文件，也不修改已有文件，退出码为 `3`。
 
 ### Retained Size
 
@@ -124,7 +144,7 @@ Dead-code and retained-size results may be inaccurate; do not use them as proof 
 
 - `RETAINED == SIZE` —— 这个函数只对自己负责，删掉它只省下它自己的字节。
 - `RETAINED ≫ SIZE` 且 `DIES` 较大 —— 好的候选。删掉它会带走一整棵子树。
-- `IND` —— 该函数可以通过 `call_indirect` 到达，只有在没有 table 槽位和间接调用依赖它时才能安全删除。
+- `IND` —— 该函数属于普通或尾部间接调用的候选；考虑删除前还需检查依赖它的 table 槽位和调用点。
 
 两个数都打印是有意的。`SIZE` 说明编译期把函数改小能省多少；`RETAINED` 说明直接删掉它省多少，后者通常是更便宜的改动。
 
@@ -169,9 +189,9 @@ COMPRESSED SIZE
 
 ### 判断哪些可以删
 
-1. 先看 `--dead-code`。那里每一行都可以直接删；确认没有模块外部按名字调用它（如果被导出，它就已经是根了，所以这一点已经被考虑在内）。
+1. 先检查诊断和建模范围，再看 `--dead-code`。列表表示当前模型中不可达的函数；图不完整时，不能把它作为可以删除函数的证明。
 2. 再看 `--retained` 中 `RETAINED` 很大且 `DIES` 大于零的行。这些是删除后会连锁的函数。
-3. 对带 `IND` 的行要谨慎：间接候选只有在 table 槽位和调用点一起删除时才安全。
+3. 对带 `IND` 的行，继续核对 table 槽位、调用点和宿主行为，再决定如何修改。
 
 ## 输出示例
 
@@ -252,7 +272,7 @@ SIZE COMPARISON
   ...
 ```
 
-退出码：`0` 正常，`1` 输入无法读取，`2` 命令行错误，`3` 超出预算。CI 既可以只依据预算判定失败，也能把「输入坏了」和「构建坏了」区分开。
+退出码：`0` 正常，`1` 输入无法读取，`2` 命令行错误，`3` 超出预算或被严格模式拒绝。
 
 本仓库用 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 给自己上闸：格式检查、`moon check --target native --deny-warn`、`moon test`，以及把示例文件限制在预算内。
 
@@ -299,7 +319,12 @@ moon run cmd/main -- that.wasm --baseline base.wasm --max-size 5KB
 ```sh
 moon check --target native --deny-warn
 moon test
+moon build --target native --release
+bash scripts/test-tail-calls.sh _build/native/release/build/cmd/main/main.exe
+bash scripts/test-graph-diagnostics.sh _build/native/release/build/cmd/main/main.exe
 ```
+
+新增诊断 CLI 脚本需要 Node.js，使用 V8 独立验证 Wasm 样本，并解析 JSON 后断言字段。两个过程级脚本都可在 Git Bash 或 Linux 上对已构建的 native 可执行文件运行。
 
 测试逐条覆盖指令表——每条指令带一个规范编码和规范给出的长度——并固定了三个真实的 MoonBit 函数体，其中一个是 locals 使用两字节 GC 引用类型的，这样一旦某个立即数宽度写错，失败的是一个测试，而不是悄悄产生一张错误的调用图。
 

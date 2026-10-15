@@ -35,7 +35,8 @@ expect_status() {
 }
 
 expect_warning() {
-  grep -Fq 'WARNING: 1 indirect call site has no resolvable target.' "$1" || fail "missing incomplete-graph warning"
+  grep -Fq 'WARNING: the call graph has 1 analysis gap.' "$1" || fail "missing incomplete-graph warning"
+  grep -Fq 'return_call_indirect: no static table targets are resolvable.' "$1" || fail "missing tail-call reason"
   grep -Fq 'Dead-code and retained-size results may be inaccurate; do not use them as proof that a function can be removed.' "$1" || fail "missing removal warning"
 }
 

@@ -486,15 +486,56 @@ fn name_of(names : Map[Int, String], index : Int) -> String {
 ///|
 /// The line a section prints under its title when the call graph has holes, or
 /// `""` when it does not, so a complete graph's report reads exactly as before.
-fn incomplete_note(unresolved : Int) -> String {
-  if unresolved == 0 {
+fn incomplete_note(graph : CallGraph) -> String {
+  let count = graph.diagnostics.length()
+  if count == 0 {
     return ""
   }
   "  (graph incomplete: " +
-  unresolved.to_string() +
-  " unresolved indirect " +
-  (if unresolved == 1 { "call" } else { "calls" }) +
-  ")\n"
+  count.to_string() +
+  " analysis " +
+  (if count == 1 { "gap" } else { "gaps" }) +
+  ")\n" +
+  render_graph_warning(graph) +
+  "\n"
+}
+
+///|
+/// A copy so rendering never reorders the caller's diagnostic records.
+fn sorted_diagnostics(graph : CallGraph) -> Array[GraphDiagnostic] {
+  let diagnostics = graph.diagnostics.copy()
+  diagnostics.sort_by(fn(a, b) {
+    if a.caller != b.caller {
+      a.caller - b.caller
+    } else {
+      a.offset - b.offset
+    }
+  })
+  diagnostics
+}
+
+///|
+fn diagnostic_code(kind : GraphDiagnosticKind) -> String {
+  match kind {
+    NoStaticTableTargets => "no_static_table_targets"
+    UnmodeledReferenceCall => "unmodeled_reference_call"
+  }
+}
+
+///|
+fn diagnostic_reason(kind : GraphDiagnosticKind) -> String {
+  match kind {
+    NoStaticTableTargets => "no static table targets are resolvable."
+    UnmodeledReferenceCall =>
+      "reference-call target analysis is not implemented."
+  }
+}
+
+///|
+fn graph_modeling_scope() -> String {
+  "Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. " +
+  "Reference-call targets and dynamic table contents are not solved. " +
+  "graph_complete means no gaps detected within this scope, not full Wasm certification."
 }
 
 ///|
@@ -504,37 +545,50 @@ fn incomplete_note(unresolved : Int) -> String {
 /// It belongs above the whole report rather than beside the sections it
 /// undermines: those sections are spread through the output, and a reader who
 /// skips one of them still has to see this. Saying it is the point — a tool that
-/// silently reports a lower bound as a fact is how a function in use gets
+/// silently reports an incomplete graph as a fact is how a function in use gets
 /// deleted.
-pub fn render_graph_warning(unresolved : Int) -> String {
-  if unresolved == 0 {
+pub fn render_graph_warning(graph : CallGraph) -> String {
+  let diagnostics = sorted_diagnostics(graph)
+  let count = diagnostics.length()
+  if count == 0 {
     return ""
   }
-  "WARNING: " +
-  unresolved.to_string() +
-  " indirect call " +
-  (if unresolved == 1 { "site has" } else { "sites have" }) +
-  " no resolvable target.\n" +
+  let mut warning = "WARNING: the call graph has " +
+    count.to_string() +
+    " analysis " +
+    (if count == 1 { "gap" } else { "gaps" }) +
+    ".\n"
+  for diagnostic in diagnostics {
+    warning = warning +
+      "  function " +
+      diagnostic.caller.to_string() +
+      ", offset " +
+      diagnostic.offset.to_string() +
+      ": " +
+      diagnostic.opcode.name() +
+      ": " +
+      diagnostic_reason(diagnostic.kind) +
+      "\n"
+  }
+  warning +
+  "\n" +
   "Dead-code and retained-size results may be inaccurate; " +
   "do not use them as proof that a function can be removed."
 }
 
 ///|
-/// The retained-size table: what deleting each function would free.
+/// The retained-size table, computed within the current graph model.
 ///
 /// `SIZE` is the function on its own and `RETAINED` is that plus every function
 /// that becomes unreachable with it, with `DIES` counting how many others that
 /// is. A row where the two sizes match is load-bearing only for itself; a row
 /// where `RETAINED` dwarfs `SIZE` is a good place to look when shrinking a
 /// binary, because removing it takes everything underneath with it.
-pub fn render_retained(
-  stats : Array[FunctionStat],
-  retained : Array[RetainedSize],
-  indirect : Set[Int],
-  file_size : Int,
-  top : Int,
-  unresolved? : Int = 0,
-) -> String {
+pub fn render_retained(analysis : Analysis, top : Int) -> String {
+  let stats = analysis.stats
+  let retained = analysis.retained
+  let indirect = analysis.indirect
+  let file_size = analysis.parsed.file_size
   let names = names_by_index(stats)
   let ranked = retained.copy()
   ranked.sort_by(fn(a, b) {
@@ -560,7 +614,7 @@ pub fn render_retained(
     index_width = number_width(entry.index, index_width)
   }
   let mut out = "Retained size\n"
-  out = out + incomplete_note(unresolved)
+  out = out + incomplete_note(analysis.graph)
   if shown == 0 {
     return out + "\n  no reachable functions to rank"
   }
@@ -611,16 +665,12 @@ pub fn render_retained(
 ///|
 /// The dead-code section: functions no root can reach.
 ///
-/// This is the report that pays for the analysis. Anything listed here cannot
-/// run: no export, no start function, no table entry and no path of calls leads
-/// to it, so its bytes are already paid for and never used.
-pub fn render_dead_code(
-  stats : Array[FunctionStat],
-  reachable : Set[Int],
-  file_size : Int,
-  top : Int,
-  unresolved? : Int = 0,
-) -> String {
+/// Unreachable means no path within the current model. Detected gaps are always
+/// shown, so a caller cannot omit the warning by forgetting an optional count.
+pub fn render_dead_code(analysis : Analysis, top : Int) -> String {
+  let stats = analysis.stats
+  let reachable = analysis.reachable
+  let file_size = analysis.parsed.file_size
   let dead : Array[FunctionStat] = []
   let mut bytes = 0
   for stat in stats {
@@ -637,7 +687,7 @@ pub fn render_dead_code(
     }
   })
   let mut out = "Dead code\n"
-  out = out + incomplete_note(unresolved)
+  out = out + incomplete_note(analysis.graph)
   if stats.length() == 0 {
     return out + "\n  no functions in this binary"
   }

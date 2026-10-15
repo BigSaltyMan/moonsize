@@ -25,7 +25,14 @@ fn graph_of_kind(pairs : Array[(Int, Int)], kind : EdgeKind) -> CallGraph {
   for pair in pairs {
     add_edge(calls, called_by, edges, pair.0, pair.1, kind, 0)
   }
-  { calls, called_by, indirect_sites: [], unresolved_indirect: [], edges, }
+  {
+    calls,
+    called_by,
+    indirect_sites: [],
+    unresolved_indirect: [],
+    diagnostics: [],
+    edges,
+  }
 }
 
 ///|
@@ -318,12 +325,8 @@ test "a function nothing points at is not reachable" {
 ///|
 test "the fixture's dead code is reported with its size" {
   let analysis = analysis_of(graph_module())
-  let parsed = match parse_module(graph_module()) {
-    Ok(parsed) => parsed
-    Err(error) => fail(describe_error(error))
-  }
   inspect(
-    render_dead_code(analysis.stats, analysis.reachable, parsed.file_size, 10),
+    render_dead_code(analysis, 10),
     content=(
       #|Dead code
       #|
@@ -366,8 +369,16 @@ test "dead code names the heaviest functions first" {
       offset: 0,
     },
   ]
+  let fixture = analysis_of_stats(stats)
   inspect(
-    render_dead_code(stats, set_of([1]), 1000, 10),
+    render_dead_code(
+      {
+        ..fixture,
+        reachable: set_of([1]),
+        parsed: { ..fixture.parsed, file_size: 1000, },
+      },
+      10,
+    ),
     content=(
       #|Dead code
       #|
@@ -407,8 +418,12 @@ test "retained size is reported as a table of two numbers" {
     { index: 1, own_size: 101, retained: 302, retained_functions: 1, },
     { index: 2, own_size: 201, retained: 201, retained_functions: 0, },
   ]
+  let fixture = analysis_of_stats(stats)
   inspect(
-    render_retained(stats, retained, Set([]), 1000, 10),
+    render_retained(
+      { ..fixture, retained, parsed: { ..fixture.parsed, file_size: 1000, }, },
+      10,
+    ),
     content=(
       #|Retained size
       #|
@@ -481,37 +496,18 @@ test "a call_indirect with no candidates is recorded, not dropped" {
 ///|
 test "an incomplete graph says so, in the report and in each section it touches" {
   let analysis = analysis_of_module(dynamic_table_module())
-  let warning = render_graph_warning(analysis.unresolved_count)
-  assert_true(
-    warning.contains("WARNING: 1 indirect call site has no resolvable target."),
-  )
+  let warning = render_graph_warning(analysis.graph)
+  assert_true(warning.contains("WARNING: the call graph has 1 analysis gap."))
   assert_true(
     warning.contains(
       "Dead-code and retained-size results may be inaccurate; do not use them as proof that a function can be removed.",
     ),
   )
   // Both affected sections repeat the incompleteness note under their titles.
-  let dead = render_dead_code(
-    analysis.stats,
-    analysis.reachable,
-    54,
-    5,
-    unresolved=analysis.unresolved_count,
-  )
-  assert_true(
-    dead.contains("  (graph incomplete: 1 unresolved indirect call)\n"),
-  )
-  let retained = render_retained(
-    analysis.stats,
-    analysis.retained,
-    analysis.indirect,
-    54,
-    5,
-    unresolved=analysis.unresolved_count,
-  )
-  assert_true(
-    retained.contains("  (graph incomplete: 1 unresolved indirect call)\n"),
-  )
+  let dead = render_dead_code(analysis, 5)
+  assert_true(dead.contains("  (graph incomplete: 1 analysis gap)\n"))
+  let retained = render_retained(analysis, 5)
+  assert_true(retained.contains("  (graph incomplete: 1 analysis gap)\n"))
 }
 
 ///|
@@ -521,24 +517,12 @@ test "a complete graph warns about nothing" {
   inspect(analysis.graph.unresolved_indirect.length(), content="0")
   inspect(analysis.unresolved_count, content="0")
   inspect(analysis.graph_complete, content="true")
-  inspect(render_graph_warning(0), content="")
+  inspect(render_graph_warning(analysis.graph), content="")
   // Both functions are reachable through the table once its contents are known.
   assert_true(analysis.reachable.contains(1))
   // Nothing to declare, so the sections read exactly as they always did.
-  assert_true(
-    !render_dead_code(analysis.stats, analysis.reachable, 64, 5).contains(
-      "graph incomplete",
-    ),
-  )
-  assert_true(
-    !render_retained(
-      analysis.stats,
-      analysis.retained,
-      analysis.indirect,
-      64,
-      5,
-    ).contains("graph incomplete"),
-  )
+  assert_true(!render_dead_code(analysis, 5).contains("graph incomplete"))
+  assert_true(!render_retained(analysis, 5).contains("graph incomplete"))
 }
 
 ///|
@@ -741,8 +725,8 @@ test "tail and ordinary unresolved indirect sites are each counted once" {
   assert_eq(analysis.graph.unresolved_indirect[0].offset, 40)
   assert_eq(analysis.graph.unresolved_indirect[1].offset, 45)
   assert_true(
-    render_graph_warning(analysis.unresolved_count).contains(
-      "WARNING: 2 indirect call sites have no resolvable target.",
+    render_graph_warning(analysis.graph).contains(
+      "WARNING: the call graph has 2 analysis gaps.",
     ),
   )
 }

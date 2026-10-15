@@ -51,6 +51,12 @@ fn dot_escape(byte : Byte) -> String {
     "\\\""
   } else if byte == b'\\' {
     "\\\\"
+  } else if byte == b'\n' {
+    "\\n"
+  } else if byte == b'\r' {
+    "\\r"
+  } else if byte == b'\t' {
+    "\\t"
   } else {
     ""
   }
@@ -105,9 +111,8 @@ fn export_name(names : Map[Int, String], index : Int) -> String {
 ///|
 /// Render the call graph as Graphviz DOT.
 ///
-/// Dead functions are drawn dashed, which is what makes the picture useful: the
-/// solid part is the program, the dashed part is what could be deleted. Indirect
-/// edges are dotted, because they are candidates rather than certainties.
+/// Functions unreachable within the model are dashed. Diagnostics and modelling
+/// limits travel in the graph label. Indirect edges are dotted candidates.
 pub fn render_dot(
   stats : Array[FunctionStat],
   graph : CallGraph,
@@ -121,6 +126,16 @@ pub fn render_dot(
   }
   let mut out = "digraph moonsize {\n  rankdir=LR;\n" +
     "  node [shape=box, fontname=\"monospace\", fontsize=10];\n"
+  let warning = render_graph_warning(graph)
+  let label = if warning.is_empty() {
+    "Analysis scope: " + graph_modeling_scope()
+  } else {
+    warning + "\nAnalysis scope: " + graph_modeling_scope()
+  }
+  out = out +
+    "  graph [labelloc=\"t\", label=" +
+    quote(label, dot_escape) +
+    "];\n"
   for stat in stats {
     let label = quote(
       export_name(names, stat.index) +
@@ -177,6 +192,14 @@ pub fn render_json(
     by_index.set(entry.index, entry)
   }
   let mut out = "{\n  \"module\": " + quote(path, json_escape) + ",\n"
+  out = out +
+    "  \"schema_version\": 1,\n  \"graph_complete\": " +
+    (if is_graph_complete(graph) { "true" } else { "false" }) +
+    ",\n  \"modeling_scope\": " +
+    quote(graph_modeling_scope(), json_escape) +
+    ",\n  \"diagnostics\": " +
+    diagnostics_json(graph).stringify() +
+    ",\n"
   out = out + "  \"functions\": [\n"
   let mut first = true
   for stat in stats {
@@ -259,6 +282,31 @@ pub fn render_json(
   }
   out = out + "\n  ]\n}\n"
   out
+}
+
+///|
+/// The same structured diagnostics embedded in JSON exports and HTML data.
+fn diagnostics_json(graph : CallGraph) -> Json {
+  let rows : Array[Json] = []
+  for diagnostic in sorted_diagnostics(graph) {
+    let row : Map[String, Json] = Map([])
+    row.set("code", Json::string(diagnostic_code(diagnostic.kind)))
+    row.set("caller", int_json(diagnostic.caller))
+    row.set("offset", int_json(diagnostic.offset))
+    row.set("opcode", Json::string(diagnostic.opcode.name()))
+    row.set("type_index", optional_index_json(diagnostic.type_index))
+    row.set("table_index", optional_index_json(diagnostic.table_index))
+    rows.push(Json::object(row))
+  }
+  Json::array(rows)
+}
+
+///|
+fn optional_index_json(index : Int?) -> Json {
+  match index {
+    Some(index) => int_json(index)
+    None => Json::null()
+  }
 }
 
 ///|

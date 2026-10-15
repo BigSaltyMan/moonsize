@@ -108,6 +108,13 @@ fn report_data(analysis : Analysis, file_path : String) -> Json {
   let members : Map[String, Json] = Map([])
   members.set("file", Json::string(file_path))
   members.set("fileSize", int_json(parsed.file_size))
+  members.set("schema_version", int_json(1))
+  members.set(
+    "graph_complete",
+    Json::boolean(is_graph_complete(analysis.graph)),
+  )
+  members.set("diagnostics", diagnostics_json(analysis.graph))
+  members.set("modeling_scope", Json::string(graph_modeling_scope()))
   let whole_file_gzip = compressed_size(analysis.data)
   members.set("gzipSize", gzip_json(whole_file_gzip))
   members.set(
@@ -489,7 +496,7 @@ pub fn render_html(
   // Said once at the top of the page for the same reason the text report says it
   // at the top of the report: the sections it undermines are spread out below,
   // and `white-space: pre-line` keeps the two lines together.
-  let warning = render_graph_warning(analysis.unresolved_count)
+  let warning = render_graph_warning(analysis.graph)
   if warning.length() > 0 {
     out.write_string("<div class=\"warn\">" + html_escape(warning) + "</div>\n")
   }
@@ -516,12 +523,15 @@ pub fn render_html(
     card(
       "Dead code",
       grouped(dead) + " B",
-      if dead == 0 {
+      if !is_graph_complete(analysis.graph) {
+        "graph incomplete; dead-code results may be inaccurate"
+      } else if dead == 0 {
         "nothing unreachable"
       } else {
         share_text(dead, file_size) + " of file"
       },
       dead > 0,
+      title=if is_graph_complete(analysis.graph) { "" } else { warning },
     ),
   )
   out.write_string("</section>\n")
@@ -543,7 +553,10 @@ pub fn render_html(
     plural(group_modules(analysis.stats).length(), "module") +
     ", " +
     grouped(analysis.graph.edges.length()) +
-    " references in the call graph. Red cells in the treemap are unreachable.\n" +
+    " references in the call graph. Red cells are unreachable within the model.\n" +
+    html_escape(graph_modeling_scope()) +
+    "\n" +
+    (if warning.is_empty() { "" } else { html_escape(warning) + "\n" }) +
     "</footer>\n",
   )
   if echarts.length() > 0 {

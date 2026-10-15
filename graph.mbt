@@ -4,8 +4,8 @@
 /// The model follows Twiggy: a module is a graph of functions rooted at whatever
 /// the outside world can reach — exported functions, the start function and
 /// everything the element sections hand to the host or to `call_indirect`. What
-/// is not reachable from those roots can never run, and what is only reachable
-/// through one function dies with it.
+/// is not reachable from those roots is unreachable within this model. Recorded
+/// diagnostics and the modelling scope limit conclusions about actual execution.
 
 ///|
 /// How one function refers to another.
@@ -39,11 +39,32 @@ pub struct IndirectSite {
   type_index : Int
   /// Offset of the ordinary or tail indirect call instruction.
   offset : Int
-  /// Every function any element segment places in that table. Conservative by
-  /// construction: the table's contents are not known statically, so a missing
-  /// candidate would mean a missing edge, and a missing edge would mean a
-  /// function wrongly called dead.
+  /// Every function any element segment places in that table. These are static
+  /// candidates; dynamic table contents are outside the current model.
   candidates : Array[Int]
+}
+
+///|
+/// A stable category of a detected gap in call-target analysis.
+pub enum GraphDiagnosticKind {
+  /// An ordinary or tail table call has no static element candidates.
+  NoStaticTableTargets
+  /// Reference-call target data flow is not modelled yet.
+  UnmodeledReferenceCall
+}
+
+///|
+/// One call site whose dependencies the current model cannot establish.
+pub struct GraphDiagnostic {
+  kind : GraphDiagnosticKind
+  /// Full function index, including preceding imports.
+  caller : Int
+  /// Instruction offset in the original file.
+  offset : Int
+  opcode : Opcode
+  type_index : Int?
+  /// None for reference calls.
+  table_index : Int?
 }
 
 ///|
@@ -64,19 +85,21 @@ pub struct CallGraph {
   /// a missing edge is a function wrongly called dead, so the sites are kept
   /// here and every report says out loud what they cost.
   unresolved_indirect : Array[IndirectSite]
+  /// Unified source of detected analysis gaps, one entry per call site.
+  diagnostics : Array[GraphDiagnostic]
   /// Every edge with its kind and site, for export.
   edges : Array[CallEdge]
 }
 
 ///|
-/// Whether every recognised indirect call site has static candidates.
+/// Whether no gaps were detected within the current analysis scope.
 ///
 /// Missing edges can make dead-code and retained-size results inaccurate.
 /// Callers such as `--dead-code`, `--retained` and `--strict` report this hole.
-/// A true result does not establish completeness for reference calls or dynamic
-/// table contents.
+/// A true result does not prove that dynamic tables or every Wasm call mechanism
+/// are fully modelled. Reference calls are recognised and diagnosed, not solved.
 pub fn is_graph_complete(graph : CallGraph) -> Bool {
-  graph.unresolved_indirect.length() == 0
+  graph.diagnostics.is_empty()
 }
 
 ///|
@@ -101,6 +124,8 @@ fn table_functions(elements : Array[ElementSegment], table : Int) -> Array[Int] 
 /// `ref.func` gives a reference edge, and `call_indirect` and
 /// `return_call_indirect` give conservative edges to static table candidates
 /// plus a record of each site, including sites with no candidates.
+/// Reference calls are kept as diagnostics without guessing a target, even when
+/// the preceding instruction is ref.func.
 pub fn build(
   data : Bytes,
   bodies : Array[FunctionBody],
@@ -111,6 +136,7 @@ pub fn build(
   let edges : Array[CallEdge] = []
   let sites : Array[IndirectSite] = []
   let unresolved : Array[IndirectSite] = []
+  let diagnostics : Array[GraphDiagnostic] = []
   for body in bodies {
     let start = body.offset + body.total_size - body.body_size
     let instructions = match decode_instructions(data, start, body.body_size) {
@@ -139,6 +165,15 @@ pub fn build(
             Reference,
             instruction.offset,
           )
+        CallRef | ReturnCallRef =>
+          diagnostics.push({
+            kind: UnmodeledReferenceCall,
+            caller: body.index,
+            offset: instruction.offset,
+            opcode: instruction.opcode,
+            type_index: Some(instruction.operands[0]),
+            table_index: None,
+          })
         CallIndirect | ReturnCallIndirect => {
           let type_index = instruction.operands[0]
           let table_index = instruction.operands[1]
@@ -156,6 +191,14 @@ pub fn build(
           // call this graph cannot follow.
           if candidates.length() == 0 {
             unresolved.push(site)
+            diagnostics.push({
+              kind: NoStaticTableTargets,
+              caller: body.index,
+              offset: instruction.offset,
+              opcode: instruction.opcode,
+              type_index: Some(type_index),
+              table_index: Some(table_index),
+            })
           }
           for candidate in candidates {
             add_edge(
@@ -178,6 +221,7 @@ pub fn build(
     called_by,
     indirect_sites: sites,
     unresolved_indirect: unresolved,
+    diagnostics,
     edges,
   })
 }

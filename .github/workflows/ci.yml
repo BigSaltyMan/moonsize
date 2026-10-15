@@ -29,6 +29,8 @@ jobs:
         run: moon build --target native --release
       - name: Tail-call CLI regressions
         run: bash scripts/test-tail-calls.sh _build/native/release/build/cmd/main/main.exe
+      - name: Graph-diagnostic CLI regressions
+        run: bash scripts/test-graph-diagnostics.sh _build/native/release/build/cmd/main/main.exe
 
   size-budget:
     name: Size budget

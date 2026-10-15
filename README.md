@@ -80,6 +80,9 @@ fn main {
           // What the five heaviest functions cost, as text or as numbers:
           // `analysis.stats` and `analysis.retained` are there to be read.
           println(@moonsize.render_top_functions(analysis.stats, analysis.data.length(), 5))
+          println(@moonsize.render_graph_warning(analysis.graph))
+          println(@moonsize.render_dead_code(analysis, 5))
+          println(@moonsize.render_retained(analysis, 5))
           println(@moonsize.render_html(analysis, options.path))
         }
         Err(error) => println(@moonsize.describe_error(error))
@@ -144,11 +147,11 @@ opcodes its `wasm-gc` backend uses. Each body contributes:
 - `call x` and `return_call x` — precise edges to `x`;
 - `ref.func x` — a reference, which counts as reachable because the function may
   run later as a closure;
-- `call_indirect` and `return_call_indirect` — *conservative* edges to every
-  function any element segment places in that table. The table's contents are
-  not known statically, so a
-  missing edge would mean a missing function and a function wrongly reported
-  dead, which is the one mistake worth avoiding here.
+- `call_indirect` and `return_call_indirect` — *conservative* edges to static
+  element candidates in the selected table;
+- `call_ref` and `return_call_ref` — recognised call sites with an
+  `UnmodeledReferenceCall` diagnostic. Target analysis is not implemented,
+  including when `ref.func` immediately precedes the call. No target is guessed.
 
 Static candidates have limits. A module may fill a table at run time
 — `table.set`, `table.init`, or the host handing it functions — and a table with
@@ -158,21 +161,59 @@ produce incomplete-graph diagnostics. Dead-code and retained-size results may
 then be inaccurate. The report says so above everything else:
 
 ```
-WARNING: 1 indirect call site has no resolvable target.
+WARNING: the call graph has 1 analysis gap.
+  function 0, offset 42: call_ref: reference-call target analysis is not implemented.
+
 Dead-code and retained-size results may be inaccurate; do not use them as proof that a function can be removed.
 ```
 
 `--dead-code` and `--retained` repeat it under their titles, and `--strict` turns
 these recognised incomplete cases into a refusal — no report, exit code 3.
 
-This change adds dependency analysis for direct and indirect tail calls.
-Reference calls (including `return_call_ref`) and dynamic table completeness
-analysis remain limited. A successful `--strict` run does not establish that
-all Wasm call mechanisms are fully modelled.
+`call_ref` and `return_call_ref` make the graph incomplete even if every table
+call has candidates. `analyze` still returns `Ok(Analysis)`: a modelling gap is
+distinct from malformed input. Diagnostics retain their category, full caller
+index, file offset, actual opcode, type index and optional table index.
+
+`graph_complete` means no gaps were detected within the current scope:
+`analysis.graph.diagnostics` is empty. Dynamic table writes, host-provided
+contents and all Wasm call mechanisms are not fully modelled. A successful
+`--strict` run is not a completeness certificate.
 
 A function is a **root** if the outside world can reach it: it is exported, it is
-the start function, or it sits in a table. Everything reachable from those roots
-is live; everything else is dead.
+the start function, or it is referenced by an element segment. Reachability and
+retained sizes describe paths in the current graph model.
+
+### Diagnostic API and export migration
+
+This is an intentional API extension. `CallGraph` now has
+`diagnostics : Array[GraphDiagnostic]`; match `GraphDiagnosticKind` on
+`NoStaticTableTargets` or `UnmodeledReferenceCall`. Total gaps come from this
+array. `Analysis.unresolved_count` still counts only table calls with no static
+candidates; it can be zero while the graph has reference-call gaps.
+
+`scan_calls` now returns `CallKind::Reference` for `call_ref` and
+`return_call_ref`, with `type_index = Some(type)` and the original offset.
+External exhaustive matches on `CallKind` must add this branch. `ref.func`
+continues to create a reference edge, not a call site.
+
+Use `render_graph_warning(analysis.graph)`, `render_dead_code(analysis, top)`
+and `render_retained(analysis, top)`. The last two read diagnostics internally;
+the old separate arrays, file-size argument and optional `unresolved` count
+are removed. The library example above and `_probe/` use these signatures.
+
+JSON exports retain `module`, `functions`, `roots`, `edges` and `indirect_sites`,
+and add `schema_version: 1`, `graph_complete`, `modeling_scope` and `diagnostics`.
+Each diagnostic has `code`, `caller`, `offset`, `opcode`, `type_index` and
+`table_index` (null for reference calls). Stable codes are
+`no_static_table_targets` and `unmodeled_reference_call`; complete graphs carry
+an empty array. Diagnostics sort by caller and offset.
+
+Non-strict JSON, DOT and HTML exports carry their own limitations: JSON contains
+structured diagnostics and scope, DOT has a graph-level warning label, and HTML
+shows diagnostics at the top and limits alongside dead-code results. Sharing an
+export preserves this information. Strict refusal occurs before writing a new
+file or changing an existing one, for all three formats.
 
 ### Retained size
 
@@ -195,7 +236,7 @@ Reading the table:
 - `RETAINED ≫ SIZE` with a high `DIES` — a good candidate. Removing it takes a
   whole subtree with it.
 - `IND` — the function can be reached through a `call_indirect`, so removing it
-  is only safe if no table entry and no indirect call expects it.
+  requires checking every dependent table entry and indirect call before removal.
 
 Both numbers are printed on purpose. `SIZE` says how much the compiler could win
 by making the function smaller; `RETAINED` says how much it wins by removing it,
@@ -203,9 +244,9 @@ which is usually the cheaper change.
 
 ### Dead code
 
-Anything unreachable from the roots cannot run: no export reaches it, no start
-function, no table entry, and no chain of calls from any of those. Its bytes are
-already paid for and never used, so the list is a deletion list.
+The list contains functions unreachable from roots within the current model.
+Inspect diagnostics and modelling limits before considering removal; an
+incomplete graph does not prove a function can be removed.
 
 MoonBit's compiler does dead-code elimination well, so a small program usually
 reports none — that is a finding too.
@@ -400,7 +441,7 @@ SIZE COMPARISON
 ```
 
 The exit codes are `0` ok, `1` unreadable input, `2` bad command line and `3`
-over budget, so a job can fail on the budget alone or tell a broken input apart
+over budget or refused by `--strict`, so a job can tell a broken input apart
 from a broken build.
 
 This repository gates itself in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
@@ -456,7 +497,14 @@ played, and the provenance of everything vendored are written down in
 ```sh
 moon check --target native --deny-warn
 moon test
+moon build --target native --release
+bash scripts/test-tail-calls.sh _build/native/release/build/cmd/main/main.exe
+bash scripts/test-graph-diagnostics.sh _build/native/release/build/cmd/main/main.exe
 ```
+
+The diagnostic CLI script requires Node.js to validate its Wasm fixtures with
+V8 and assert fields in parsed JSON. Both CLI scripts run in Git Bash or Linux
+after building the native executable.
 
 The test suite covers the instruction table one opcode at a time — every entry
 carries a canonical encoding and the length the specification gives it — and pins

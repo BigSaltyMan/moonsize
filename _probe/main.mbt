@@ -847,6 +847,41 @@ fn main {
           println(analysis.roots.length())
           println(analysis.reachable.length())
           println(analysis.indirect.length())
+          println(analysis.graph_complete)
+          println(analysis.unresolved_count)
+          for diagnostic in analysis.graph.diagnostics {
+            println(diagnostic.caller)
+            println(diagnostic.offset)
+            println(diagnostic.opcode.name())
+            for index in [diagnostic.type_index, diagnostic.table_index] {
+              match index {
+                Some(index) => println(index)
+                None => println("none")
+              }
+            }
+            match diagnostic.kind {
+              NoStaticTableTargets => println("no static table targets")
+              UnmodeledReferenceCall =>
+                println("reference targets not modelled")
+            }
+          }
+          for stat in analysis.stats {
+            let start = stat.offset + stat.total_size - stat.body_size
+            match @moonsize.scan_calls(bytes, start, stat.body_size) {
+              Ok(sites) =>
+                for site in sites {
+                  match site.kind {
+                    Direct(target) => println(target)
+                    Indirect(table) => println(table)
+                    Reference => println("reference call")
+                  }
+                }
+              Err(error) => println(@moonsize.describe_error(error))
+            }
+          }
+          println(@moonsize.render_graph_warning(analysis.graph))
+          println(@moonsize.render_dead_code(analysis, options.top))
+          println(@moonsize.render_retained(analysis, options.top))
           println(
             @moonsize.render_top_functions(
               analysis.stats,

@@ -627,7 +627,7 @@ test "scan_calls reports direct and indirect sites with their offsets" {
               #|3
             ),
           )
-        Indirect(_) => fail("expected a direct call")
+        Indirect(_) | Reference => fail("expected a direct call")
       }
       inspect(
         sites[0].offset,
@@ -643,7 +643,7 @@ test "scan_calls reports direct and indirect sites with their offsets" {
               #|0
             ),
           )
-        Direct(_) => fail("expected an indirect call")
+        Direct(_) | Reference => fail("expected an indirect call")
       }
       assert_eq(sites[1].type_index, Some(1))
     }
@@ -714,6 +714,39 @@ test "scan_calls rejects truncated tail immediates without returning partial sit
     match scan_calls(body + b"\x00\x0b", 0, body.length()) {
       Err(WasmError::UnexpectedEnd(_, _)) => ()
       _ => fail("expected body boundary error, with no partial call list")
+    }
+  }
+}
+
+///|
+test "scan_calls preserves multibyte reference type indices and file offsets" {
+  let bytes = b"\xaa\xbb\x00\xd2\x01\x1a\x14\x81\x01\x15\xac\x02\x0b"
+  let sites = match scan_calls(bytes, 2, bytes.length() - 2) {
+    Ok(sites) => sites
+    Err(error) => fail(describe_error(error))
+  }
+  assert_eq(sites.length(), 2)
+  assert_eq(sites[0].type_index, Some(129))
+  assert_eq(sites[1].type_index, Some(300))
+  assert_eq(sites[0].offset, 6)
+  assert_eq(sites[1].offset, 9)
+  for site in sites {
+    match site.kind {
+      Reference => ()
+      _ => fail("expected reference call")
+    }
+  }
+}
+
+///|
+test "scan_calls rejects truncated reference calls instead of returning partial sites" {
+  for suffix in [b"\x14", b"\x14\x80", b"\x15", b"\x15\x80"] {
+    let body = b"\x00\x10\x01" + suffix
+    for bytes in [body, body + b"\x00\x0b"] {
+      match scan_calls(bytes, 0, body.length()) {
+        Err(WasmError::UnexpectedEnd(_, _)) => ()
+        _ => fail("expected reference immediate truncation error")
+      }
     }
   }
 }
