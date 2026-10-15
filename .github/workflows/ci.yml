@@ -12,11 +12,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # The marketplace action installs the toolchain and puts `moon` on PATH.
-      # If it is ever unavailable, the documented installer is
-      # `curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash` followed
-      # by adding `$HOME/.moon/bin` to `$GITHUB_PATH`.
-      - uses: moonbit-community/setup-moonbit@v1
+      # The upstream action has no v1 tag; pin its main revision for reproducibility.
+      - uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
+        with:
+          version: latest
+      # The CLI scripts use V8 to validate Wasm GC, reference and tail-call fixtures.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Toolchain versions
+        run: |
+          moon version --all
+          node --version
       - name: Formatting
         run: moon fmt --check
       # Warnings are errors here, because the library is meant to build clean on
@@ -41,7 +48,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: moonbit-community/setup-moonbit@v1
+      - uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
+        with:
+          version: latest
+      - name: Toolchain version
+        run: moon version --all
       # The example is 10.4 KB, so this passes; a change that pushed it past
       # 100 KB fails the job with exit code 3.
       - name: The example still builds

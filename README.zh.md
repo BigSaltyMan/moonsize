@@ -303,7 +303,7 @@ SIZE COMPARISON
 本仓库用 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 给自己上闸：格式检查、`moon check --target native --deny-warn`、`moon test`，以及把示例文件限制在预算内。
 
 ```yaml
-- uses: moonbit-community/setup-moonbit@v1
+- uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
 - name: The example stays inside its budget
   run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
 ```
@@ -311,7 +311,7 @@ SIZE COMPARISON
 任何产出 `.wasm` 的项目都可以用同样的三行：
 
 ```yaml
-- uses: moonbit-community/setup-moonbit@v1
+- uses: moonbit-community/setup-moonbit@04293a8a813bfd4b6c2fce22701b52ae1050d100
 - run: moon build --target wasm --release
 - name: Size budget
   run: moonsize _build/wasm/release/build/app/app.wasm --max-size 250KB
