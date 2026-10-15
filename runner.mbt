@@ -101,49 +101,107 @@ pub fn describe_size_failure(
 }
 
 ///|
-/// One row of the size comparison: a section as each module has it.
+/// Identity is separate from display: full, case-sensitive custom names cannot
+/// collide with standard sections. Empty names are valid custom identities.
+priv enum SectionKey {
+  StandardSection(Int)
+  CustomSection(String)
+} derive(Eq, Hash)
+
+///|
+/// One row compares all encoded bytes for a section identity on either side.
 priv struct SizeRow {
+  key : SectionKey
   label : String
   baseline : Int
   current : Int
 }
 
 ///|
-/// The size of the section carrying this label, or `None` when the module has no
-/// such section.
-fn labelled_section_size(parsed : WasmModule, label : String) -> Int? {
+/// Sum actual encoded sizes, including each repeated custom section's header.
+fn summarize_sections(parsed : WasmModule) -> Map[SectionKey, Int] {
+  let sizes : Map[SectionKey, Int] = Map([])
   for section in parsed.sections {
-    if section_label(section) == label {
-      return Some(section.total_size)
+    let key = if section.kind.is_custom() {
+      CustomSection(
+        match section.custom_name {
+          Some(name) => name
+          None => ""
+        },
+      )
+    } else {
+      StandardSection(section.id)
     }
+    sizes.set(key, sizes.get(key).unwrap_or(0) + section.total_size)
   }
-  None
+  sizes
 }
 
 ///|
-/// Both modules' sections, matched by label and ordered by their current size.
-///
-/// A section only one of the two has is still listed, against a zero: arriving
-/// or disappearing is exactly the kind of change a comparison is for.
+fn section_key_label(key : SectionKey) -> String {
+  match key {
+    StandardSection(id) =>
+      match SectionId::from_id(id) {
+        Some(kind) => kind.name()
+        None => "section " + id.to_string()
+      }
+    CustomSection(name) => "custom (" + name + ")"
+  }
+}
+
+///|
+fn standard_section_rank(id : Int) -> Int {
+  match SectionId::from_id(id) {
+    Some(kind) => section_order(kind)
+    None => id
+  }
+}
+
+///|
+/// Final tie-break: standard sections in binary order, then custom names in
+/// String::compare order. Neither map iteration nor physical section order is
+/// used, so rearranging same-size or repeated custom sections changes no rows.
+fn compare_section_keys(a : SectionKey, b : SectionKey) -> Int {
+  match (a, b) {
+    (StandardSection(left), StandardSection(right)) =>
+      standard_section_rank(left) - standard_section_rank(right)
+    (StandardSection(_), CustomSection(_)) => -1
+    (CustomSection(_), StandardSection(_)) => 1
+    (CustomSection(left), CustomSection(right)) => String::compare(left, right)
+  }
+}
+
+///|
+/// Independently sum both modules, union identities, then order by current size
+/// descending, baseline size descending, and deterministic section identity.
 fn size_rows(baseline : WasmModule, current : WasmModule) -> Array[SizeRow] {
+  let before = summarize_sections(baseline)
+  let after = summarize_sections(current)
+  let keys : Set[SectionKey] = Set([])
+  for key, _ in before {
+    keys.add(key)
+  }
+  for key, _ in after {
+    keys.add(key)
+  }
   let rows : Array[SizeRow] = []
-  for section in ordered_sections(current) {
-    let label = section_label(section)
+  for key in keys {
     rows.push({
-      label,
-      baseline: match labelled_section_size(baseline, label) {
-        Some(size) => size
-        None => 0
-      },
-      current: section.total_size,
+      key,
+      label: section_key_label(key),
+      baseline: before.get(key).unwrap_or(0),
+      current: after.get(key).unwrap_or(0),
     })
   }
-  for section in ordered_sections(baseline) {
-    let label = section_label(section)
-    if labelled_section_size(current, label) is None {
-      rows.push({ label, baseline: section.total_size, current: 0, })
+  rows.sort_by(fn(a, b) {
+    if a.current != b.current {
+      b.current - a.current
+    } else if a.baseline != b.baseline {
+      b.baseline - a.baseline
+    } else {
+      compare_section_keys(a.key, b.key)
     }
-  }
+  })
   rows
 }
 
@@ -191,12 +249,12 @@ fn size_row_text(
 }
 
 ///|
-/// The size comparison table: the whole file and every section, against the
+/// The size comparison table: the whole file and every section group, against the
 /// module it is being compared with.
 ///
-/// Sections are ordered by their current size, so the table reads like the
-/// section report above it, and the totals come first because that is the number
-/// a budget is spent against.
+/// Standard sections match by kind; custom sections group by full name. Sizes
+/// include actual headers. Current size, baseline size, then identity determine
+/// row order. The whole-file total comes first and remains the budget's input.
 pub fn render_size_comparison(
   baseline : WasmModule,
   current : WasmModule,

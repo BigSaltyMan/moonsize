@@ -486,7 +486,7 @@ moonsize app.wasm --baseline main.wasm --max-size 5KB  # at most 5 KB of growth
 
 With a baseline, `--max-size` bounds the *change*, not the file: the question a
 pull request asks is what it costs, not how big the program already was. A run
-with a baseline prints the comparison after the report, heaviest section first,
+with a baseline prints the comparison after the report, largest current group first,
 with the change as bytes and as a share of what it was:
 
 ```
@@ -500,6 +500,32 @@ SIZE COMPARISON
   custom (producers)        71       71  0  (0.0%)
   ...
 ```
+
+Standard sections compare by kind. Custom sections group by their complete,
+case-sensitive names: repeated names produce one row containing their summed
+encoded sizes. Empty names are valid, and a custom section named `code` remains
+separate from the standard code section. Sizes include each section's actual
+id, length encoding and full payload, including the custom name encoding;
+legal non-shortest length encodings therefore count their extra bytes.
+
+For example, two `x` sections of 4 and 6 bytes compared with two of 5 and 8 bytes
+produce one row:
+
+```text
+              baseline  current  delta
+  custom (x)        10       13  +3  (+30.0%)
+```
+
+This compares a name's total encoded size without attempting to pair individual
+same-name custom sections across builds. Reordering sections does not change
+the result. Ties use descending baseline size, then standard binary section
+order followed by custom name order (`String::compare`). Deleted groups remain
+visible against zero.
+
+`total` is the entire file, including its eight-byte header. Group increases
+and decreases may cancel, and equal group sizes do not imply equal content.
+With a baseline, `--max-size` still limits only the whole-file growth, including
+when some groups grow while the total is unchanged.
 
 The exit codes are `0` ok, `1` unreadable input, `2` bad command line and `3`
 over budget or refused by `--strict`, so a job can tell a broken input apart

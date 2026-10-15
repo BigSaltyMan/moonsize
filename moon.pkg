@@ -8,3 +8,7 @@ supported_targets = "+native"
 import {
   "moonbitlang/core/json",
 } for "wbtest"
+
+import {
+  "moonbitlang/core/string",
+} for "test"

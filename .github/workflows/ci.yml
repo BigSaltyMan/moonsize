@@ -40,6 +40,8 @@ jobs:
         run: bash scripts/test-parser-boundaries.sh _build/native/release/build/cmd/main/main.exe
       - name: Module-structure CLI regressions
         run: bash scripts/test-module-structure.sh _build/native/release/build/cmd/main/main.exe
+      - name: Size-comparison CLI regressions
+        run: bash scripts/test-size-comparison.sh _build/native/release/build/cmd/main/main.exe
 
   size-budget:
     name: Size budget
