@@ -98,4 +98,20 @@ Reader 增加 `[start, end)` 范围和 `new_range(data, start, length)`；构造
 
 增加内部数值与公开输出测试，覆盖自比、重排、两侧实例数量不同、实例/整组增删、大小写/空白/空名称、标准与 custom 同名、排序、空模块、非最短段头编码，并对合法模块集合逐对核对自比与反向比较性质。公开测试独立解析报告数字，核对分组两侧总量、差值和 whole-file total。本地 native 测试结果为 **240 项通过、0 项失败**。
 
-新增 `scripts/test-size-comparison.sh`，V8 独立验证 17 个完整模块，**23 个进程场景**通过。真实 CLI 精确检查每行 baseline/current/delta、唯一性、排序、分组与文件总量守恒；覆盖 `0B` 自比、预算恰好相等/超过、缩减、总量不变但分组一增一减，并用五秒超时区分进程故障。CI 在保留既有四个脚本后追加新脚本；五个脚本合计 334 个场景。公开 `.mbti` 与修改前完全一致；本次提交的 Linux CI 仍待推送后取得对应记录，前述 `53331c6` 的成功不作为新提交的验证记录。
+新增 `scripts/test-size-comparison.sh`，V8 独立验证 17 个完整模块，**23 个进程场景**通过。真实 CLI 精确检查每行 baseline/current/delta、唯一性、排序、分组与文件总量守恒；覆盖 `0B` 自比、预算恰好相等/超过、缩减、总量不变但分组一增一减，并用五秒超时区分进程故障。CI 在保留既有四个脚本后追加新脚本；五个脚本合计 334 个场景。公开 `.mbti` 与修改前完全一致。提交 `a66b413` 已取得 [Linux CI 成功记录](https://github.com/BigSaltyMan/moonsize/actions/runs/38733044612)，五个脚本和体积预算任务均成功。
+
+## 10. 预算检查读取本次构建产物（2026-10-15）
+
+此前 `size-budget` job 虽执行 `moon build --target wasm`，预算输入却仍是仓库中的 `examples/fib.wasm`，不能证明本次源码构建结果符合预算。本次将 job 的 `EXAMPLE` 固定为默认 debug 模式的 `_build/wasm/debug/build/examples/examples.wasm`，构建后检查文件存在且非空，并输出路径、字节数和 SHA-256。显式构建 native release CLI，再直接调用实际可执行文件；100KB 正例和 0B 反例都读取同一个构建路径，不回退到发布示例副本。
+
+0B 反例显式捕获退出状态，仅接受 `3` 且含 `over the budget` 原因。返回 `0`、输入错误 `1`、参数错误 `2`、启动失败等其他状态都令步骤失败，不用 `moon run` 的包装状态证明预算拒绝。
+
+PR 工作流继续在同一套已安装工具链下，以默认 debug Wasm 模式构建 baseline 与 current。两侧均先检查实际产物存在且非空，再复制到临时目录，记录来源路径、比较路径、字节数和 SHA-256，最后用本次构建的原生 CLI 比较临时文件。仅在历史基线没有 `examples/moon.pkg` 时保留仓库旧二进制回退，并明确记录它未从基线源码重新构建；存在该包而构建失败时直接终止。
+
+两份 README 的再生成命令补上 `cp _build/wasm/debug/build/examples/examples.wasm examples/fib.wasm`：先构建，再更新发布副本，再从副本生成 HTML，确认新报告后另行更新截图。CI 集成示例同样改读 `$EXAMPLE`。本次没有重新生成仓库示例、HTML 或图片。
+
+本地按工作流提取出的 Bash 命令验证：新示例为 10,675 字节，100KB 返回 `0`，0B 精确返回 `3` 且附预算原因。新产物 SHA-256 为 `b6ae1f1e5dd86f95c82c51eb3f03e65d2070df3bdbf4102881b81a4f812d7a2c`，与仓库副本的 `0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c` 不同，证明没有继续分析旧副本。
+
+本地用 `a66b413` 的临时源码快照代替 PR 的 base worktree，原样执行后续构建、非空检查、复制和比较命令；双边构建通过，临时 baseline/current 与各自构建来源逐字节一致，总增量为零。另验证 12 个失败场景，覆盖缺失示例/CLI、错误状态 `0/1/2/126/127`、退出 `3` 但缺少原因，以及基线构建失败直接退出。这里只做临时过程验证，未为 YAML 新增重复的单元测试。
+
+本次未修改公开 API 或预算算法。`moon fmt --check`、`--deny-warn` 检查及 240 项 native 测试通过；五个 CLI 脚本仍覆盖 334 个场景，保留预算等号、增长、缩减和零增长回归。本次提交的 Linux CI 需要取得对应提交的运行记录后才能标记远程验证完成。

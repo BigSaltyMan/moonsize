@@ -46,25 +46,41 @@ jobs:
   size-budget:
     name: Size budget
     runs-on: ubuntu-latest
+    env:
+      # Keep the default debug build and its artifact path in sync.
+      EXAMPLE: _build/wasm/debug/build/examples/examples.wasm
+      CLI: _build/native/release/build/cmd/main/main.exe
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-moonbit
       - name: Toolchain version
         run: moon version --all
-      # The example is 10.4 KB, so this passes; a change that pushed it past
-      # 100 KB fails the job with exit code 3.
       - name: The example still builds
         run: moon build --target wasm
-      - name: The example stays inside its budget
-        run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
-      # A budget that never fires is worse than no budget, because it looks like
-      # one. This runs the same example against a budget it cannot meet and
-      # checks that the tool says so.
-      - name: The gate actually fires
+      - name: Inspect the built example
         run: |
-          if moon run cmd/main -- --max-size 1KB examples/fib.wasm > gate.log 2>&1; then
-            echo "expected exit code 3 from a 1KB budget on a 10.4KB file"
-            cat gate.log
+          if [[ ! -s "$EXAMPLE" ]]; then
+            echo "missing or empty built example: $EXAMPLE" >&2
             exit 1
           fi
-          grep -q "over the budget" gate.log
+          printf 'budget input: %s\nbytes: %s\n' "$EXAMPLE" "$(wc -c < "$EXAMPLE")"
+          sha256sum "$EXAMPLE"
+      - name: Build native CLI
+        run: moon build --target native --release
+      - name: The example stays inside its budget
+        run: '"$CLI" "$EXAMPLE" --max-size 100KB'
+      # Every valid module exceeds 0B. Only a budget refusal (3), accompanied
+      # by its reason, proves that the gate fired; input/launch errors do not.
+      - name: The gate actually fires
+        run: |
+          status=0
+          "$CLI" "$EXAMPLE" --max-size 0B > gate.log 2>&1 || status=$?
+          cat gate.log
+          if [[ "$status" -ne 3 ]]; then
+            echo "expected budget exit code 3, got $status" >&2
+            exit 1
+          fi
+          grep -Fq "over the budget" gate.log

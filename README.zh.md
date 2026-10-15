@@ -313,13 +313,26 @@ SIZE COMPARISON
 
 退出码：`0` 正常，`1` 输入无法读取，`2` 命令行错误，`3` 超出预算或被严格模式拒绝。
 
-本仓库用 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 给自己上闸：格式检查、`moon check --target native --deny-warn`、`moon test`，以及把示例文件限制在预算内。本地 setup action 固定 MoonBit `0.10.13+cbb11c36f`，与本地格式和测试使用的版本一致，并在解析依赖前运行 `moon update`。升级工具链时应同步更新本地检查与 CI。
+本仓库用 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) 给自己上闸：格式检查、`moon check --target native --deny-warn`、`moon test`，以及把本次源码构建出的 debug Wasm 示例限制在预算内。本地 setup action 固定 MoonBit `0.10.13+cbb11c36f`，与本地格式和测试使用的版本一致，并在解析依赖前运行 `moon update`。升级工具链时应同步更新本地检查与 CI。
 
 ```yaml
 - uses: ./.github/actions/setup-moonbit
+- name: Build the example and CLI
+  run: |
+    moon build --target wasm
+    moon build --target native --release
 - name: The example stays inside its budget
-  run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
+  env:
+    EXAMPLE: _build/wasm/debug/build/examples/examples.wasm
+    CLI: _build/native/release/build/cmd/main/main.exe
+  run: |
+    test -s "$EXAMPLE"
+    printf 'budget input: %s\nbytes: %s\n' "$EXAMPLE" "$(wc -c < "$EXAMPLE")"
+    sha256sum "$EXAMPLE"
+    "$CLI" "$EXAMPLE" --max-size 100KB
 ```
+
+预算 job 直接读取上述构建产物，`examples/fib.wasm` 继续作为发布示例副本。反例使用 `0B`，显式捕获原生 CLI 状态，要求精确返回 `3` 且包含预算失败原因；文件缺失、命令无法启动或参数错误都会使任务失败。构建模式改变时，debug/release 产物路径必须同步修改。
 
 其它产出 `.wasm` 的项目可以先用官方安装器安装兼容工具链，再执行体积预算检查：
 
@@ -348,12 +361,7 @@ SIZE COMPARISON
       --max-size 5KB
 ```
 
-[`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) 在每个 PR 上做的就是这件事。`examples/` 现在是本模块的一个包，所以两边都按同样的方式编译示例，对比的是同一份源码的两次构建：
-
-```sh
-moon build --target wasm                        # 产出示例 wasm
-moon run cmd/main -- that.wasm --baseline base.wasm --max-size 5KB
-```
+[`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) 在每个 PR 上执行双边比较。两边使用同一套已安装工具链、默认 debug Wasm 模式；拷贝前检查产物存在且非空，记录来源路径、比较路径、字节数和 SHA-256。原生 CLI 最终比较临时目录中的 `$RUNNER_TEMP/current.wasm` 与 `$RUNNER_TEMP/baseline.wasm`。若历史基线没有 `examples/moon.pkg`，日志明确注明「baseline 使用仓库历史示例，未从该分支源码重新构建」；存在该包的基线必须构建成功，不能在构建失败后回退到旧二进制。
 
 ## 开发
 
@@ -374,14 +382,19 @@ bash scripts/test-parser-boundaries.sh _build/native/release/build/cmd/main/main
 
 ### 重新生成示例
 
-[`examples/report.html`](examples/report.html) 和本 README 里引用的数字——文件大小、段占比、Retained Size——都是从真实构建产物里读出来的，不是手写的。所以改了 [`examples/fib.mbt`](examples/fib.mbt)，或者升级了工具链之后，它们就过期了，三步都得重跑：
+[`examples/report.html`](examples/report.html) 和本 README 里引用的数字——文件大小、段占比、Retained Size——都是从真实构建产物里读出来的，不是手写的。所以改了 [`examples/fib.mbt`](examples/fib.mbt)，或者升级了工具链之后，它们就过期了，需要构建、复制产物，再生成报告：
 
 ```sh
 moon build --target wasm
-moon run cmd/main -- --html examples/report.html examples/fib.wasm
-# 然后按这个页面重新截 examples/report.png
+
+cp _build/wasm/debug/build/examples/examples.wasm \
+  examples/fib.wasm
+
+moon run cmd/main -- \
+  --html examples/report.html \
+  examples/fib.wasm
 ```
 
-第一步构建 `examples/`，产物落在 `_build/wasm/debug/build/examples/examples.wasm`；`examples/fib.wasm` 是它的副本，报告由这份 wasm 生成，截图则是那份报告在 1400px 宽、整页高度下的截取。`examples/` 下没有任何东西是手改的——所以那里出现过期数字，意味着构建过期，而不是打错了字。
+第一步构建 `examples/`，产物落在 `_build/wasm/debug/build/examples/examples.wasm`；第二步更新仓库里的 `examples/fib.wasm` 副本；第三步依据该副本生成 HTML。确认新报告后，再另行更新 1400px 宽、整页高度的截图。仅运行构建不会更新仓库示例副本或报告。
 
 `.moonignore` 把渲染出来的页面挡在发布包之外——它占了原本 2.4 MB 模块中的 1.2 MB，而没人会为了看一张截图去 `moon add` 这个模块——源码、示例二进制和图表库都照常发布。

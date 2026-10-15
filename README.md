@@ -533,16 +533,33 @@ from a broken build.
 
 This repository gates itself in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
 formatting, `moon check --target native --deny-warn`, `moon test`, and the
-checked-in example held to a budget. The local setup action pins MoonBit
-`0.10.13+cbb11c36f` to match local formatting and tests, and runs `moon update`
-before dependency resolution. A toolchain upgrade should update local checks
-and CI together.
+freshly built debug Wasm example held to a budget. The local setup action pins
+MoonBit `0.10.13+cbb11c36f` to match local formatting and tests, and runs
+`moon update` before dependency resolution. A toolchain upgrade should update
+local checks and CI together.
 
 ```yaml
 - uses: ./.github/actions/setup-moonbit
+- name: Build the example and CLI
+  run: |
+    moon build --target wasm
+    moon build --target native --release
 - name: The example stays inside its budget
-  run: moon run cmd/main -- --max-size 100KB examples/fib.wasm
+  env:
+    EXAMPLE: _build/wasm/debug/build/examples/examples.wasm
+    CLI: _build/native/release/build/cmd/main/main.exe
+  run: |
+    test -s "$EXAMPLE"
+    printf 'budget input: %s\nbytes: %s\n' "$EXAMPLE" "$(wc -c < "$EXAMPLE")"
+    sha256sum "$EXAMPLE"
+    "$CLI" "$EXAMPLE" --max-size 100KB
 ```
+
+The budget job reads that build artifact directly; `examples/fib.wasm` remains
+the published example copy. Its reverse check uses `0B`, explicitly captures
+the native CLI's status, and requires exactly `3` plus the budget-failure reason.
+Missing files, launch errors and command-line errors fail the job. Debug and
+release artifact paths must track the build mode if it changes.
 
 For another project that produces a `.wasm`, install the compatible toolchain
 with the official installer before applying its size budget:
@@ -574,14 +591,14 @@ it as the baseline; `--max-size` then reads as the allowance:
 ```
 
 [`.github/workflows/size-check.yml`](.github/workflows/size-check.yml) does that
-on every pull request. `examples/` is a package of this module, so both sides
-build the example the same way and the comparison is between two builds of the
-same source:
-
-```sh
-moon build --target wasm                        # -> examples wasm
-moon run cmd/main -- that.wasm --baseline base.wasm --max-size 5KB
-```
+on every pull request. Both sides use the same installed toolchain and default
+debug Wasm mode. Each build artifact must exist and be nonempty before copying;
+the workflow logs source paths, comparison paths, byte counts and SHA-256 hashes.
+The native CLI compares `$RUNNER_TEMP/current.wasm` against
+`$RUNNER_TEMP/baseline.wasm`. If a historical baseline has no
+`examples/moon.pkg`, the log explicitly says it uses the repository's historical
+example without rebuilding that branch's source. A baseline with that package
+must build successfully; build failures do not fall back to the stored binary.
 
 ## Development
 
@@ -617,19 +634,24 @@ The numbers quoted in [`examples/report.html`](examples/report.html) and in this
 README — the file size, the section shares, the retained sizes — are read out of a
 real build rather than written by hand. Changing
 [`examples/fib.mbt`](examples/fib.mbt) or moving to a new toolchain makes them
-stale, and all three steps have to be run again:
+stale. Build, copy the artifact, then generate the report:
 
 ```sh
 moon build --target wasm
-moon run cmd/main -- --html examples/report.html examples/fib.wasm
-# then re-capture examples/report.png from that page
+
+cp _build/wasm/debug/build/examples/examples.wasm \
+  examples/fib.wasm
+
+moon run cmd/main -- \
+  --html examples/report.html \
+  examples/fib.wasm
 ```
 
 The first step builds `examples/` and leaves the artifact at
-`_build/wasm/debug/build/examples/examples.wasm`; `examples/fib.wasm` is a copy of
-it, the report is generated from that, and the screenshot is a capture of the
-report at 1400px wide and full height. Nothing under `examples/` is edited by
-hand, so a stale number there means a stale build rather than a typo.
+`_build/wasm/debug/build/examples/examples.wasm`. The second step updates the
+repository's `examples/fib.wasm` copy; the third generates HTML from that copy.
+After checking the new report, separately update the screenshot at 1400px wide
+and full height. Rebuilding alone does not update the stored binary or report.
 
 `.moonignore` keeps the rendered page out of the published package — it is
 1.2 MB of what would otherwise be a 2.4 MB module, and nobody `moon add`s this

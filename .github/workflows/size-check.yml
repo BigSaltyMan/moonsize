@@ -1,11 +1,11 @@
 name: Size check
 
-# Report what a pull request does to the size of the example, by building the
-# same source on both sides of the merge and comparing the two binaries.
+# Report what a pull request does to the size of the example, by building each
+# ref's example source and comparing the two binaries.
 #
-# The example is a package of this module (`examples/moon.pkg`), so both sides
-# build it the same way and the comparison is between two builds of the same
-# source rather than between two stored binaries.
+# When both refs have examples/moon.pkg, both use the installed toolchain and
+# the same default debug Wasm build. Historical refs without that package use
+# their checked-in binary, explicitly reported as a fallback rather than a build.
 
 on:
   pull_request:
@@ -16,11 +16,15 @@ env:
   # build steps below and this becomes `_build/wasm/release/...` if a release
   # budget is what matters.
   EXAMPLE: _build/wasm/debug/build/examples/examples.wasm
+  CLI: _build/native/release/build/cmd/main/main.exe
 
 jobs:
   compare:
     name: Compare the example against the base branch
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,21 +39,39 @@ jobs:
           git worktree add "$RUNNER_TEMP/base" "origin/${{ github.base_ref }}"
           if [ -f "$RUNNER_TEMP/base/examples/moon.pkg" ]; then
             (cd "$RUNNER_TEMP/base" && moon build --target wasm)
-            cp "$RUNNER_TEMP/base/$EXAMPLE" "$RUNNER_TEMP/baseline.wasm"
+            source="$RUNNER_TEMP/base/$EXAMPLE"
+            if [[ ! -s "$source" ]]; then
+              echo "missing or empty baseline build artifact: $source" >&2
+              exit 1
+            fi
+            printf 'baseline built from source: %s\n' "$source"
+            cp "$source" "$RUNNER_TEMP/baseline.wasm"
           else
-            # A base branch from before the example was a package has no way to
-            # build it, so the checked-in binary is all there is. A base branch
-            # older than that binary's own regeneration differs in the name
-            # section by a few tens of bytes — noise against a budget measured in
-            # kilobytes, and gone once the base branch catches up.
+            echo "baseline uses the repository's historical example; not rebuilt from this branch's source"
             git show "origin/${{ github.base_ref }}:examples/fib.wasm" \
               > "$RUNNER_TEMP/baseline.wasm"
           fi
+          if [[ ! -s "$RUNNER_TEMP/baseline.wasm" ]]; then
+            echo "missing or empty baseline comparison input" >&2
+            exit 1
+          fi
+          printf 'baseline comparison input: %s\nbytes: %s\n' "$RUNNER_TEMP/baseline.wasm" "$(wc -c < "$RUNNER_TEMP/baseline.wasm")"
+          sha256sum "$RUNNER_TEMP/baseline.wasm"
 
       - name: Build this pull request's example
         run: |
           moon build --target wasm
+          if [[ ! -s "$EXAMPLE" ]]; then
+            echo "missing or empty current build artifact: $EXAMPLE" >&2
+            exit 1
+          fi
+          printf 'current built from source: %s\n' "$EXAMPLE"
           cp "$EXAMPLE" "$RUNNER_TEMP/current.wasm"
+          printf 'current comparison input: %s\nbytes: %s\n' "$RUNNER_TEMP/current.wasm" "$(wc -c < "$RUNNER_TEMP/current.wasm")"
+          sha256sum "$RUNNER_TEMP/current.wasm"
+
+      - name: Build native CLI
+        run: moon build --target native --release
 
       - name: Compare
         # The tool doing the comparing is this pull request's, so a change that
@@ -58,7 +80,7 @@ jobs:
         # `--max-size` is the growth a pull request may get away with. Raise it
         # deliberately, or drop it to report the change without failing the job.
         run: |
-          moon run cmd/main -- "$RUNNER_TEMP/current.wasm" \
+          "$CLI" "$RUNNER_TEMP/current.wasm" \
             --baseline "$RUNNER_TEMP/baseline.wasm" \
             --top 0 \
             --max-size 5KB
