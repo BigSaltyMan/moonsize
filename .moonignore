@@ -5,12 +5,13 @@
 _build/
 .mooncakes/
 target/
+node_modules/
 
 # The rendered example report. It is generated from `examples/fib.wasm` and is
 # 1.2 MB of a 2.4 MB package; it belongs in the repository, where the README
 # links to it, but not in a module somebody just `moon add`ed. The example's
-# source and binary stay, and so does the chart library, which `--html` falls
-# back to for an offline page.
+# source and binary stay, along with the vendored chart source/license and the
+# generated MoonBit resource compiled into the native CLI.
 examples/report.html
 examples/report.png
 

@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-16",
+  "source_parent": "9ae56c289a7fda58426aad4351cfff5bc597fd21",
+  "source_dirty_during_local_test": true,
+  "platform": "win32",
+  "os_release": "10.0.26300",
+  "browser": "156.0.4314.23",
+  "playwright": "1.58.2",
+  "pdf_renderer": "pdftoppm version 26.07.0\r\nCopyright 2005-2026 The Poppler Developers - http://poppler.freedesktop.org\r\nCopyright 1996-2011, 2022 Glyph & Cog, LLC",
+  "input_sha256": "0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c",
+  "library_sha256": "bf4a223524e40b77c304bec67e1222cf551f14880cf42c69dc046558e11c07b1",
+  "cli_before_bytes": 804864,
+  "cli_after_bytes": 2893824,
+  "cli_increase_bytes": 2088960,
+  "cli_sha256": "b109456a7c86621fbafa0a2bfc10b74176b7023d1cf27ff4af0139716f4a07d6",
+  "report_sha256": "914bdf556d0a41e7fde51bc7cb17b019cbf135805cbbaef90e9dd9b81371a37f",
+  "cli_cases": 3,
+  "all_cli_cases": 730,
+  "native_tests": 336,
+  "source_demos": 4,
+  "artifact_directory": "_build/html-delivery-verification/run-JM2Zrx",
+  "offline_mode": "Fresh context offline before navigation; only main HTTP document fulfilled from copied bytes; no subresource route; original context closed. No file:// navigation.",
+  "pdfs": [
+    {
+      "name": "example",
+      "pdf_sha256": "f57e0cc23da2e1af2d039b3eff8d849199766b37548e1894ccacb2bce7e9ec12",
+      "pages": 5,
+      "external_requests": [],
+      "console_errors": [],
+      "render_errors": [],
+      "state_restored": true,
+      "network_control": "blocked",
+      "responsive": [
+        {
+          "viewport": 1440,
+          "document": 1440
+        },
+        {
+          "viewport": 1024,
+          "document": 1024
+        },
+        {
+          "viewport": 768,
+          "document": 768
+        },
+        {
+          "viewport": 390,
+          "document": 390
+        }
+      ],
+      "page_png_sha256": [
+        "b636df1c56ce87a7ed7bb859fdadb3ac7a05f575101bf48aee50fc27e1b0495a",
+        "ac366b291ab8baebc885df74213e6ce26e4fe53971a49828d72f97ea0381a0fe",
+        "60eb59dc965765bd1707591aecbdd881b7173fbdd0557c4516d05155140ac8b3",
+        "9ce7cb10bf75c4e68a76b662b34f085323bb78578f63bd3f097a64f0a24b8fd5",
+        "40c213e29691f9162df63c7047ef76578f0d5b4095387ce136cbe7da53e149b6"
+      ]
+    },
+    {
+      "name": "long-name-warning",
+      "pdf_sha256": "629dd87c7487ab6f7126928901030b8d44b01eb2a20642076c62287d5bcd1f30",
+      "pages": 4,
+      "external_requests": [],
+      "console_errors": [],
+      "render_errors": [],
+      "state_restored": true,
+      "network_control": "blocked",
+      "responsive": [
+        {
+          "viewport": 1440,
+          "document": 1440
+        },
+        {
+          "viewport": 1024,
+          "document": 1024
+        },
+        {
+          "viewport": 768,
+          "document": 768
+        },
+        {
+          "viewport": 390,
+          "document": 390
+        }
+      ],
+      "page_png_sha256": [
+        "37426f350e17dfa6b5de386b5fff737c9d0d6ce2e9378c112457aad374d64a4b",
+        "05b0215a0770616d19c26a72940c4ed4c95102546cf608bce46b60450aaae4de",
+        "e6228cda877519df15a1ddd4dc474fa28efffb08fcdd99f2b7832d08c894b246",
+        "5f2520852de4d5c3d63262308d599c64d1846f7ca41a67e47a4b6635b55158e0"
+      ]
+    }
+  ],
+  "human_review": "All 9 local Poppler page PNGs visually inspected: exact metrics, charts, full function/module identities, warnings, table columns and methods retained; no clipped page edges, overlay tips or unintended empty pages. Overview deliberately occupies its own page.",
+  "limitations": [
+    "HTTP main-document mapping used to honor repository file:// prohibition; OS double-click file opening not tested.",
+    "A4 portrait with 12mm margins in Chromium-family print; other browsers/printers not tested."
+  ],
+  "remote_ci": "Verify final pushed SHA; CI stores its own clean-HEAD evidence and platform-specific PDFs."
+}

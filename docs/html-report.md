@@ -48,16 +48,20 @@ native details have semantic keyboard targets.
 
 With JavaScript and ECharts, the comparison button toggles independent gzip
 alongside raw without changing the axis extent. The legend remains available.
-Before printing, report disclosures open and charts resize; after printing,
-the original disclosure state returns. Print CSS keeps measurements and model
-notes, repeats table headers and removes unnecessary navigation/button controls.
-Actual browser checks and the remaining print limitation are recorded below.
+Before printing, the report establishes the A4 content width before synchronous,
+animation-free chart redraw and flush. Chart heights use denser print rows.
+Disclosures open, hover tips hide, and the complete native module legend replaces
+small pie percentage labels. After printing, the original widths, heights,
+disclosure and pie-label states return. Print CSS repeats table headers and
+starts major chapters on new pages; no screen screenshot is substituted for a
+PDF. See [offline and PDF acceptance](html-delivery.md) for actual evidence.
 
-The CLI embeds the vendored ECharts source when it can find it. That output
-has no remote font, stylesheet or script tags, no sibling asset dependency,
-and includes its complete measured data. When ECharts is absent, CDN mode is
-announced by the CLI and visibly identified near the overview. Charts need
-network in that mode. Missing/broken ECharts produces a chart status message;
+The native CLI embeds its compiled-in ECharts 5.6.0 in every report, independent
+of cwd and without downloads or asset discovery. It has no remote font,
+stylesheet or script dependency. The library API is separate: omitting its
+optional echarts source retains CDN mode for compatibility; offline library
+callers must supply a source. That mode is visibly identified near the overview.
+Missing/broken ECharts produces a chart status message;
 cards, the server-rendered function table and methods remain readable. Native
 details work even when JavaScript is disabled. Measurement failures are separate
 from chart-loading failures.
@@ -94,7 +98,8 @@ The compression CLI regression continues to execute the report's own formatter
 functions. `scripts/test-html-report.mjs` adds real CLI fixtures for empty/single
 modules, preceding imports, Top 20 truncation, Unicode/very long names, duplicate
 and missing names, many small modules, graph gaps, repeated custom names, long
-paths and CDN fallback. V8 independently validates the complete fixtures.
+paths and unrelated-cwd generation. Library CDN mode remains covered by native
+tests. V8 independently validates the complete fixtures.
 
 The generated script is executed with observable chart/DOM adapters, including
 four width inputs, native comparison events, resizing, print disclosure state,
@@ -122,11 +127,13 @@ checks on 2026-10-16 produced these results, independently of the adapters:
 | Missing library | Removing only the embedded chart-library script in a temporary test copy displays the fallback, disables comparison, and leaves cards and the full native table readable. |
 | Graph gaps | A real CLI-generated indirect-call fixture displays the specific diagnostic outside disclosures. |
 | Screenshots | Actual viewport captures: report-desktop.jpg and report-mobile.jpg. The original report.png is untouched. |
-| Relocated report, disconnected network | Static resource checks and script-adapter execution pass; an actual disconnected browser session was not performed. |
-| Actual print/PDF output | Not performed: the available browser API does not expose print/media emulation or PDF export. Before/after-print state is covered by the generated-script regression, not a visual print claim. |
+| Relocated report, disconnected network | Completed in fresh offline Chromium contexts with only copied HTML bytes fulfilled as the main HTTP document; no external resources, successful network control, all charts painted. See html-delivery.md. |
+| Actual print/PDF output | Completed using the pinned Playwright test runner and Edge/Chromium printing. Poppler rendered every page; all 9 pages of the two local A4 PDFs were visually reviewed. Screen styles and open states restore. See html-delivery.md. |
 
 The browser initially rejected file navigation. The user then explicitly chose
-`http://localhost:5173`; all actual visual checks and screenshots above used
-that HTTP surface. No file-navigation restriction was bypassed. The server is
-loopback-only and serves examples/. Linux CI validates functional contracts;
-it does not claim disconnected-network or visual print acceptance.
+`http://localhost:5173` for the redesign screenshots. The later offline delivery
+test uses distinct HTTP URLs on the same loopback development surface. No file-navigation restriction was bypassed. The server is
+loopback-only and serves examples/. The later delivery regression now verifies
+fresh offline rendering and real PDFs in Linux CI as well. Human visual review
+is recorded separately for the local Windows PDFs; CI does not perform human
+review. Neither file:// opening nor non-Chromium printing is claimed as tested.

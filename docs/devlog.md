@@ -253,3 +253,17 @@ scripts/demo-budget.mjs 在 `_build/budget-demo/` 同路径工程内以 wasm/deb
 按用户指定，通过 npm run dev 的 HTTP 页面 http://localhost:5173 做真实 Chromium 验收，复用已运行的 5173 服务器。1440/1024/768/390 宽度均无页面横向溢出，图表绘制和 gzip 切换正常；验证实际 tooltip、手机局部表格滚动、Enter 展开/收起、454 字符 Unicode 名称与重名索引、移除图表库后的静态回退和真实缺口警告。两张 JPEG 来自真实视口。初始 file 协议被浏览器拒绝后未绕过，用户指定 HTTP 后在该地址验收。实际断网下打开迁移文件、打印/PDF 输出未完成，现有浏览器 API 没有网络切断、打印或 PDF 导出能力；资源自包含及打印事件回归不能替代这两项实测。详细边界见 docs/html-report.md。远端 Linux 结果以推送后目标 SHA 的实际 CI 记录为准。
 
 README 截图后续更新：两份 README 均直接展示 report-desktop.jpg 与 report-mobile.jpg，并将再生成说明同步为实际视口尺寸和 localhost:5173 地址；旧 report.png 保留在工作区，未覆盖或提交。仅修改文档，核对两张 JPEG 的实际尺寸、引用路径及 diff，无需重复运行分析实现测试。
+
+## 19. 自包含 HTML 发行与实际离线/PDF 验收（2026-10-16）
+
+基线为 main 9ae56c2。确认旧 CLI 从 cwd、父目录 assets 读取 ECharts，缺失时输出 CDN 页面，违背默认离线交付承诺。本次移除文件搜索，以固定 SHA-256 的 ECharts 5.6.0 生成私有 cmd/main/echarts_generated.mbt。当前 MoonBit 工具链已实际验证普通 String literal/StringBuilder 的 native 编译；不依赖未经确认的资源指令。生成器将源码分为有界行并原样重组，避免编译器长行警告，--check 对比格式化后的完整生成物及资源哈希。Node 只在更新资源/测试时使用；常规 MoonBit 构建直接使用已提交生成物，生产 CLI 无下载、浏览器或 Node 依赖。补齐上游完整 Apache LICENSE/NOTICE 与 bundled d3 许可、固定来源、哈希和更新步骤。
+
+公开 render_html 签名不变，库调用者未传 echarts 时仍选择兼容 CDN 模式；CLI 始终明确传入编译资源。独立 cwd 生成、cwd/父目录放置同名恶意资源的输出逐字一致，实际报告中的库源码重构后 SHA-256 与 vendored 文件相同。Windows native release 从 804864 增至 2893824 B（+2088960 B）；原 Wasm 示例预算口径未改。使用同一 examples/fib.wasm（0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c）经实际 CLI 重生成页面，所有旧 DATA 字段和值完整相等，文件/code/whole gzip/不可达编码仍为 10675/5166/5207/0 B。屏幕布局未改，既有两张截图和用户 report.png 不覆盖。
+
+实际打印发现旧实现按屏幕 canvas 宽度输出，右端会裁切，且悬浮提示进入 PDF。本次 beforeprint 先建立 A4 的 186mm 内容宽度和单列图表，再以无动画 resize、同步 ZRender flush 完成绘制；隐藏 hover 提示，打印使用紧凑图高和完整原生模块图例。概览、构成、函数、模块地图按章节分页，表格跨页重复表头，必要方法自动展开；打印后原内联样式、宽高、展开状态及环图标签恢复。小环图不打印易裁切的内部百分比，完整图例保留每片精确字节。
+
+新增 scripts/test-html-portability.mjs：3 个实际 CLI 场景，V8 验证长名称/缺口样本，固定源输入与库哈希，复制件目录含空格和中文且只有 HTML。关闭原 context 后，新 context 从创建时即 offline、禁用 service worker，仅将复制件字节映射为主 HTTP 文档，其他资源请求不提供替代；四张图实际绘制，tooltip、数字和表格可用，外部请求及阻断错误为零，fetch 控制确实失败。此方式遵守 AGENTS 禁止 file:// 的规则，没有声称实测 OS 双击打开或借用原页缓存。
+
+测试环境固定 Playwright 1.58.2、PDF.js 5.4.624；本机 Edge 156.0.4314.23、Windows 10.0.26300、Poppler 26.07.0。真实 A4 浏览器 PDF 分别 5 页与 4 页，Poppler 独立渲染，每页检查数据/完整名称、图表、表格列和模型说明；已逐页人工检查全部 9 张 PNG，无裁切、覆盖、空黑图或意外空白页。PDF.js 同时检查文本与图形，真实打印事件校验纸宽及状态恢复，再在 1440/1024/768/390 下检查布局。原 336 项测试、727 CLI 场景、四个源码演示及预算 0/3 继续通过，加上迁移 3 场景共 730。资源与打印最终修正后重新运行对应检查和浏览器验收。
+
+详细复现见 docs/html-delivery.md，本地哈希/环境快照见 docs/html-delivery-results.json；PDF、页面 PNG 和逐页 manual-review.md 保存在 _build/html-delivery-verification/latest.json 指向的 run-JM2Zrx 目录。CI 新增锁定开发依赖、Chromium 实际离线/PDF 测试和 html-delivery-evidence；不会将适配器检查或 CI 自动检查冒充人工视觉验收。非 Chromium 浏览器、物理打印机和 file:// 双击路径未实测，A4/12mm 设置范围单独说明。目标远程状态以最终提交 SHA 的 CI 为准。

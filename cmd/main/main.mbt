@@ -44,36 +44,6 @@ fn read_baseline(options : @lib.Options) -> (Bytes, @lib.WasmModule)? {
 }
 
 ///|
-/// The vendored chart library, or an empty string when it is not there.
-///
-/// The report is generated with the library inlined, so it opens offline from
-/// anywhere. When the checkout's `assets/` directory is not next to the working
-/// directory the report falls back to a CDN script tag, which still renders but
-/// needs a network connection; saying so once is better than producing a page
-/// that silently shows empty boxes.
-fn read_echarts() -> String {
-  let candidates = [
-    "assets/echarts.min.js", "../assets/echarts.min.js", "../../assets/echarts.min.js",
-  ]
-  let mut found = ""
-  let mut i = 0
-  while i < candidates.length() && found.length() == 0 {
-    try {
-      found = @fs.read_file_to_string(candidates[i])
-    } catch {
-      _ => ()
-    }
-    i = i + 1
-  }
-  if found.length() == 0 {
-    println(
-      "moonsize: assets/echarts.min.js not found; the report will load ECharts from a CDN",
-    )
-  }
-  found
-}
-
-///|
 /// The text report: the section table, the function ranking, the module summary,
 /// and whichever optional sections were asked for.
 fn print_report(
@@ -442,7 +412,7 @@ fn main {
           let contents = @lib.render_html(
             analysis,
             options.path,
-            echarts=read_echarts(),
+            echarts=vendored_echarts(),
           )
           write_output(target, contents)
           println("HTML report written to " + target)

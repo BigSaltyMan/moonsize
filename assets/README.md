@@ -10,11 +10,29 @@ Apache ECharts, the chart library the HTML report is drawn with.
 | File | `dist/echarts.min.js` |
 | Size | 1,034,102 bytes |
 | SHA-256 | `bf4a223524e40b77c304bec67e1222cf551f14880cf42c69dc046558e11c07b1` |
-| Licence | Apache-2.0 (see the banner at the top of the file) |
+| Licence | Apache-2.0 ([LICENSE](ECHARTS-LICENSE.txt), [NOTICE](ECHARTS-NOTICE.txt)); bundled d3 terms in [LICENSE-d3](ECHARTS-LICENSE-d3.txt) |
 
 It is vendored rather than loaded from a CDN so that `moonsize --html` produces a
 report that opens with no network connection, which is the same promise the rest
 of the tool makes: everything happens on the machine you run it on.
+
+### Native CLI embedding
+
+`cmd/main/echarts_generated.mbt` is generated from this exact file. Its private
+function rejoins bounded MoonBit string literals without modifying any source
+bytes, including the upstream banners. Current toolchain verification used
+moon 0.1.20260915 / moonc v0.10.13+cbb11c36f and native release builds on Windows;
+CI checks the same generated resource on Linux. No unverified embed directive,
+runtime file search, download or frontend build is used. Normal MoonBit builds
+compile the checked-in generated file without requiring Node.
+
+`node scripts/embed-echarts.mjs` regenerates it; `--check` compares exact
+formatted output and the pinned SHA-256. The original upstream banners remain
+verbatim in the reconstructed source and
+report; the complete license, NOTICE and d3 terms are retained in assets. Include
+these license/notice files when redistributing standalone native binaries.
+The native CLI always supplies this source. The library's optional echarts
+parameter is unchanged; choosing its empty/default value still selects CDN mode.
 
 ### Updating
 
@@ -23,9 +41,16 @@ of the tool makes: everything happens on the machine you run it on.
 # against the integrity hash from https://registry.npmjs.org/echarts/<version>,
 # then extract the one file this repository needs.
 curl -sSLo echarts.tgz https://registry.npmjs.org/echarts/-/echarts-<version>.tgz
-tar xzf echarts.tgz package/dist/echarts.min.js
+tar xzf echarts.tgz package/dist/echarts.min.js package/LICENSE package/NOTICE package/licenses/LICENSE-d3
 cp package/dist/echarts.min.js assets/echarts.min.js
-sha256sum assets/echarts.min.js   # update the hash above
+cp package/LICENSE assets/ECHARTS-LICENSE.txt
+cp package/NOTICE assets/ECHARTS-NOTICE.txt
+cp package/licenses/LICENSE-d3 assets/ECHARTS-LICENSE-d3.txt
+sha256sum assets/echarts.min.js   # review/update this table AND the generator pin
+# Update the fixed version/source/hash in scripts/embed-echarts.mjs after review.
+node scripts/embed-echarts.mjs
+moon fmt
+node scripts/embed-echarts.mjs --check
 ```
 
 Verifying against the registry tarball rather than against a CDN matters: this

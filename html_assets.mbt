@@ -52,6 +52,7 @@ const HTML_STYLE : String =
   #|.chart { width:100%; min-width:0; height:240px; }
   #|.chart.ring { height:390px; }
   #|.chart.map { height:450px; }
+  #|.print-legend { display:none; }
   #|.empty { min-height:120px; display:flex; align-items:center; justify-content:center; padding:20px; text-align:center; color:var(--muted); font-size:13px; }
   #|.function-details { margin-top:18px; border-top:1px solid var(--line); padding-top:14px; }
   #|summary { cursor:pointer; font-weight:600; font-size:14px; padding:6px 0; }
@@ -74,7 +75,29 @@ const HTML_STYLE : String =
   #|@media (max-width:1100px) { .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .value { font-size:29px; } }
   #|@media (max-width:850px) { .composition-grid { grid-template-columns:minmax(0,1fr); } .chart.ring { height:360px; } }
   #|@media (max-width:480px) { .shell { padding:16px; } h1 { font-size:26px; } .cards { grid-template-columns:minmax(0,1fr); gap:10px; } .card { padding:16px 18px; } .panel { padding:16px 12px; } .analysis-status { padding:15px; } .report-nav { gap:8px 16px; } .chart.map { height:420px; } .section-heading { margin-top:24px; } }
-  #|@media print { body { background:white; font-size:12px; } .shell { max-width:none; padding:0; } .report-nav,.skip-link,button { display:none; position:static; } .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .card,.analysis-status { break-inside:avoid; box-shadow:none; } .composition-grid { grid-template-columns:1fr; } .panel { border-color:#c9d1d1; margin-bottom:14px; break-inside:avoid; } .table-scroll { overflow:visible; } table { min-width:0; font-size:9px; } th,td { padding:6px 4px; } thead { display:table-header-group; } tr { break-inside:avoid; } .methods { break-inside:auto; } .function-details { break-inside:auto; } a { color:inherit; } }
+  #|@page { size:A4 portrait; margin:12mm; }
+  #|@media print {
+  #|  body { background:white; font-size:12px; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  #|  .shell { width:186mm; max-width:100%; padding:0; }
+  #|  .report-header { padding:0 0 12px; } h1 { font-size:24px; }
+  #|  .report-nav,.skip-link,button,.report-tooltip { display:none!important; position:static; }
+  #|  .cards { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  #|  .card { padding:12px; } .value { font-size:24px; margin:4px 0; }
+  #|  .analysis-status { padding:10px 12px; margin-bottom:14px; }
+  #|  .card,.analysis-status,.chart { break-inside:avoid; box-shadow:none; }
+  #|  .composition-grid { grid-template-columns:1fr; }
+  #|  .section-heading { margin-top:16px; break-after:avoid; }
+  #|  #composition,#function-ranking,#module-map { break-before:page; }
+  #|  #composition .panel { break-inside:avoid; }
+  #|  h2,h3,summary,caption { break-after:avoid; }
+  #|  .panel { border-color:#c9d1d1; padding:12px; margin-bottom:12px; break-inside:auto; }
+  #|  .table-scroll { overflow:visible; } table { min-width:0; font-size:10px; }
+  #|  th,td { padding:6px 4px; overflow-wrap:anywhere; } thead { display:table-header-group; } tr { break-inside:avoid; }
+  #|  .methods,.function-details { break-inside:auto; } .methods { margin-top:14px; padding:12px; }
+  #|  .methods p { font-size:12px; line-height:1.5; } .methods h3 { margin-top:12px; }
+  #|  .print-legend { display:grid; grid-template-columns:1fr 1fr; gap:3px 16px; margin:8px 0 0; padding:0; list-style:none; font-size:11px; overflow-wrap:anywhere; }
+  #|  footer { padding-top:12px; break-before:avoid; } a { color:inherit; }
+  #|}
 
 ///|
 /// Inline report asset; no frontend build or network dependency.
@@ -123,7 +146,7 @@ const HTML_SCRIPT : String =
   #|  }
   #|  return Object.assign({},base,{
   #|    grid:{left:labelWidth(id)+10,right:80,top:legend?36:12,bottom:30,containLabel:false},
-  #|    tooltip:{trigger:'axis',confine:true,axisPointer:{type:'shadow'},extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',
+  #|    tooltip:{className:'report-tooltip',trigger:'axis',confine:true,axisPointer:{type:'shadow'},extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',
   #|      formatter:ps=>{
   #|        const r=rows[ps[0].dataIndex];
   #|        let text='<b>'+esc(r.name)+'</b>'+(r.index===undefined?'':'<br/>function #'+r.index)+'<br/>'+(r.body?'body ':'raw ')+NUM(r.size)+' B ('+PCT(r.size,DATA.fileSize)+' of file)';
@@ -142,7 +165,7 @@ const HTML_SCRIPT : String =
   #|function pieOption(rows) {
   #|  const total=rows.reduce((sum,r)=>sum+r.size,0);
   #|  return Object.assign({},base,{
-  #|    tooltip:{trigger:'item',confine:true,extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',formatter:p=>{
+  #|    tooltip:{className:'report-tooltip',trigger:'item',confine:true,extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',formatter:p=>{
   #|      const r=rows[p.dataIndex];
   #|      let text='<b>'+esc(p.name)+'</b><br/>'+NUM(p.value)+' B<br/>'+PCT(p.value,total)+' of attributed function bytes';
   #|      text+='<br/>'+PCT(p.value,DATA.codeSize)+' of complete code section';
@@ -150,7 +173,7 @@ const HTML_SCRIPT : String =
   #|      return text;
   #|    }},
   #|    legend:{type:'scroll',bottom:4,left:'center',icon:'circle',itemWidth:9,itemHeight:9,
-  #|      textStyle:{color:INK,fontSize:11,width:190,overflow:'truncate'},tooltip:{show:false}},
+  #|      textStyle:{color:INK,fontSize:11,width:190,overflow:'truncate'},tooltip:{className:'report-tooltip',show:false}},
   #|    series:[{type:'pie',radius:['46%','72%'],center:['50%','43%'],avoidLabelOverlap:true,
   #|      itemStyle:{borderColor:'#fff',borderWidth:2},labelLine:{show:false},
   #|      label:{position:'inside',fontSize:11,color:'#fff',formatter:'{d}%'},
@@ -160,7 +183,7 @@ const HTML_SCRIPT : String =
   #|}
   #|function treemapOption(rows) {
   #|  return Object.assign({},base,{
-  #|    tooltip:{confine:true,extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',formatter:p=>{
+  #|    tooltip:{className:'report-tooltip',confine:true,extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',formatter:p=>{
   #|      let text='<b>'+esc(p.name)+'</b><br/>'+NUM(p.value)+' B';
   #|      if(p.data&&p.data.index!==undefined)text+='<br/>function #'+p.data.index;
   #|      if(p.data&&p.data.gzip!==null&&p.data.gzip!==undefined)text+='<br/>independent gzip '+NUM(p.data.gzip)+' B ('+RATIO(p.value, p.data.gzip)+')';
@@ -220,14 +243,31 @@ const HTML_SCRIPT : String =
   #|}
   #|function wireReport() {
   #|  const resize=()=>charts.forEach(({id,chart})=>{
-  #|    chart.resize();if(id==='sections'||id==='functions')chart.setOption({yAxis:{axisLabel:{width:labelWidth(id)}},grid:{left:labelWidth(id)+10}});
+  #|    chart.resize({animation:{duration:0}});if(id==='sections'||id==='functions')chart.setOption({yAxis:{axisLabel:{width:labelWidth(id)}},grid:{left:labelWidth(id)+10}});
+  #|    // Flush the synchronous, animation-free drawing before the print snapshot.
+  #|    chart.getZr?.().flush();
   #|  });
   #|  window.addEventListener('resize',resize);
-  #|  let printState=null;
+  #|  let printState=null,printStyles=null;
   #|  window.addEventListener('beforeprint',()=>{
-  #|    if(!printState){printState=['function-details','method-details'].map(id=>{const el=document.getElementById(id),open=el.open;el.open=true;return [el,open];});}resize();
+  #|    if(!printState){
+  #|      printState=['function-details','method-details'].map(id=>{const el=document.getElementById(id),open=el.open;el.open=true;return [el,open];});
+  #|      const ids=['report','composition-panels','sections','functions','modules','treemap'];
+  #|      printStyles=ids.map(id=>{const el=document.getElementById(id);return [el,el.style.cssText];});
+  #|      // beforeprint can precede the browser's final paper layout. Establish
+  #|      // the A4 content width and one-column chart layout before redrawing.
+  #|      Object.assign(document.getElementById('report').style,{width:'186mm',maxWidth:'100%',padding:'0'});
+  #|      document.getElementById('composition-panels').style.gridTemplateColumns='minmax(0,1fr)';
+  #|      for(const [id,height] of [['sections',Math.max(170,DATA.sections.length*21+48)],['functions',Math.max(150,Math.min(20,DATA.functions.length)*22+48)],['modules',220],['treemap',300]])document.getElementById(id).style.height=height+'px';
+  #|    }
+  #|    charts.forEach(({chart})=>chart.dispatchAction({type:'hideTip'}));resize();
+  #|    // The complete printed legend carries exact values. Tiny pie sectors
+  #|    // cannot fit percentage labels at paper size without clipping them.
+  #|    charts.filter(c=>c.id==='modules').forEach(({chart})=>chart.setOption({series:[{data:pieOption(DATA.pie).series[0].data.map(r=>({...r,label:{show:false}}))}]}));
   #|  });
-  #|  window.addEventListener('afterprint',()=>{if(printState){printState.forEach(([el,open])=>{el.open=open;});printState=null;}resize();});
+  #|  window.addEventListener('afterprint',()=>{
+  #|    if(printState){printState.forEach(([el,open])=>{el.open=open;});printStyles.forEach(([el,css])=>{el.style.cssText=css;});printState=null;printStyles=null;charts.filter(c=>c.id==='modules').forEach(({chart})=>chart.setOption({series:[{data:pieOption(DATA.pie).series[0].data}]}));}resize();
+  #|  });
   #|}
   #|main();
   #|wireReport();

@@ -24,6 +24,8 @@ jobs:
           node --version
       - name: Formatting
         run: moon fmt --check
+      - name: Embedded chart resource matches pinned vendored source
+        run: node scripts/embed-echarts.mjs --check
       # Warnings are errors here, because the library is meant to build clean on
       # a toolchain that keeps finding new things to warn about.
       - name: Check
@@ -54,6 +56,29 @@ jobs:
         run: node scripts/test-function-path.mjs _build/native/release/build/cmd/main/main.exe
       - name: Multi-metric budget CLI regressions
         run: node scripts/test-budget.mjs _build/native/release/build/cmd/main/main.exe
+      - name: HTML delivery test dependencies (not CLI dependencies)
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          sudo apt-get install -y --no-install-recommends poppler-utils fonts-noto-cjk
+      - name: Relocated offline report and real A4 PDF regressions
+        run: |
+          mkdir -p _build/html-delivery-verification
+          npm run dev > _build/html-delivery-verification/server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:5173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/test-html-portability.mjs _build/native/release/build/cmd/main/main.exe --browser
+      - name: HTML offline and PDF evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-delivery-evidence
+          path: _build/html-delivery-verification/
+          if-no-files-found: error
       - name: MoonBit budget source demo and rollback
         run: node scripts/demo-budget.mjs _build/native/release/build/cmd/main/main.exe
       - name: Budget source evidence artifacts

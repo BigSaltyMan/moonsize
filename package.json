@@ -3,6 +3,11 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
-    "test:visual": "node scripts/test-html-report.mjs"
+    "test:visual": "node scripts/test-html-report.mjs",
+    "test:delivery": "node scripts/test-html-portability.mjs _build/native/release/build/cmd/main/main.exe --browser"
+  },
+  "devDependencies": {
+    "pdfjs-dist": "5.4.624",
+    "playwright": "1.58.2"
   }
 }

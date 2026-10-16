@@ -497,9 +497,9 @@ fn card(
 ///
 /// `echarts` is the chart library's source. Passing it inlines the library, so
 /// the report opens from any directory with no network and no sibling file;
-/// leaving it empty emits a CDN `<script src>` instead, which keeps the command
-/// working for someone who has the binary but not the repository around it. The
-/// library does no I/O, so reading `assets/echarts.min.js` is the caller's job.
+/// leaving it empty selects the compatible library CDN mode. This library does
+/// no I/O. The CLI always supplies its compiled-in vendored source;
+/// a library caller can explicitly supply a source or retain the CDN default.
 pub fn render_html(
   analysis : Analysis,
   file_path : String,
@@ -733,7 +733,7 @@ fn render_html_measured(
     "</p>\n",
   )
   out.write_string(
-    "<section id=\"composition\" aria-labelledby=\"composition-title\"><div class=\"section-heading\"><h2 id=\"composition-title\">Where the bytes go</h2><p>Complete sections, then attributed function encodings</p></div><div class=\"composition-grid\">\n",
+    "<section id=\"composition\" aria-labelledby=\"composition-title\"><div class=\"section-heading\"><h2 id=\"composition-title\">Where the bytes go</h2><p>Complete sections, then attributed function encodings</p></div><div id=\"composition-panels\" class=\"composition-grid\">\n",
   )
   out.write_string(
     "<article class=\"panel\"><div class=\"panel-tools\"><h3>Sections</h3><button id=\"section-compare\" type=\"button\" aria-pressed=\"false\" aria-controls=\"sections\">Compare independent gzip</button></div><p class=\"panel-note\">Raw sizes include section headers and payloads. Both views use the same byte axis.</p><p class=\"panel-note\">Each section is compressed separately. These sizes are not additive and do not represent whole-file transfer shares.</p><div id=\"sections\" class=\"chart\" role=\"img\" aria-label=\"Section sizes in encoded bytes\"></div>\n",
@@ -750,8 +750,18 @@ fn render_html_measured(
     }
   }
   out.write_string(
-    "</article><article class=\"panel\"><h3>Modules · attributed function bytes</h3><p class=\"panel-note\">Shares are based on attributed function bytes; code-section overhead is excluded. Small modules may be grouped as other.</p><div id=\"modules\" class=\"chart ring\" role=\"img\" aria-label=\"Module shares of attributed function encodings\"></div></article></div></section>\n",
+    "</article><article class=\"panel\"><h3>Modules · attributed function bytes</h3><p class=\"panel-note\">Shares are based on attributed function bytes; code-section overhead is excluded. Small modules may be grouped as other.</p><div id=\"modules\" class=\"chart ring\" role=\"img\" aria-label=\"Module shares of attributed function encodings\"></div><ul class=\"print-legend\" aria-label=\"All module slices in print\">",
   )
+  for slice in html_data_array(data, "pie") {
+    out.write_string(
+      "<li>" +
+      html_escape(html_data_text(slice, "name")) +
+      " · " +
+      grouped(html_data_int(slice, "size")) +
+      " B</li>",
+    )
+  }
+  out.write_string("</ul></article></div></section>\n")
   out.write_string(
     "<section id=\"function-ranking\" aria-labelledby=\"functions-title\"><div class=\"section-heading\"><h2 id=\"functions-title\">Functions to investigate</h2><p>Top 20 local functions, ranked by body bytes</p></div><article class=\"panel\"><p class=\"panel-note\">Function gzip uses independent streams including size prefixes, with ratios based on encoded size. It does not measure transfer savings from removal.</p><div id=\"functions\" class=\"chart\" role=\"img\" aria-label=\"Top 20 functions by body bytes; complete names in the table below\"></div>\n",
   )

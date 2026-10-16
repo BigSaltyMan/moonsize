@@ -143,11 +143,11 @@ try {
     assert.deepEqual(read(fs.readFileSync(detached,'utf8')).data,data);
     assert(!read(fs.readFileSync(detached,'utf8')).script.includes('fetch('));
   }
-  // ECharts is deliberately unavailable in this cwd; CLI still provides its server-rendered table.
+  // An unrelated cwd cannot change the CLI's bundled chart resource mode.
   const f=configs[1],cdn=path.join(work,'cdn.html');
-  const notice=run([f.file,'--html',cdn],work);assert(notice.includes('CDN'));
-  const html=fs.readFileSync(cdn,'utf8'),parsed=read(html);assert(html.includes('CDN fallback mode: charts need a network connection'));assert(html.includes('<script src='));
-  assert(html.includes('<p id="chart-resource-mode" class="panel-note">CDN chart mode: charts require a network connection.'));
+  const notice=run([f.file,'--html',cdn],work);assert(!notice.includes('CDN'));
+  const html=fs.readFileSync(cdn,'utf8'),parsed=read(html);assert(!html.includes('<script src='));
+  assert(html.includes('<p id="chart-resource-mode" class="panel-note">Chart library and report data are embedded'));
   checkTable(html,parsed.data);assert.equal(execute(parsed.script,{library:false}).elements['chart-status'].hidden,false);
   const folder=path.join(work,'目录-'+'long_'.repeat(12));fs.mkdirSync(folder);
   const longPath=path.join(folder,'很长的输入文件名.wasm');fs.copyFileSync(f.file,longPath);

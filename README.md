@@ -654,19 +654,28 @@ identity-based module colors, independent of rank. Treemap area remains raw
 function encoding; unreachable functions also have text and outlined cells,
 which do not imply removal savings.
 
-When ECharts is embedded, the generated file contains its library, styles,
-scripts and data without remote fonts or sibling assets. If the CLI cannot find
-`assets/echarts.min.js`, it announces CDN fallback; that mode visibly states
-that charts require network access. If chart loading fails, a message replaces
-the blank charts. The measured cards, MoonBit-rendered function table and native
-method disclosures remain readable, including without JavaScript.
+The native CLI always embeds pinned ECharts 5.6.0 from its executable, regardless
+of the working directory. It never reads a nearby assets/ file or downloads a
+chart library. The report contains its library, styles, scripts and data without
+remote fonts or sibling files. Copying that one HTML file is sufficient.
+The library API remains compatible: render_html without an echarts source still
+selects CDN mode; pass a source explicitly for an offline library-generated page.
+Missing/broken chart code still leaves a clear fallback and readable cards,
+function table and methods.
+
+A4 printing redraws charts at paper width, hides hover controls, opens required
+disclosures, repeats table headers and includes a complete module legend. It
+restores the screen layout and disclosure states afterwards. Actual relocated
+offline rendering and two browser-generated PDFs have been checked; see
+[delivery evidence and reproduction](docs/html-delivery.md). Node and browser
+test tools are not required to generate reports with the native CLI.
 
 The current [generated example](examples/report.html) uses the unchanged
 [stored input](examples/fib.wasm), SHA-256
 `0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c`.
 It measures 10,675 B file, 5,166 B code, 5,207 B whole-file gzip and 0 B
 unreachable local function encodings. [Page usage and verification limits](docs/html-report.md)
-record the real HTTP-browser checks, screenshots and remaining print/offline limits.
+record the real HTTP-browser checks, screenshots and tested offline/print scope.
 
 ![Current report at 1440 px](examples/report-desktop.jpg)
 

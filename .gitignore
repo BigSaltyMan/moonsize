@@ -1,5 +1,6 @@
 _build/
 .mooncakes/
 target/
+node_modules/
 # 本地生态查重分析产物（不进仓库）
 .ecoscan/
