@@ -26,18 +26,20 @@ fn write_output(path : String, contents : String) -> Unit {
 
 ///|
 /// The module to compare against, or `None` when the invocation named none.
-fn read_baseline(options : @lib.Options) -> @lib.WasmModule? {
+fn read_baseline(options : @lib.Options) -> (Bytes, @lib.WasmModule)? {
   match options.baseline {
     None => None
-    Some(target) =>
-      match @lib.parse_module(read_input(target)) {
-        Ok(parsed) => Some(parsed)
+    Some(target) => {
+      let bytes = read_input(target)
+      match @lib.parse_module(bytes) {
+        Ok(parsed) => Some((bytes, parsed))
         Err(error) => {
           println("moonsize: \{target}: \{@lib.describe_error(error)}")
           @sys.exit(1)
           None
         }
       }
+    }
   }
 }
 
@@ -138,8 +140,31 @@ fn main {
   // run without half a comparison already in the log.
   let baseline = read_baseline(options)
   let baseline_size = match baseline {
-    Some(baseline_module) => Some(baseline_module.file_size)
+    Some((_, baseline_module)) => Some(baseline_module.file_size)
     None => None
+  }
+  // Prepare every fallible comparison before printing any normal report. The
+  // baseline bytes were read once; size comparison never constructs its graph.
+  let function_diff = if options.diff_functions {
+    match baseline {
+      Some((baseline_bytes, _)) =>
+        match @lib.compare_modules(baseline_bytes, bytes) {
+          Ok(diff) => Some(diff)
+          Err(error) => {
+            match error {
+              Baseline(error) =>
+                println("moonsize: baseline: \{@lib.describe_error(error)}")
+              Current(error) =>
+                println("moonsize: current: \{@lib.describe_error(error)}")
+            }
+            @sys.exit(@lib.EXIT_INPUT)
+            return
+          }
+        }
+      None => None // parse_options rejects this combination before I/O.
+    }
+  } else {
+    None
   }
   let analysis = match @lib.analyze(bytes, parsed) {
     Ok(analysis) => analysis
@@ -180,11 +205,15 @@ fn main {
       }
   }
   match baseline {
-    Some(baseline_module) => {
+    Some((_, baseline_module)) => {
       println("")
       println(@lib.render_size_comparison(baseline_module, parsed))
     }
     None => ()
+  }
+  if function_diff is Some(diff) {
+    println("")
+    println(@lib.render_function_diff(diff, options.top))
   }
   // The gate is last so the report a CI log shows is the one that explains the
   // failure, and it runs whatever the output mode was: a budget is a budget.

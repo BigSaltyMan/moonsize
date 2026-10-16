@@ -41,6 +41,7 @@ fn analysis_with_name(name : String) -> Analysis raise {
       index: 1,
       name,
       module_name: "demo",
+      raw_name: None,
       body_size: 120,
       total_size: 122,
       offset: 0,

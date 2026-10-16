@@ -637,10 +637,14 @@ fn read_function_names(reader : Reader, names : Map[Int, String]) -> Unit {
       Ok(value) => value
       Err(_) => return
     }
-    let text = match reader.read_bytes(length) {
-      Ok(bytes) => @utf8.decode_lossy(bytes)
+    let bytes = match reader.read_bytes(length) {
+      Ok(bytes) => bytes
       Err(_) => return
     }
+    // Debug names are optional, but a replacement character manufactured by
+    // lossy decoding is not a reliable cross-build symbol identity. Keep earlier
+    // names and leave this damaged suffix unnamed. A literal U+FFFD remains valid.
+    let text = @utf8.decode(bytes) catch { _ => return }
     names.set(index, text)
   }
 }

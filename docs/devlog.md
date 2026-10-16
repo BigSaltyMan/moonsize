@@ -150,4 +150,26 @@ HTML 卡片标记 `Whole-file gzip`，段图例改为 `independent gzip`，图�
 
 两份 README 的例子来自实际测量 `examples/fib.wasm`：raw 10,675 B、整文件 gzip 5,207 B。说明实际服务编码不固定，独立压缩只观察局部可压缩性，优化收益应比较修改前后完整构建产物；不再宣称符号名的网络贡献近乎为零。未再生成示例二进制、HTML 或图片，已有图片和优化计划继续排除在提交外。
 
-`moon info`、格式化、native deny-warn 检查、测试、release 构建、格式检查与 diff 检查通过。预算读取新构建的 10,675 字节示例，100KB 返回 0，0B 精确返回 3 且含预算原因。取得本次提交的 Linux CI 成功记录后，才能标记远程验证完成。
+`moon info`、格式化、native deny-warn 检查、测试、release 构建、格式检查与 diff 检查通过。预算读取新构建的 10,675 字节示例，100KB 返回 0，0B 精确返回 3 且含预算原因。提交 `7cf1862` 的 [Linux CI 已成功](https://github.com/BigSaltyMan/moonsize/actions/runs/38842804686)，269 项测试、463 个 CLI 场景及预算正反例均通过。
+
+## 13. 函数与包级体积差异（2026-10-16）
+
+在 `7cf1862` 基线上增加 `FunctionStat.raw_name : String?`：非空原始符号在显示名 demangle 前保存，缺失/空名称为 None；真实符号 `(unnamed)` 仍为 Some。`name`、包归因、body/total_size 和偏移口径不变；合成的纯显示测试记录不从显示名猜测 raw_name。
+
+新增公开 `compare_modules(baseline_data, current_data)`，返回 `Result[ModuleSizeDiff, ComparisonError]`，错误区分 Baseline/Current。内部执行现有基础结构检查、import/函数有界读取和名字收集，不构建调用图，也不求解完整 Wasm 类型/指令语义。结果提供文件总量、两侧 code 段/函数编码/开销、函数记录、包记录及分类覆盖数量/字节。
+
+只匹配两侧本地函数中各唯一的同一个非空原始符号。唯一单侧符号标为 added-symbol / removed-symbol；任意一侧重复时，所有相关记录均为 ambiguous，不与普通新增/消失重叠；无名/空名为 missing-symbol。歧义与缺名逐函数逐侧保留，不能用 index、offset、体积、排列或显示名配对。新增/消失只描述二进制符号，可能源于重命名或工具链变化。
+
+包汇总分别聚合两侧全部本地函数，包含无法匹配部分，保持 `(unnamed)` / `(top-level)` 等现有尽力归因。包字节之和等于函数 total_size 之和；函数编码加段头/数量编码等额外开销等于 code 段；函数分类增量完整对账，但不等于整个文件的增量。函数/包记录按增量绝对值降序，再按区分大小写的 UTF-16 字典序身份排列，同一身份最终按状态/定位索引消除平局。当前工具链的 String::compare 使用长度优先顺序，因此新排名单独明确实现字典序，不改变原有段比较排序。
+
+新增 `--diff-functions`，必须配合 baseline，与 HTML/调用图文件输出冲突时在读取输入前返回 2；可组合压缩、retained、dead-code 等文本章节。新 `diff_report.mbt` 输出函数、包、匹配覆盖和 code 开销四节，raw 符号引用并转义；`--top` 分别限制两种排名，top=0 保留所有汇总和覆盖情况。未启用时 baseline 仍保持原来的文件/段比较。CLI 每个文件只读一次，baseline 同时保留 bytes/parsed；所有可能失败的比较准备在正常报告前完成。当前 strict 仍可返回 3，解析/收集错误为 1，预算仍只约束整个文件增长。
+
+新增公开 API 黑盒回归，覆盖自比、索引重排、前置导入、增长/缩减、新增/消失、单侧/双侧重名及另一侧缺失、显示名碰撞、空/缺名/字面 `(unnamed)`、长度前缀 127→128、函数数量编码 127→128、空/显式空 code、两侧解析和统计错误、无需完整 baseline 图，以及文本转义/隐藏排名。逐条检查函数分类不遗漏不重复、包/函数总量和 code 开销三类对账。另先复现非法 UTF-8 名称字节 FF / FE 被有损解码成同一字符而误匹配，再将 `read_function_names` 改为严格解码：可选调试名称的受损后缀留为无名，前面已读名称保留；合法 U+FFFD / BOM 不受影响。解析函数签名不变，避免凭损失信息的字符串建立身份。native 测试为 **284 项通过、0 项失败**。
+
+第七个脚本 `scripts/test-function-diff.sh` 通过 **35 个进程场景**，V8 验证 32 份完整模块。按手工指定的符号配对账本断言实际每行身份、两侧索引和大小、状态、增量、排名、分类覆盖、包总量、code 开销。包括 top=0/1、unicode、参数冲突的新建/既有文件保护、坏 baseline 的准备失败无半份报告、缺名产物的预算等号/超限、非 code 增长仍触发预算，以及 strict 当前/基线区别。保留前六个脚本，合计 **498 个 CLI 场景**。
+
+源码演示位于 `examples/function-diff/{before,after}.mbt`；两者是脚本输入，没有另设包影响现有示例预算。`scripts/demo-function-diff.sh` 在同一个独立临时项目里按 before→after→rollback 构建，统一 `--target wasm --debug --no-strip`，V8 确认合法且存在 name 段，再执行两次真实 CLI 比较。自动检查 classify 增长、新 weighted_score 符号、包增长，以及回退后完整 Wasm 字节一致、全部符号匹配且差异为零。产物和报告保留在忽略的 `_build/function-diff-demo.*`，命令写入两份 README，并接入 Linux CI。
+
+MoonBit `0.10.13+cbb11c36f` 的实际演示：文件 4,977→10,785 B（+5,808）；classify 29→55 B（+26），weighted_score 新符号 103 B，demo::functiondiff 包 29→158 B（+129）。原有 29 个符号仍匹配，current 另有 18 个唯一新增符号（包含运行时辅助函数）共 2,055 B；已匹配增量 +70 B，函数编码总增量 +2,125 B，code 开销两侧均为 4 B。回退文件和函数差异均为零，不把手写数字作为测试依据。
+
+公开 `.mbti` 增量限定为 raw_name、Options.diff_functions，以及比较状态/错误/结果类型、compare_modules 和文本渲染入口。原有解析、建图、压缩、预算 API 不变。检查、七个脚本、真实源码演示及预算正反例完成后提交；取得目标提交的 Linux CI 成功记录后，再标记远程验证完成。图片和优化计划继续保留在工作区。

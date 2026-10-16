@@ -150,6 +150,9 @@ pub struct FunctionStat {
   index : Int
   /// Display name: demangled when the binary mangles it.
   name : String
+  /// Original nonempty symbol from the name section, before display demangling.
+  /// None means missing or empty; the literal symbol `(unnamed)` is Some.
+  raw_name : String?
   /// Package attributed by `module_of`.
   module_name : String
   /// Locals plus instruction bytes, i.e. what a compiler can still shrink.
@@ -191,6 +194,11 @@ pub fn function_stats(
     }
     stats.push({
       index: body.index,
+      raw_name: if raw.is_empty() {
+        None
+      } else {
+        Some(raw)
+      },
       name: if raw.length() == 0 {
         UNNAMED_FUNCTION
       } else {
@@ -444,7 +452,7 @@ pub fn render_module_summary(
 pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
   "                 [--compress] [--strict] [--call-graph <path>] [--html <path>]\n" +
-  "                 [--max-size <size>] [--baseline <path.wasm>]\n\n" +
+  "                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
   "find what can be deleted.\n\n" +
@@ -459,7 +467,8 @@ pub fn usage() -> String {
   "  --max-size <size>    fail with exit code 3 above this size, where size is\n" +
   "                       bytes or a KB/MB/GB count such as 10KB or 1.5MB\n" +
   "  --baseline <path>    compare against another module and print the change;\n" +
-  "                       --max-size then bounds the growth, not the file\n\n" +
+  "                       --max-size then bounds the growth, not the file\n" +
+  "  --diff-functions     append function and package changes; requires --baseline\n\n" +
   "Exit codes: 0 ok, 1 unreadable input, 2 bad command line, 3 over budget."
 }
 

@@ -4,6 +4,39 @@ test "defaults to the ten heaviest functions" {
     Ok(options) => {
       inspect(options.path, content="app.wasm")
       inspect(options.top, content="10")
+      assert_false(options.diff_functions)
+    }
+    Err(message) => fail(message)
+  }
+}
+
+///|
+test "function diff requires baseline and rejects file output modes before I/O" {
+  for
+    args in [
+      ["moonsize", "missing", "--diff-functions"],
+      [
+        "moonsize", "missing", "--diff-functions", "--baseline", "old", "--html",
+        "out",
+      ],
+      [
+        "moonsize", "missing", "--diff-functions", "--baseline", "old", "--call-graph",
+        "out",
+      ],
+    ] {
+    match parse_options(args) {
+      Err(message) => assert_true(message.contains("--diff-functions"))
+      Ok(_) => fail("invalid function comparison options accepted")
+    }
+  }
+  match
+    parse_options([
+      "moonsize", "new", "--diff-functions", "--baseline", "old", "--top", "0", "--compress",
+      "--retained",
+    ]) {
+    Ok(options) => {
+      assert_true(options.diff_functions)
+      assert_eq(options.top, 0)
     }
     Err(message) => fail(message)
   }

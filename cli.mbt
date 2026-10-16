@@ -23,7 +23,9 @@ pub struct Options {
   max_size : Int?
   /// Compare against this module instead of checking an absolute ceiling.
   baseline : String?
-  /// Print what the file and each section cost once gzip-compressed.
+  /// Append symbol-based function and package differences (requires baseline).
+  diff_functions : Bool
+  /// Print whole-file gzip and independent section gzip measurements.
   compress : Bool
   /// Refuse to report at all when the call graph is incomplete, rather than
   /// printing the numbers with a warning above them.
@@ -48,6 +50,7 @@ pub fn Options::default(path : String) -> Options {
     html: None,
     max_size: None,
     baseline: None,
+    diff_functions: false,
     compress: false,
     strict: false,
   }
@@ -209,7 +212,7 @@ pub fn parse_size(text : String) -> Int? {
 ///
 /// The grammar is `moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
 /// [--call-graph <path>] [--html <path>] [--max-size <size>] [--baseline
-/// <path.wasm>] [--compress] [--strict]`: exactly one positional path, and a repeat of a flag keeps the
+/// <path.wasm>] [--diff-functions] [--compress] [--strict]`: exactly one positional path, and a repeat of a flag keeps the
 /// last value. Anything else is reported as an error so a typo never silently
 /// analyses the wrong thing.
 ///
@@ -225,6 +228,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut html : String? = None
   let mut max_size : Int? = None
   let mut baseline : String? = None
+  let mut diff_functions = false
   let mut compress = false
   let mut strict = false
   let mut i = 1
@@ -278,6 +282,9 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
           )
       }
       i = i + 2
+    } else if arg == "--diff-functions" {
+      diff_functions = true
+      i = i + 1
     } else if arg == "--compress" {
       compress = true
       i = i + 1
@@ -300,6 +307,15 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if diff_functions && baseline is None {
+    return Err("moonsize: --diff-functions requires --baseline\n\n" + usage())
+  }
+  if diff_functions && (html is Some(_) || call_graph is Some(_)) {
+    return Err(
+      "moonsize: --diff-functions cannot be combined with --html or --call-graph\n\n" +
+      usage(),
+    )
   }
   match call_graph {
     Some(target) =>
@@ -334,6 +350,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     html,
     max_size,
     baseline,
+    diff_functions,
     compress,
     strict,
   })

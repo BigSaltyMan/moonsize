@@ -29,7 +29,7 @@ it builds with `--target native` as well.
 ```
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
-                 [--max-size <size>] [--baseline <path.wasm>]
+                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
 
 Report the section table of a WebAssembly binary, rank its heaviest
 functions, roll the bytes up by module, and follow the call graph to
@@ -47,6 +47,7 @@ find what can be deleted.
                        bytes or a KB/MB/GB count such as 10KB or 1.5MB
   --baseline <path>    compare against another module and print the change;
                        --max-size then bounds the growth, not the file
+  --diff-functions     append function and package changes; requires --baseline
 
 Exit codes: 0 ok, 1 unreadable input, 2 bad command line, 3 over budget.
 ```
@@ -572,6 +573,93 @@ visible against zero.
 and decreases may cancel, and equal group sizes do not imply equal content.
 With a baseline, `--max-size` still limits only the whole-file growth, including
 when some groups grow while the total is unchanged.
+
+### Function and package changes
+
+```sh
+moonsize current.wasm --baseline previous.wasm --diff-functions --top 20
+```
+
+This appends `FUNCTION SIZE CHANGES`, `PACKAGE SIZE CHANGES`, `MATCHING SUMMARY`
+and `CODE OVERHEAD`. Without `--diff-functions`, baseline output stays at the
+existing file/section comparison. The option requires `--baseline` and rejects
+`--html` or `--call-graph` with exit `2` before reading inputs. Other text options
+combine normally. `--top 0` keeps totals and matching coverage but hides both
+detail rankings; positive limits apply independently to functions and packages.
+
+Matching uses the exact, nonempty original symbol only when it appears once
+among local functions on **each** side. Function indices and offsets only locate
+records within a build. Display names, sizes and order never establish identity.
+Unique one-sided symbols are `added-symbol` or `removed-symbol`; a duplicate on
+either side makes all related records `ambiguous`, even if absent on the other
+side. Missing or empty names are `missing-symbol`. Both unmatched categories
+retain separate per-side records and byte counts; neither is also called an
+addition/removal. The actual symbol `(unnamed)` remains distinct from no symbol.
+Added/removed symbols may reflect renames or compiler changes rather than source
+functions being added/deleted. Stripped binaries still have accurate totals and
+package summaries, with an explicit lack of function identity coverage.
+
+Function sizes include the body length prefix, locals and instruction bytes
+(`total_size`); package summaries independently aggregate **all** functions by
+the existing best-effort `module_name`, including `(unnamed)` and `(top-level)`.
+Ranking uses absolute byte delta, then case-sensitive UTF-16 lexical symbol or
+package order; duplicate identity ties use status and per-build indices. It does
+not depend on Map traversal. Raw symbols are quoted and escaped in text.
+
+The structured results reconcile:
+
+```text
+package encoded-byte sums = local function total_size sums
+code section = function encoding + code overhead (header/count encoding)
+function delta = matched delta + added bytes - removed bytes
+               + unmatched current bytes - unmatched baseline bytes
+```
+
+Name/data and other section changes belong to the existing section comparison;
+function deltas do not sum to the whole-file delta. `--max-size` still budgets
+only whole-file growth, including growth outside code. Current-input strict
+behavior is unchanged; comparison itself does not build a baseline call graph.
+Both files are read once, and fallible comparison preparation finishes before
+any normal report is printed.
+
+Library callers use `compare_modules(baseline_data, current_data)` returning
+`Result[ModuleSizeDiff, ComparisonError]` (`Baseline(WasmError)` / `Current(WasmError)`).
+The result exposes file totals, `baseline_code` / `current_code`
+(`CodeSizeSummary`: section, function count/bytes, overhead), `functions`
+(`FunctionSizeChange` with status, raw symbol, optional per-side `FunctionStat`,
+delta), `packages` (`PackageSizeChange`) and `matching` (`MatchingSummary`,
+per-category count/byte coverage and matched delta). `render_function_diff(diff,
+top)` renders the same text. Validation covers basic module structure and bounded
+function/import parsing, without full Wasm type/instruction validation.
+
+API migration: `FunctionStat.raw_name : String?` preserves a nonempty symbol
+before `display_name`, alongside unchanged display, package and size fields.
+Internal record constructors must supply it; never reconstruct it from `name`.
+Malformed UTF-8 in optional function-name metadata stops name collection at that
+entry, retaining earlier names and leaving the damaged suffix unmatched; it is
+not lossily converted into a fabricated shared identity. Valid Unicode names,
+including a literal replacement character or BOM, retain their exact identity.
+`Options` adds `diff_functions`, defaulting to false. Existing parse, analyze,
+compression and budget signatures remain unchanged.
+
+For a source-built demonstration, run:
+
+```sh
+moon build --target native --release
+bash scripts/demo-function-diff.sh _build/native/release/build/cmd/main/main.exe
+```
+
+The script copies [before.mbt](examples/function-diff/before.mbt) and
+[after.mbt](examples/function-diff/after.mbt) into the **same** temporary project,
+builds both with `--target wasm --debug --no-strip`, verifies real name sections
+with V8, runs comparison, then restores the source and checks the complete
+artifact and symbol differences return to zero. Artifacts and measured reports
+remain under `_build/function-diff-demo.*`. With MoonBit `0.10.13+cbb11c36f`, the
+measured example is 4,977 → 10,785 file bytes; `classify` is 29 → 55 encoded bytes,
+the new `weighted_score` symbol is 103 bytes, and `demo::functiondiff` is
+29 → 158 bytes. All function encoding grows by 2,125 bytes, including runtime
+helpers; this differs from the 5,808-byte whole-file growth. These are measured
+demo results for that toolchain, not fixed cross-version expectations.
 
 The exit codes are `0` ok, `1` unreadable input, `2` bad command line and `3`
 over budget or refused by `--strict`, so a job can tell a broken input apart

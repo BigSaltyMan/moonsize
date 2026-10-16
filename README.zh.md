@@ -24,7 +24,7 @@ moon build --release
 ```
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
-                 [--max-size <size>] [--baseline <path.wasm>]
+                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
 
   --top <n>            排名显示多少个函数（默认 10）
   --retained           删除每个函数能连带释放多少
@@ -37,6 +37,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                        10KB、1.5MB 这种带 KB/MB/GB 后缀的写法
   --baseline <path>    与另一个模块对比并打印变化；此时 --max-size 限制的是
                        增量，而不是文件本身
+  --diff-functions     追加函数与包级差异，必须配合 --baseline
 
 退出码：0 正常，1 输入无法读取，2 命令行错误，3 超出预算。
 ```
@@ -333,6 +334,46 @@ SIZE COMPARISON
 这比较的是该名称下全部段的编码体积，不尝试跨构建配对同名 custom 段实例。只调整段的排列不会改变比较结果。当前总大小相同时，先按 baseline 总大小降序，再按标准段二进制顺序、custom 完整名称顺序（`String::compare`）排列；整组删除仍会显示，current 为零。
 
 `total` 代表整个文件，包含八字节模块头；组内增减可能互相抵消。这个表用于体积分组比较，体积相同不代表内容相同。`--max-size` 配合 baseline 仍限制文件总增长，总量不变时不会因为个别分组增长而失败。
+
+### 函数与包级差异
+
+```sh
+moonsize current.wasm --baseline previous.wasm --diff-functions --top 20
+```
+
+新增选项追加 `FUNCTION SIZE CHANGES`、`PACKAGE SIZE CHANGES`、`MATCHING SUMMARY` 和 `CODE OVERHEAD`。不指定时，baseline 仍只输出原有文件/段比较。必须配合 `--baseline`；与 `--html`、`--call-graph` 冲突时，在读取输入前返回参数错误 `2`。其他文本选项正常组合；`--top 0` 保留汇总和匹配覆盖情况，隐藏函数与包的详细排名，正数分别限制两张排名表。
+
+只匹配两侧本地函数中各出现一次的同一个非空原始符号，不按 index、offset、顺序、体积或显示名猜测身份。唯一符号只在一侧出现时，状态为 `added-symbol` 或 `removed-symbol`；任意一侧重名时，两侧相关记录全部为 `ambiguous`，即使另一侧没有该符号也不计为普通新增/消失。缺少或空名称为 `missing-symbol`；两类未匹配记录逐函数、逐侧保留，并统计数量及字节数。字面符号 `(unnamed)` 与无名函数不同。新增/消失符号也可能来自源码重命名或工具链变更，不能直接宣称源码函数增加/删除。无名产物仍有准确总量和包汇总，但会明确提示缺乏函数身份匹配能力。
+
+函数比较口径是 `total_size`：函数体长度前缀、locals 和指令字节。包汇总按现有 `module_name` 尽力归因，独立纳入两侧所有函数，包括未匹配记录以及 `(unnamed)`、`(top-level)` 分组。排名先按增量绝对值降序，再按区分大小写的 UTF-16 字典序排列原始符号/包名；同一身份的最终平局按状态、两侧索引排序。索引只作定位和平局顺序，不用于匹配；不依赖 Map 遍历顺序，文本中的原始符号带引号并转义。
+
+结果能完整对账：
+
+```text
+包编码字节总和 = 全部本地函数 total_size 总和
+code 段大小 = 函数编码总量 + 段头及函数数量编码等开销
+函数总增量 = 已匹配增量 + 新增符号字节 - 消失符号字节
+           + 未匹配 current 字节 - 未匹配 baseline 字节
+```
+
+name、data 等其他段仍由现有段比较解释，函数增量之和不等于文件增量。`--max-size` 继续只限制文件总增长，未匹配记录不改变预算规则。当前输入的 strict 行为不变，比较本身不构建 baseline 调用图。每份文件只读一次，可能失败的比较准备在正常报告输出前完成。
+
+库入口 `compare_modules(baseline_data, current_data)` 返回 `Result[ModuleSizeDiff, ComparisonError]`，错误区分 `Baseline(WasmError)` / `Current(WasmError)`。结果含文件大小、`baseline_code` / `current_code`（`CodeSizeSummary`：code 段大小、函数数量/编码字节和额外开销）、`functions`（`FunctionSizeChange`：状态、原始符号、可选两侧 `FunctionStat` 和增量）、`packages`（`PackageSizeChange`）及 `matching`（`MatchingSummary`：各类别数量/字节覆盖情况和已匹配增量）。`render_function_diff(diff, top)` 生成同样的文本。检查覆盖基础模块结构、函数/import 有界读取，不提供完整 Wasm 类型或指令语义验证。
+
+API 迁移：`FunctionStat` 新增 `raw_name : String?`，在 `display_name` 前保存非空原始符号；内部构造记录时需补该字段，不能从 `name` 反推。现有显示名、包归因和大小口径不变。`Options` 新增默认 false 的 `diff_functions`；原有解析、分析、压缩和预算函数签名不变。
+
+可选的函数名称元数据遇到非法 UTF-8 时，在该条目停止收集，保留此前名称，受损后缀按缺少符号处理，不通过有损替换制造共同身份。合法 Unicode 名称（包括字面的替换字符和 BOM）仍保留原始身份。
+
+运行真实源码演示：
+
+```sh
+moon build --target native --release
+bash scripts/demo-function-diff.sh _build/native/release/build/cmd/main/main.exe
+```
+
+脚本把 [before.mbt](examples/function-diff/before.mbt) 和 [after.mbt](examples/function-diff/after.mbt) 依次复制到同一个临时项目，以相同的 `--target wasm --debug --no-strip` 配置构建，并用 V8 确认 name 段存在；比较后回退源码，核对整个 Wasm 字节及符号差异均恢复为零。产物和实际报告保留在 `_build/function-diff-demo.*`。
+
+本机 MoonBit `0.10.13+cbb11c36f` 实测：文件 4,977 → 10,785 字节，`classify` 编码 29 → 55 字节，新 `weighted_score` 符号 103 字节，`demo::functiondiff` 包 29 → 158 字节。包含运行时辅助函数的全部函数编码增长 2,125 字节，区别于文件增长 5,808 字节。这些是指定工具链下的演示测量，不是跨版本固定期望。
 
 退出码：`0` 正常，`1` 输入无法读取，`2` 命令行错误，`3` 超出预算或被严格模式拒绝。
 
