@@ -38,7 +38,7 @@ find what can be deleted.
   --top <n>            how many functions to rank (default 10)
   --retained           what deleting each function would free
   --dead-code          functions no root can reach
-  --compress           what the file and each section cost gzip-compressed
+  --compress           whole-file gzip and independent section gzip sizes
   --strict             refuse to report when the call graph is incomplete,
                        instead of reporting it with a warning
   --call-graph <path>  write the call graph as .dot or .json
@@ -358,55 +358,59 @@ reports none — that is a finding too.
 
 ### Compressed size
 
-A WebAssembly module is not served raw. It is served gzipped, and how much that
-saves depends on what the bytes are: machine code compresses a little, symbol
-names and strings compress a lot, and already-packed data barely moves at all. A
-section table read raw therefore misleads in both directions, and `--compress`
-answers the question a network asks instead:
+`--compress` measures the complete Wasm file as one gzip stream using the current
+compressor defaults. Actual servers may use gzip with other settings, another
+content encoding, or no compression. Section measurements are independent gzip
+streams for observing local compressibility.
+
+Measured from `examples/fib.wasm` with `--compress`:
 
 ```
 COMPRESSED SIZE
   raw   10675 B
   gzip   5207 B  (48.7% of raw, ratio 2.05x)
 
-  BY SECTION
+  BY SECTION — INDEPENDENT GZIP STREAMS
 
-  SECTION              RAW  GZIP  RATIO  SHARE(GZIP)
-  code                5166  2712  1.90x        52.0%
-  custom (name)       4975  1983  2.50x        38.0%
-  data                 252   174  1.44x         3.3%
-  custom (producers)    71    95  0.74x         1.8%
-  type                  59    66  0.89x         1.2%
-  function              50    63  0.79x         1.2%
-  import                37    61  0.60x         1.1%
-  export                21    45  0.46x         0.8%
-  global                13    34  0.38x         0.6%
-  element                8    32  0.25x         0.6%
-  table                  7    31  0.22x         0.5%
-  memory                 5    29  0.17x         0.5%
-  datacount              3    27  0.11x         0.5%
+  SECTION              RAW  GZIP  RATIO
+  code                5166  2712  1.90x
+  custom (name)       4975  1983  2.50x
+  data                 252   174  1.44x
+  custom (producers)    71    95  0.74x
+  type                  59    66  0.89x
+  function              50    63  0.79x
+  import                37    61  0.60x
+  export                21    45  0.46x
+  global                13    34  0.38x
+  element                8    32  0.25x
+  table                  7    31  0.22x
+  memory                 5    29  0.17x
+  datacount              3    27  0.11x
+
+  Section gzip sizes are measured independently and are not additive.
+  They do not represent shares of the whole-file gzip size.
 ```
 
-`SHARE(GZIP)` is what the section costs as a share of the compressed file rather
-than of the raw one, and it is the column to read. Here the code section is 48.3%
-of the file raw but 52.0% of it compressed, while the name section goes the other
-way — 46.6% raw, 38.0% compressed. The bytes the compiler emitted are the ones
-worth attacking; the symbol names are close to free on the wire, which is worth
-knowing before spending an afternoon on `--strip`.
+Each section range includes its id, length prefix and payload, including a
+custom section's name. HTML function gzip covers the encoded function range
+including its length prefix (`total_size` / HTML `size`); its ratio uses that
+same raw range, not `bodySize`. `RATIO` is raw bytes divided by gzip bytes. Small
+streams may grow because each has its own header and trailer; their actual size
+and ratio below `1` remain visible.
 
-Two things to keep in mind reading it. It is an estimate: the compressor runs at
-its default level, which is the level servers use, but a server may be configured
-differently, and it compresses the whole response rather than each section on its
-own. And every section is compressed as its own stream, so each pays its own gzip
-container of about twenty bytes — which is invisible for a section of kilobytes
-and dominant for one of a handful of bytes, and is why the smallest sections
-above read as growing when compressed. The shares barely notice, because twenty
-bytes is nothing against a table of kilobytes.
+Independent streams are not additive and do not represent whole-file transfer
+shares or the bytes saved by removing a function. Gzip can exploit redundancy
+across ranges when compressing the whole file. To measure an optimization's
+benefit, compare the complete build artifacts before and after the change.
 
-A piece the compressor refuses is reported as a failure, never as its raw size:
-`gzip failed: ...` in the text report, `N/A` with the reason on hover in the HTML
-card. Printing the raw size would read as a ratio of 1.00x, and that is a
-different claim from "nothing was measured".
+A failed measurement stays a failure: text shows `failed` and a reason for the
+specific section; a failed whole-file card shows `N/A` with its own reason.
+Other successful measurements remain available. HTML sections, functions and
+treemap leaves pair `gzip` with `gzipError`: success is a number and `null`;
+failure is `null` and the local reason. This additive HTML data extension and
+its `compression_scope` explanation are separate from call-graph JSON exports.
+Public parsing and compression signatures are unchanged; `compress_sections`
+now returns `Err` for invalid metadata ranges instead of measuring empty bytes.
 
 ### Judging what can be deleted
 
@@ -471,8 +475,8 @@ emailed or opened from anywhere. The source it was built from is
 [`examples/fib.mbt`](examples/fib.mbt), which is also a package here: building
 `--target wasm` produces the example alongside the tool.
 
-**Four headline numbers.** File size, the code section, what the file costs
-gzipped, and how much of it is unreachable. The gzip card carries the share of
+**Four headline numbers.** File size, the code section, whole-file gzip,
+and how much of it is unreachable. The gzip card carries the share of
 raw and the ratio underneath, and the dead-code card turns red when there is
 anything to delete, which is the one number most people open the report for.
 
@@ -482,16 +486,15 @@ are sized to their row count, so every row keeps its label; a fixed-height box
 makes ECharts drop most of them, and the rows that survive look like headings for
 the unlabelled ones below.
 
-The sections chart has two views, switched by the `raw` / `gzip` legend in its
-corner: the same bars measured before and after compression. They share one axis
-and overlap exactly, so switching shows how much shorter the compressed bars are
-instead of rescaling the axis to hide it — the code section barely moves, the
-name section loses half its length. The tooltip gives both numbers and the ratio
-in either view.
+The sections chart switches between `raw` and `independent gzip` on one axis.
+Each section is compressed separately; these sizes are not additive and do not
+represent whole-file transfer shares. Tooltips show each local measurement's
+size, ratio or failure reason, independently of the whole-file card.
 
 **Top 20 functions by body size** — what the compiler could shrink. Body size is
 used rather than the encoded size so that the ranking answers "where is the
-code", not "where are the size prefixes".
+code", not "where are the size prefixes". Gzip tooltips use the full encoded
+function range and its matching raw denominator.
 
 **Modules** — a donut of how the code section divides between packages, as a
 share of the code section rather than of the file, so the slices mean "which
@@ -502,9 +505,8 @@ inside the ring, so they never collide with the legend.
 **Treemap** — module → function, where area is bytes. This is the one chart that
 shows the whole binary at once: the big cells are the functions worth looking at,
 and cells are drawn red when the function is unreachable. The area stays the raw
-size — a treemap drawn by compressed bytes would be a different chart, and a less
-useful one — so the compressed size and ratio are reported in the tooltip
-instead of drawn.
+encoded size. Independent function gzip and its ratio or failure reason appear
+in the tooltip; they do not estimate transfer savings from deletion.
 
 Hovering any bar, slice or cell shows the exact bytes and percentage. Every
 number in the page comes from the same `Analysis` the text report uses, so the

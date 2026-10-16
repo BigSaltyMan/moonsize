@@ -20,6 +20,65 @@ fn noise(length : Int) -> Bytes {
 }
 
 ///|
+test "invalid compression spans fail without overflow or empty substitution" {
+  let data = b"abcd"
+  for
+    (offset, length) in [
+      (-1, 1),
+      (0, -1),
+      (5, 0),
+      (3, 2),
+      (1, 2147483647),
+      (2147483647, 2147483647),
+    ] {
+    match compressed_span(data, offset, length) {
+      Ok(_) => fail("invalid span was measured")
+      Err(message) => {
+        assert_true(message.contains("offset " + offset.to_string()))
+        assert_true(message.contains("length " + length.to_string()))
+        assert_true(message.contains("file length 4"))
+      }
+    }
+  }
+}
+
+///|
+test "section compression rejects invalid metadata instead of measuring empty bytes" {
+  let parsed : WasmModule = {
+    version: 1,
+    file_size: 4,
+    sections: [
+      {
+        id: 0,
+        kind: Custom,
+        offset: 3,
+        payload_size: 2,
+        total_size: 4,
+        custom_name: Some("bad"),
+      },
+    ],
+  }
+  match compress_sections(b"abcd", parsed)[0].gzip {
+    Err(_) => ()
+    Ok(_) => fail("out-of-bounds section was compressed successfully")
+  }
+}
+
+///|
+test "compression reports independent streams without transfer shares" {
+  let text = render_compression(100, Ok(50), [
+    { label: "bad", raw: 10, gzip: Err("local failure"), },
+    { label: "small", raw: 3, gzip: Ok(27), },
+  ])
+  assert_false(text.contains("SHARE(GZIP)"))
+  assert_true(text.contains("INDEPENDENT GZIP STREAMS"))
+  assert_true(text.contains("not additive"))
+  assert_true(text.contains("50.0% of raw"))
+  assert_true(text.contains("bad: local failure"))
+  assert_true(text.contains("0.11x"))
+}
+
+///|
 test "an empty input still produces a well-formed stream" {
   let compressed = match compress_gzip(Bytes::new(0)) {
     Ok(compressed) => compressed
@@ -88,12 +147,15 @@ test "the compression report renders totals and the per-section table" {
       #|  raw   10675 B
       #|  gzip   2891 B  (27.0% of raw, ratio 3.69x)
       #|
-      #|  BY SECTION
+      #|  BY SECTION — INDEPENDENT GZIP STREAMS
       #|
-      #|  SECTION         RAW  GZIP  RATIO  SHARE(GZIP)
-      #|  code           5166  1543  3.34x        53.3%
-      #|  custom (name)  4975   964  5.16x        33.3%
-      #|  data            252   210  1.20x         7.2%
+      #|  SECTION         RAW  GZIP  RATIO
+      #|  code           5166  1543  3.34x
+      #|  custom (name)  4975   964  5.16x
+      #|  data            252   210  1.20x
+      #|
+      #|  Section gzip sizes are measured independently and are not additive.
+      #|  They do not represent shares of the whole-file gzip size.
       #|
     ),
   )
@@ -109,7 +171,8 @@ test "a section that grew when compressed is not hidden" {
   let text = render_compression(10675, Ok(5207), sections)
   assert_true(text.contains("datacount"))
   assert_true(text.contains("0.11x"))
-  assert_true(text.contains("0.5%"))
+  assert_true(text.contains("48.7% of raw"))
+  assert_false(text.contains("0.5%"))
 }
 
 ///|
@@ -118,6 +181,7 @@ test "the report copes with a module that has no sections" {
   let text = render_compression(8, Ok(27), sections)
   assert_true(text.contains("no sections"))
   assert_true(text.contains("ratio 0.29x"))
+  assert_true(text.contains("not additive"))
 }
 
 ///|
@@ -175,8 +239,7 @@ test "a refused compression is reported, not passed off as the raw size" {
   assert_true(!text.contains("10675 B  ("))
   assert_true(!text.contains("ratio 1.00x"))
   // The section that failed says so, and the one that did not still shows its
-  // own number — but no share anywhere, because with no total there is nothing
-  // for a share to be a share of.
+  // own number and ratio. No row depends on the whole-file measurement.
   assert_true(text.contains("failed"))
   assert_true(text.contains("174"))
   assert_true(!text.contains("%"))
@@ -188,10 +251,103 @@ test "a section that compressed stays readable when the total did not" {
     { label: "code", raw: 5166, gzip: Ok(2712), },
   ]
   let text = render_compression(10675, Err("boom"), sections)
-  // Its own size stands, because that one was measured...
+  // Its own size and ratio stand, because that stream was measured.
   assert_true(text.contains("2712"))
-  // ...but its share does not, because there is no total to be a share of.
+  assert_true(text.contains("1.90x"))
   assert_true(!text.contains("52.0%"))
+}
+
+///|
+test "valid empty and whole-file spans use exactly their requested bytes" {
+  let data = b"abcd"
+  assert_eq(compressed_span(data, 0, 4), compressed_size(data))
+  for offset in [0, 4] {
+    assert_eq(compressed_span(data, offset, 0), compressed_size(b""))
+  }
+  assert_eq(compressed_span(data, 1, 2), compressed_size(b"bc"))
+  let stream = match compress_gzip(data[1:3].to_owned()) {
+    Ok(stream) => stream
+    Err(message) => fail(message)
+  }
+  let (restored, _) = @gzip.decompress(stream) catch {
+    error => fail(error.to_string())
+  }
+  assert_eq(restored, b"bc")
+}
+
+///|
+test "independent full custom sections round trip but do not sum to whole-file gzip" {
+  // Three identical, legal custom sections named x; each payload is 8 bytes.
+  let data = b"\x00asm\x01\x00\x00\x00\x00\x08\x01xabcabc\x00\x08\x01xabcabc\x00\x08\x01xabcabc"
+  let parsed = match parse_module(data) {
+    Ok(parsed) => parsed
+    Err(error) => fail(describe_error(error))
+  }
+  let rows = compress_sections(data, parsed)
+  assert_eq(rows.length(), 3)
+  let mut sum = 0
+  for i, section in ordered_sections(parsed) {
+    let bytes = data[section.offset:section.offset + section.total_size].to_owned()
+    assert_eq(bytes, b"\x00\x08\x01xabcabc")
+    assert_eq(rows[i].raw, 10)
+    let stream = match compress_gzip(bytes) {
+      Ok(stream) => stream
+      Err(message) => fail(message)
+    }
+    let (restored, _) = @gzip.decompress(stream) catch {
+      error => fail(error.to_string())
+    }
+    assert_eq(restored, bytes)
+    assert_eq(rows[i].gzip, Ok(stream.length()))
+    assert_true(
+      render_compression(data.length(), compressed_size(data), rows).contains(
+        ratio_text(10, stream.length()),
+      ),
+    )
+    sum = sum + stream.length()
+  }
+  let whole = match compressed_size(data) {
+    Ok(size) => size
+    Err(message) => fail(message)
+  }
+  // This fixed sample witnesses non-additivity, not an inequality for all files.
+  assert_true(sum != whole)
+}
+
+///|
+test "one invalid section does not discard successful independent measurements" {
+  let parsed : WasmModule = {
+    version: 1,
+    file_size: 4,
+    sections: [
+      {
+        id: 0,
+        kind: Custom,
+        offset: 0,
+        payload_size: 2,
+        total_size: 4,
+        custom_name: Some("good"),
+      },
+      {
+        id: 0,
+        kind: Custom,
+        offset: 4,
+        payload_size: 0,
+        total_size: 2,
+        custom_name: Some("bad"),
+      },
+    ],
+  }
+  let rows = compress_sections(b"abcd", parsed)
+  assert_eq(rows[0].gzip, compressed_size(b"abcd"))
+  assert_true(rows[1].gzip is Err(_))
+  let text = render_compression(4, Ok(24), rows)
+  assert_true(
+    text.contains(
+      "gzip failed for custom (bad): invalid compression range: offset 4, length 2, file length 4",
+    ),
+  )
+  assert_true(text.contains("600.0% of raw"))
 }
 
 ///|

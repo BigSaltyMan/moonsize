@@ -419,7 +419,7 @@ test "the page reports the compressed size the tool actually computes" {
   }
   let html = render_html(analysis, "app.wasm")
   assert_true(html.contains("\"gzipSize\":" + gzip_size.to_string()))
-  assert_true(html.contains("<span class=\"label\">Gzip size</span>"))
+  assert_true(html.contains("<span class=\"label\">Whole-file gzip</span>"))
   assert_true(
     html.contains("<span class=\"value\">" + grouped(gzip_size) + " B</span>"),
   )
@@ -476,8 +476,10 @@ test "the sections chart offers both views of the same bars" {
   let html = render_html(analysis_with_name("demo::fib"), "app.wasm")
   // Two series over one axis, with the compressed one hidden until it is asked
   // for, so switching shows the drop rather than rescaling the axis.
-  assert_true(html.contains("data: ['raw', 'gzip']"))
-  assert_true(html.contains("selected: { raw: true, gzip: false }"))
+  assert_true(html.contains("data: ['raw', 'independent gzip']"))
+  assert_true(
+    html.contains("selected: { raw: true, 'independent gzip': false }"),
+  )
   assert_true(html.contains("barGap: '-100%'"))
   assert_true(html.contains("'#a78bfa')"))
 }
@@ -499,7 +501,7 @@ test "every headline card is one well-formed element" {
   // which every substring assertion above is happy to accept. This one looks at
   // the tag itself.
   assert_true(!html.contains("card\">card"))
-  for label in ["File size", "Code section", "Gzip size", "Dead code"] {
+  for label in ["File size", "Code section", "Whole-file gzip", "Dead code"] {
     assert_true(
       html.contains(
         "      <div class=\"card\">\n        <span class=\"label\">" +
@@ -508,4 +510,144 @@ test "every headline card is one well-formed element" {
       ),
     )
   }
+}
+
+///|
+fn assert_gzip_pair(row : Json, size : Json, error : Json) -> Unit raise {
+  let object = json_object(row)
+  assert_eq(object.get("gzip"), Some(size))
+  assert_eq(object.get("gzipError"), Some(error))
+}
+
+///|
+test "HTML range failures originate from the actual function measurement" {
+  // This existing rendering fixture deliberately claims 122 bytes in a 24-byte file.
+  let analysis = analysis_with_name("oversized")
+  let data = json_object(report_data(analysis, "range.wasm"))
+  let reason = Json::string(
+    "invalid compression range: offset 0, length 122, file length 24",
+  )
+  assert_eq(data.get("gzipError"), Some(Json::null()))
+  assert_gzip_pair(json_array(data["functions"])[0], Json::null(), reason)
+  let group = json_object(json_array(data["modules"])[0])
+  assert_gzip_pair(json_array(group["children"])[0], Json::null(), reason)
+  for row in json_array(data["sections"]) {
+    assert_eq(json_object(row).get("gzipError"), Some(Json::null()))
+  }
+}
+
+///|
+test "HTML local compression errors keep their own reasons beside a successful whole file" {
+  let analysis = analysis_of(minimal_module())
+  let measured = measure_compression(analysis)
+  measured.sections[0] = Err("section-only <failure>")
+  measured.functions.set(analysis.stats[0].index, Err("function-only failure"))
+  let data = json_object(
+    report_data(analysis, "app.wasm", compression=measured),
+  )
+  assert_eq(data.get("gzipError"), Some(Json::null()))
+  assert_eq(data.get("gzipSize"), Some(gzip_json(measured.whole_file)))
+  let sections = json_array(data["sections"])
+  assert_gzip_pair(
+    sections[0],
+    Json::null(),
+    Json::string("section-only <failure>"),
+  )
+  assert_gzip_pair(sections[1], gzip_json(measured.sections[1]), Json::null())
+  let functions = json_array(data["functions"])
+  assert_gzip_pair(
+    functions[0],
+    Json::null(),
+    Json::string("function-only failure"),
+  )
+  let group = json_object(json_array(data["modules"])[0])
+  assert_gzip_pair(
+    json_array(group["children"])[0],
+    Json::null(),
+    Json::string("function-only failure"),
+  )
+  let html = render_html_measured(analysis, "app.wasm", measured, "")
+  assert_true(html.contains("section-only \\u003cfailure>"))
+  assert_true(html.contains("function-only failure"))
+  assert_false(html.contains(">N/A<"))
+  assert_true(
+    html.contains("else if (r.gzipError !== null && r.gzipError !== undefined)"),
+  )
+  assert_true(
+    html.contains(
+      "else if (p.data && p.data.gzipError !== null && p.data.gzipError !== undefined)",
+    ),
+  )
+  assert_false(html.contains("esc(DATA.gzipError)"))
+  assert_true(
+    html.contains("if (v === null || v === undefined) return 'failed'"),
+  )
+}
+
+///|
+test "HTML whole-file failure leaves successful local measurements available" {
+  let analysis = analysis_of(minimal_module())
+  let measured = measure_compression(analysis)
+  let failed : CompressionMeasurements = {
+    whole_file: Err("whole-only failure"),
+    sections: measured.sections,
+    functions: measured.functions,
+  }
+  let data = json_object(report_data(analysis, "app.wasm", compression=failed))
+  assert_eq(data.get("gzipSize"), Some(Json::null()))
+  assert_eq(data.get("gzipError"), Some(Json::string("whole-only failure")))
+  for i, row in json_array(data["sections"]) {
+    assert_gzip_pair(row, gzip_json(measured.sections[i]), Json::null())
+  }
+  let stat = analysis.stats[0]
+  assert_gzip_pair(
+    json_array(data["functions"])[0],
+    gzip_json(measured.functions[stat.index]),
+    Json::null(),
+  )
+  let html = render_html_measured(analysis, "app.wasm", failed, "")
+  assert_true(html.contains(">N/A<"))
+  assert_true(html.contains("title=\"whole-only failure\""))
+  assert_true(
+    html.contains(
+      "Each section is compressed separately. These sizes are not additive and do not represent whole-file transfer shares.",
+    ),
+  )
+}
+
+///|
+test "HTML function gzip and treemap use total encoded bytes as their raw denominator" {
+  let analysis = analysis_of(minimal_module())
+  let stat = analysis.stats[0]
+  assert_eq(stat.total_size, 3)
+  assert_eq(stat.body_size, 2)
+  let measured = measure_compression(analysis)
+  assert_eq(measured.functions[stat.index], compressed_size(b"\x02\x00\x0b"))
+  let data = json_object(
+    report_data(analysis, "app.wasm", compression=measured),
+  )
+  let function = json_object(json_array(data["functions"])[0])
+  assert_eq(function.get("size"), Some(int_json(3)))
+  assert_eq(function.get("bodySize"), Some(int_json(2)))
+  assert_gzip_pair(
+    Json::object(function),
+    gzip_json(measured.functions[stat.index]),
+    Json::null(),
+  )
+  let group = json_object(json_array(data["modules"])[0])
+  let leaf = json_array(group["children"])[0]
+  assert_eq(json_object(leaf).get("value"), Some(int_json(3)))
+  assert_gzip_pair(
+    leaf,
+    gzip_json(measured.functions[stat.index]),
+    Json::null(),
+  )
+  let html = render_html_measured(analysis, "app.wasm", measured, "")
+  assert_true(html.contains("gzipRawSize: f.size"))
+  assert_true(html.contains("RATIO(gzipRaw, r.gzip)"))
+  assert_true(html.contains("RATIO(p.value, p.data.gzip)"))
+  assert_true(html.contains("value: c.value"))
+  assert_true(html.contains("gzip: c.gzip"))
+  assert_true(html.contains("gzipError: c.gzipError"))
+  assert_true(html.contains("\"compression_scope\":"))
 }

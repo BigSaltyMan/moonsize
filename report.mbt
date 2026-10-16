@@ -451,7 +451,7 @@ pub fn usage() -> String {
   "  --top <n>            how many functions to rank (default 10)\n" +
   "  --retained           what deleting each function would free\n" +
   "  --dead-code          functions no root can reach\n" +
-  "  --compress           what the file and each section cost gzip-compressed\n" +
+  "  --compress           whole-file gzip and independent section gzip sizes\n" +
   "  --strict             refuse to report when the call graph is incomplete,\n" +
   "                       instead of reporting it with a warning\n" +
   "  --call-graph <path>  write the call graph as .dot or .json\n" +
@@ -825,23 +825,9 @@ fn ratio_text(raw : Int, gzip : Int) -> String {
 }
 
 ///|
-/// The compression report: what the file costs as a transfer, and which sections
-/// that cost is made of.
-///
-/// `SHARE(GZIP)` is a section's compressed size as a share of the whole file's
-/// compressed size, not of its raw size, because that is the distribution a
-/// network pays for. A section that is large raw and small compressed is not the
-/// expensive one, and only this column says so.
-///
-/// The totals and the per-section numbers come from compressing each piece on its
-/// own, so the sections do not add up to the total. Two effects are at work:
-/// gzip finds redundancy between sections that compressing one in isolation
-/// cannot see, and every stream pays its own header and trailer - about 20 bytes
-/// - which a section smaller than that shows up as a ratio below 1. The shares
-/// barely move for the same reason: 20 bytes against a table of kilobytes.
-///
-/// A piece the compressor refuses is printed as a failure rather than as its raw
-/// size: the two are not the same number and must not look like one.
+/// Whole-file gzip and independent full-section streams. Each ratio divides
+/// that row's raw bytes by its own gzip bytes. Independent streams neither add
+/// up to nor represent shares of whole-file gzip. Failures retain their reasons.
 pub fn render_compression(
   raw_size : Int,
   gzip : Result[Int, String],
@@ -868,12 +854,13 @@ pub fn render_compression(
       }
       Err(_) => {
         // The column has to fit the word as well as the numbers under it.
-        gzip_width = number_width("failed".length(), gzip_width)
+        if gzip_width < "failed".length() {
+          gzip_width = "failed".length()
+        }
         ratios.push("-")
       }
     }
   }
-  let share_width = "SHARE(GZIP)".length()
   let mut total_width = number_width(raw_size, 1)
   let total_text = match gzip {
     Ok(size) => {
@@ -895,9 +882,11 @@ pub fn render_compression(
     pad_right("gzip", 4) +
     "  " +
     total_text +
-    "\n\n  BY SECTION\n"
+    "\n\n  BY SECTION — INDEPENDENT GZIP STREAMS\n"
+  let note = "\n  Section gzip sizes are measured independently and are not additive.\n" +
+    "  They do not represent shares of the whole-file gzip size.\n"
   if sections.length() == 0 {
-    return out + "\n  no sections"
+    return out + "\n  no sections\n" + note
   }
   out = out +
     "\n  " +
@@ -908,28 +897,16 @@ pub fn render_compression(
     pad_left("GZIP", gzip_width) +
     "  " +
     pad_left("RATIO", ratio_width) +
-    "  " +
-    pad_left("SHARE(GZIP)", share_width) +
     "\n"
   let mut i = 0
   for section in sections {
-    let (gzip_cell, ratio_cell, share_cell) = match section.gzip {
+    let (gzip_cell, ratio_cell) = match section.gzip {
       Ok(size) =>
         (
           pad_left(size.to_string(), gzip_width),
           pad_left(ratios[i], ratio_width),
-          match gzip {
-            Ok(total) => pad_left(share_text(size, total), share_width)
-            // Without a total there is nothing to be a share of.
-            Err(_) => pad_left("-", share_width)
-          },
         )
-      Err(_) =>
-        (
-          pad_left("failed", gzip_width),
-          pad_left("-", ratio_width),
-          pad_left("-", share_width),
-        )
+      Err(_) => (pad_left("failed", gzip_width), pad_left("-", ratio_width))
     }
     out = out +
       "  " +
@@ -940,10 +917,14 @@ pub fn render_compression(
       gzip_cell +
       "  " +
       ratio_cell +
-      "  " +
-      share_cell +
       "\n"
     i = i + 1
+  }
+  out = out + note
+  for section in sections {
+    if section.gzip is Err(message) {
+      out = out + "  gzip failed for " + section.label + ": " + message + "\n"
+    }
   }
   out
 }

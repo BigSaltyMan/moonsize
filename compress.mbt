@@ -1,22 +1,13 @@
 ///|
-/// Compression, for the question raw sizes cannot answer: what a module costs
-/// once it is on the wire.
-///
-/// Servers serve WebAssembly gzip-compressed, and how much that saves depends
-/// almost entirely on what the bytes look like. A name section full of symbols
-/// and strings shrinks several times over; a data section full of already-packed
-/// numbers barely moves. The raw section table therefore overstates what some
-/// sections cost and understates others, and it is the compressed shares that
-/// describe a transfer.
+/// Whole-file gzip measures one complete Wasm file as one stream. Independent
+/// section and function streams measure local compressibility: they are not
+/// additive and do not attribute whole-file transfer bytes to individual pieces.
 
 ///|
 /// Compress `data` as a gzip stream.
 ///
-/// The compressor runs at its default level — six, which is what servers use —
-/// so the result is what a transfer would pay rather than the best a compressor
-/// could manage. It stays an estimate in two ways worth knowing about: a server
-/// may be configured for a different level, and it compresses the response as a
-/// whole rather than each section on its own.
+/// Keep the compressor's current defaults. A server may use another gzip
+/// configuration, another content encoding, or no compression at all.
 pub fn compress_gzip(data : Bytes) -> Result[Bytes, String] {
   Ok(@gzip.compress(data)) catch {
     error => Err(error.to_string())
@@ -40,7 +31,8 @@ pub fn compressed_size(data : Bytes) -> Result[Int, String] {
 }
 
 ///|
-/// A section measured before and after compression.
+/// A section's complete encoding (id, length prefix and payload), measured as
+/// its own gzip stream. `raw` is the length of that same encoding.
 pub struct SectionCompression {
   label : String
   raw : Int
@@ -66,19 +58,10 @@ pub fn compress_sections(
 ) -> Array[SectionCompression] {
   let rows : Array[SectionCompression] = []
   for section in ordered_sections(parsed) {
-    let start = section.offset
-    let end = start + section.total_size
-    // A truncated file can claim a section that runs past its own end, so what
-    // is missing is measured as nothing rather than indexed out of bounds.
-    let bytes = if start >= 0 && start <= end && end <= data.length() {
-      data[start:end].to_owned()
-    } else {
-      Bytes::new(0)
-    }
     rows.push({
       label: section_label(section),
       raw: section.total_size,
-      gzip: compressed_size(bytes),
+      gzip: compressed_span(data, section.offset, section.total_size),
     })
   }
   rows
@@ -87,7 +70,8 @@ pub fn compress_sections(
 ///|
 /// The compressed size of `data[offset : offset + length]`, or why there is none.
 ///
-/// This is how a section or a function body is measured on its own: the caller
+/// This is how a complete section or encoded function (including its size
+/// prefix, using `total_size`) is measured independently: the caller
 /// has the offsets the decoder recorded, not a slice of its own. A range that
 /// does not fit the file is reported too — measuring it as its own length would
 /// be the same silent guess in a different place.
@@ -96,17 +80,20 @@ fn compressed_span(
   offset : Int,
   length : Int,
 ) -> Result[Int, String] {
-  let end = offset + length
-  if offset < 0 || offset > end || end > data.length() {
+  // Validate by subtraction before adding: even a huge length cannot overflow.
+  if offset < 0 ||
+    length < 0 ||
+    offset > data.length() ||
+    length > data.length() - offset {
     return Err(
-      "range " +
+      "invalid compression range: offset " +
       offset.to_string() +
-      ".." +
-      end.to_string() +
-      " is outside a file of " +
-      data.length().to_string() +
-      " bytes",
+      ", length " +
+      length.to_string() +
+      ", file length " +
+      data.length().to_string(),
     )
   }
+  let end = offset + length
   compressed_size(data[offset:end].to_owned())
 }

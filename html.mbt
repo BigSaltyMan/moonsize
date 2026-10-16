@@ -102,8 +102,50 @@ fn int_json(value : Int) -> Json {
 }
 
 ///|
+/// One measurement per range, reused by the card, data rows and treemap leaves.
+/// Kept internal so tests can inject failures at the rendering boundary.
+priv struct CompressionMeasurements {
+  whole_file : Result[Int, String]
+  sections : Array[Result[Int, String]]
+  functions : Map[Int, Result[Int, String]]
+}
+
+///|
+fn measure_compression(analysis : Analysis) -> CompressionMeasurements {
+  let functions : Map[Int, Result[Int, String]] = Map([])
+  for stat in analysis.stats {
+    functions.set(
+      stat.index,
+      compressed_span(analysis.data, stat.offset, stat.total_size),
+    )
+  }
+  {
+    whole_file: compressed_size(analysis.data),
+    sections: compress_sections(analysis.data, analysis.parsed).map(fn(row) {
+      row.gzip
+    }),
+    functions,
+  }
+}
+
+///|
+/// The number and error always describe the same measurement result.
+fn set_gzip_fields(row : Map[String, Json], gzip : Result[Int, String]) -> Unit {
+  row.set("gzip", gzip_json(gzip))
+  row.set("gzipError", gzip_error_json(gzip))
+}
+
+///|
 /// The payload the page draws from, as one JSON object.
-fn report_data(analysis : Analysis, file_path : String) -> Json {
+fn report_data(
+  analysis : Analysis,
+  file_path : String,
+  compression? : CompressionMeasurements,
+) -> Json {
+  let measured = match compression {
+    Some(measured) => measured
+    None => measure_compression(analysis)
+  }
   let parsed = analysis.parsed
   let members : Map[String, Json] = Map([])
   members.set("file", Json::string(file_path))
@@ -115,29 +157,23 @@ fn report_data(analysis : Analysis, file_path : String) -> Json {
   )
   members.set("diagnostics", diagnostics_json(analysis.graph))
   members.set("modeling_scope", Json::string(graph_modeling_scope()))
-  let whole_file_gzip = compressed_size(analysis.data)
-  members.set("gzipSize", gzip_json(whole_file_gzip))
+  members.set("gzipSize", gzip_json(measured.whole_file))
+  members.set("gzipError", gzip_error_json(measured.whole_file))
   members.set(
-    "gzipError",
-    match whole_file_gzip {
-      Ok(_) => Json::null()
-      Err(message) => Json::string(message)
-    },
+    "compression_scope",
+    Json::string(
+      "Whole-file gzip is one complete-file stream. Sections include their headers and payloads; functions include their size prefixes (size, not bodySize). Each local range is an independent gzip stream. These sizes are not additive and do not represent whole-file transfer shares or removal savings.",
+    ),
   )
   members.set("codeSize", int_json(section_size(parsed, Code)))
   members.set("deadSize", int_json(dead_size(analysis)))
   let sections : Array[Json] = []
-  for section in ordered_sections(parsed) {
+  for i, section in ordered_sections(parsed) {
     let row : Map[String, Json] = Map([])
     row.set("name", Json::string(section_label(section)))
     row.set("total", int_json(section.total_size))
     row.set("payload", int_json(section.payload_size))
-    row.set(
-      "gzip",
-      gzip_json(
-        compressed_span(analysis.data, section.offset, section.total_size),
-      ),
-    )
+    set_gzip_fields(row, measured.sections[i])
     sections.push(Json::object(row))
   }
   members.set("sections", Json::array(sections))
@@ -157,10 +193,7 @@ fn report_data(analysis : Analysis, file_path : String) -> Json {
     row.set("module", Json::string(stat.module_name))
     row.set("bodySize", int_json(stat.body_size))
     row.set("size", int_json(stat.total_size))
-    row.set(
-      "gzip",
-      gzip_json(compressed_span(analysis.data, stat.offset, stat.total_size)),
-    )
+    set_gzip_fields(row, measured.functions[stat.index])
     row.set("dead", Json::boolean(!analysis.reachable.contains(stat.index)))
     functions.push(Json::object(row))
   }
@@ -173,12 +206,7 @@ fn report_data(analysis : Analysis, file_path : String) -> Json {
       let leaf : Map[String, Json] = Map([])
       leaf.set("name", Json::string(child.name))
       leaf.set("value", int_json(child.total_size))
-      leaf.set(
-        "gzip",
-        gzip_json(
-          compressed_span(analysis.data, child.offset, child.total_size),
-        ),
-      )
+      set_gzip_fields(leaf, measured.functions[child.index])
       leaf.set("dead", Json::boolean(!analysis.reachable.contains(child.index)))
       children.push(Json::object(leaf))
     }
@@ -361,7 +389,7 @@ const HTML_STYLE : String = "      :root {\n      --bg: #f6f8fb; --panel: #fffff
 
 ///|
 /// The page's script: number formatting, four chart builders, and the wiring.
-const HTML_SCRIPT : String = "    const DATA = __DATA__;\n\n    const esc = (s) => String(s).replace(/[&<>\"']/g, (c) => ({\n      '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;',\n    }[c]));\n\n    const BYTES = (v) => {\n      if (v >= 1048576) return (v / 1048576).toFixed(2) + ' MB';\n      if (v >= 1024) return (v / 1024).toFixed(1) + ' KB';\n      return v + ' B';\n    };\n\n    const NUM = (v) => v.toLocaleString('en-US');\n    const PCT = (part, whole) => whole > 0 ? (part / whole * 100).toFixed(1) + '%' : 'n/a';\n    const RATIO = (raw, gzip) => gzip > 0 ? (raw / gzip).toFixed(2) + 'x' : 'n/a';\n\n    const INK = '#334155';\n    const LINE = '#e2e8f0';\n    const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';\n\n    const axis = (extra) => Object.assign({\n      axisLine: { lineStyle: { color: '#cbd5e1' } },\n      axisTick: { show: false },\n      axisLabel: { color: INK, fontSize: 11 },\n      splitLine: { lineStyle: { color: LINE } },\n    }, extra || {});\n\n    // A static report: the grow-in animation would leave a chart empty in a\n    // screenshot, a print, or any capture that does not run animation frames.\n    const base = {\n      animation: false,\n      textStyle: { fontFamily: 'ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif' },\n    };\n\n    function barOption(rows, color, maxValue, gzipColor) {\n      // One unit across the axis: mixing \"1000 B\" with \"2.9 KB\" makes the ticks\n      // read as unrelated numbers and, being long, collide with each other.\n      const unit = maxValue >= 1048576 ? 1048576 : maxValue >= 1024 ? 1024 : 1;\n      const suffix = unit === 1048576 ? ' MB' : unit === 1024 ? ' KB' : ' B';\n      // A step that is a whole number of units keeps every tick round: stepping\n      // by whole kilobytes reads \"0, 2, 4 KB\" instead of \"0.9, 2.9, 4.9 KB\".\n      const step = unit * Math.max(1, Math.ceil(maxValue / unit / 4));\n      // Pinning the top of the axis to a whole step keeps ECharts from adding a\n      // final tick at its own niced extent, which is the one label that would\n      // not be round.\n      const top = unit === 1 ? undefined : step * Math.ceil(maxValue / step);\n      const tick = (v) => unit === 1 ? String(Math.round(v)) : (v / unit).toFixed(1).replace(/\\.0$/, '') + suffix;\n      // The two views are the same bars measured two ways, so they share one\n      // axis and overlap exactly. Switching then shows how much shorter the\n      // compressed bars are, rather than rescaling the axis to hide it.\n      const series = [{\n        name: 'raw',\n        type: 'bar',\n        data: rows.map((r) => r.size),\n        itemStyle: { color: color, borderRadius: [0, 3, 3, 0] },\n        label: {\n          show: true, position: 'right', color: INK, fontSize: 11,\n          formatter: (p) => BYTES(p.value),\n        },\n      }];\n      let legend;\n      if (gzipColor !== undefined) {\n        series.push({\n          name: 'gzip',\n          type: 'bar',\n          barGap: '-100%',\n          data: rows.map((r) => r.gzip),\n          itemStyle: { color: gzipColor, borderRadius: [0, 3, 3, 0] },\n          label: {\n            show: true, position: 'right', color: INK, fontSize: 11,\n            formatter: (p) => BYTES(p.value),\n          },\n        });\n        legend = {\n          data: ['raw', 'gzip'],\n          selected: { raw: true, gzip: false },\n          top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 8,\n          itemGap: 10, textStyle: { color: INK, fontSize: 11 },\n        };\n      }\n      const option = Object.assign({}, base, {\n        grid: { left: 4, right: 96, top: legend ? 24 : 12, bottom: 4, containLabel: true },\n        tooltip: {\n          trigger: 'axis',\n          axisPointer: { type: 'shadow' },\n          formatter: (ps) => {\n            const r = rows[ps[0].dataIndex];\n            let text = '<b>' + esc(r.name) + '</b><br/>raw ' + NUM(r.size) + ' B (' + PCT(r.size, DATA.fileSize) + ' of file)';\n            // `null` is \"not measured\", which is not the same as the raw size\n            // and must not read like it.\n            if (r.gzip !== null && r.gzip !== undefined) {\n              text += '<br/>gzip ' + NUM(r.gzip) + ' B (' + PCT(r.gzip, r.size) + ' of raw, ' + RATIO(r.size, r.gzip) + ')';\n            } else if (DATA.gzipError) {\n              text += '<br/>gzip failed: ' + esc(DATA.gzipError);\n            }\n            return text;\n          },\n        },\n        xAxis: axis({\n          type: 'value',\n          splitNumber: unit === 1 ? 3 : undefined,\n          interval: unit === 1 ? undefined : step,\n          max: top,\n          axisLabel: { color: INK, fontSize: 11, hideOverlap: true, formatter: tick },\n        }),\n        yAxis: axis({\n          type: 'category',\n          inverse: true,\n          data: rows.map((r) => r.name),\n          axisLabel: { color: INK, fontSize: 11, fontFamily: MONO, width: 190, overflow: 'truncate', interval: 0 },\n          splitLine: { show: false },\n        }),\n        series: series,\n      });\n      if (legend !== undefined) option.legend = legend;\n      return option;\n    }\n\n    // Below this share of the ring a slice is too narrow to hold its own label,\n    // so it is identified by the legend and the tooltip instead.\n    const LABELLED_PCT = 6;\n\n    function pieOption(rows) {\n      const total = rows.reduce((sum, r) => sum + r.size, 0);\n      return Object.assign({}, base, {\n        tooltip: {\n          trigger: 'item',\n          formatter: (p) => {\n            const r = rows[p.dataIndex];\n            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B<br/>' + p.percent + '% of the code section';\n            if (r && r.members && r.members.length) text += '<br/>' + esc(r.members.join(', '));\n            return text;\n          },\n        },\n        legend: {\n          type: 'scroll', bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8,\n          textStyle: { color: INK, fontSize: 11 },\n        },\n        series: [{\n          type: 'pie',\n          radius: ['40%', '66%'],\n          center: ['50%', '47%'],\n          avoidLabelOverlap: true,\n          itemStyle: { borderColor: '#fff', borderWidth: 1 },\n          // Labels sit inside the ring, where they cannot collide with the\n          // legend or with each other, and only the slices wide enough to hold\n          // one keep it. Everything else is identified by the legend and the\n          // tooltip — never by a leader line pointing at empty space.\n          label: {\n            position: 'inside',\n            fontSize: 11,\n            color: '#fff',\n            textBorderColor: 'rgba(15,23,42,0.45)',\n            textBorderWidth: 2,\n            formatter: '{d}%',\n          },\n          labelLine: { show: false },\n          data: rows.map((r) => {\n            const labelled = r.size / total * 100 >= LABELLED_PCT;\n            return {\n              name: r.name,\n              value: r.size,\n              label: { show: labelled },\n              labelLine: { show: labelled },\n              itemStyle: r.members && r.members.length ? { color: '#94a3b8' } : undefined,\n            };\n          }),\n        }],\n      });\n    }\n\n    function treemapOption(rows) {\n      return Object.assign({}, base, {\n        tooltip: {\n          // The area stays the raw size — a treemap whose cells were drawn by\n          // compressed bytes would be a different chart, and a less useful one —\n          // so the compressed number is reported instead of drawn.\n          formatter: (p) => {\n            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B';\n            if (p.data && p.data.gzip !== null && p.data.gzip !== undefined) {\n              text += '<br/>gzip ' + NUM(p.data.gzip) + ' B (' + RATIO(p.value, p.data.gzip) + ')';\n            } else if (p.data && DATA.gzipError) {\n              text += '<br/>gzip failed: ' + esc(DATA.gzipError);\n            }\n            if (p.data && p.data.dead) text += '<br/>unreachable';\n            return text;\n          },\n        },\n        series: [{\n          type: 'treemap',\n          roam: false,\n          nodeClick: false,\n          breadcrumb: { show: false },\n          width: '100%',\n          height: '100%',\n          top: 2,\n          left: 2,\n          right: 2,\n          bottom: 2,\n          upperLabel: { show: true, height: 22, fontSize: 11, color: '#fff' },\n          itemStyle: { borderColor: '#fff', borderWidth: 1, gapWidth: 1 },\n          levels: [\n            { itemStyle: { borderWidth: 0, gapWidth: 3 }, colorSaturation: [0.4, 0.55] },\n            { itemStyle: { borderWidth: 1, gapWidth: 1 }, colorSaturation: [0.35, 0.5] },\n          ],\n          data: rows.map((m) => ({\n            name: m.name,\n            value: m.size,\n            children: m.children.map((c) => ({\n              name: c.name,\n              value: c.value,\n              dead: c.dead,\n              itemStyle: c.dead ? { color: '#f87171' } : undefined,\n            })),\n          })),\n        }],\n      });\n    }\n\n    function emptyInto(id, message) {\n      const el = document.getElementById(id);\n      el.className = 'empty';\n      el.textContent = message;\n    }\n\n    const charts = [];\n\n    function mount(id, option) {\n      const chart = echarts.init(document.getElementById(id));\n      chart.setOption(option);\n      charts.push(chart);\n    }\n\n    function main() {\n      const sections = DATA.sections\n        .map((s) => ({ name: s.name, size: s.total, payload: s.payload, gzip: s.gzip }))\n        .sort((a, b) => b.size - a.size);\n      const top = DATA.functions.slice(0, 20).map((f) => ({ name: f.name, size: f.bodySize }));\n\n      // Give the two bar charts the height their rows need. A fixed box is what\n      // used to squeeze thirteen rows into a space that fits eight.\n      const barRows = Math.max(sections.length, top.length);\n      const barHeight = Math.max(320, barRows * 26 + 60);\n      ['sections', 'functions'].forEach((id) => {\n        document.getElementById(id).style.height = barHeight + 'px';\n      });\n\n      if (sections.length) mount('sections', barOption(sections, '#60a5fa', sections[0].size, '#a78bfa'));\n      else emptyInto('sections', 'no sections');\n\n      if (top.length) mount('functions', barOption(top, '#34d399', top[0].size));\n      else emptyInto('functions', 'no functions');\n\n      const modules = DATA.modules.filter((m) => m.size > 0);\n      // The ring needs room for the labels that sit outside it, so it is taller\n      // than the default box even though its row is sized by the bar charts.\n      document.getElementById('modules').style.height = '460px';\n      if (DATA.pie.length) mount('modules', pieOption(DATA.pie));\n      else emptyInto('modules', 'no functions');\n\n      if (modules.length) mount('treemap', treemapOption(modules));\n      else emptyInto('treemap', 'no functions');\n\n      window.addEventListener('resize', () => charts.forEach((c) => c.resize()));\n    }\n\n    main();"
+const HTML_SCRIPT : String = "    const DATA = __DATA__;\n\n    const esc = (s) => String(s).replace(/[&<>\"']/g, (c) => ({\n      '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;',\n    }[c]));\n\n    const BYTES = (v) => {\n      if (v === null || v === undefined) return 'failed';\n      if (v >= 1048576) return (v / 1048576).toFixed(2) + ' MB';\n      if (v >= 1024) return (v / 1024).toFixed(1) + ' KB';\n      return v + ' B';\n    };\n\n    const NUM = (v) => v.toLocaleString('en-US');\n    const PCT = (part, whole) => whole > 0 ? (part / whole * 100).toFixed(1) + '%' : 'n/a';\n    const RATIO = (raw, gzip) => gzip > 0 ? (raw / gzip).toFixed(2) + 'x' : 'n/a';\n\n    const INK = '#334155';\n    const LINE = '#e2e8f0';\n    const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';\n\n    const axis = (extra) => Object.assign({\n      axisLine: { lineStyle: { color: '#cbd5e1' } },\n      axisTick: { show: false },\n      axisLabel: { color: INK, fontSize: 11 },\n      splitLine: { lineStyle: { color: LINE } },\n    }, extra || {});\n\n    // A static report: the grow-in animation would leave a chart empty in a\n    // screenshot, a print, or any capture that does not run animation frames.\n    const base = {\n      animation: false,\n      textStyle: { fontFamily: 'ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif' },\n    };\n\n    function barOption(rows, color, maxValue, gzipColor) {\n      maxValue = Math.max(maxValue, ...rows.map((r) => r.gzip ?? 0));\n      // One unit across the axis: mixing \"1000 B\" with \"2.9 KB\" makes the ticks\n      // read as unrelated numbers and, being long, collide with each other.\n      const unit = maxValue >= 1048576 ? 1048576 : maxValue >= 1024 ? 1024 : 1;\n      const suffix = unit === 1048576 ? ' MB' : unit === 1024 ? ' KB' : ' B';\n      // A step that is a whole number of units keeps every tick round: stepping\n      // by whole kilobytes reads \"0, 2, 4 KB\" instead of \"0.9, 2.9, 4.9 KB\".\n      const step = unit * Math.max(1, Math.ceil(maxValue / unit / 4));\n      // Pinning the top of the axis to a whole step keeps ECharts from adding a\n      // final tick at its own niced extent, which is the one label that would\n      // not be round.\n      const top = unit === 1 ? undefined : step * Math.ceil(maxValue / step);\n      const tick = (v) => unit === 1 ? String(Math.round(v)) : (v / unit).toFixed(1).replace(/\\.0$/, '') + suffix;\n      // Raw and independent gzip share an axis, including streams that grow.\n      const series = [{\n        name: 'raw',\n        type: 'bar',\n        data: rows.map((r) => r.size),\n        itemStyle: { color: color, borderRadius: [0, 3, 3, 0] },\n        label: {\n          show: true, position: 'right', color: INK, fontSize: 11,\n          formatter: (p) => BYTES(p.value),\n        },\n      }];\n      let legend;\n      if (gzipColor !== undefined) {\n        series.push({\n          name: 'independent gzip',\n          type: 'bar',\n          barGap: '-100%',\n          data: rows.map((r) => r.gzip),\n          itemStyle: { color: gzipColor, borderRadius: [0, 3, 3, 0] },\n          label: {\n            show: true, position: 'right', color: INK, fontSize: 11,\n            formatter: (p) => BYTES(p.value),\n          },\n        });\n        legend = {\n          data: ['raw', 'independent gzip'],\n          selected: { raw: true, 'independent gzip': false },\n          top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 8,\n          itemGap: 10, textStyle: { color: INK, fontSize: 11 },\n        };\n      }\n      const option = Object.assign({}, base, {\n        grid: { left: 4, right: 96, top: legend ? 24 : 12, bottom: 4, containLabel: true },\n        tooltip: {\n          trigger: 'axis',\n          axisPointer: { type: 'shadow' },\n          formatter: (ps) => {\n            const r = rows[ps[0].dataIndex];\n            let text = '<b>' + esc(r.name) + '</b><br/>raw ' + NUM(r.size) + ' B (' + PCT(r.size, DATA.fileSize) + ' of file)';\n            // Each local failure belongs to this row, never to the whole file.\n            const gzipRaw = r.gzipRawSize ?? r.size;\n            if (r.gzip !== null && r.gzip !== undefined) {\n              text += '<br/>independent gzip ' + NUM(r.gzip) + ' B (' + PCT(r.gzip, gzipRaw) + ' of encoded raw, ' + RATIO(gzipRaw, r.gzip) + ')';\n            } else if (r.gzipError !== null && r.gzipError !== undefined) {\n              text += '<br/>independent gzip failed: ' + esc(r.gzipError);\n            }\n            return text;\n          },\n        },\n        xAxis: axis({\n          type: 'value',\n          splitNumber: unit === 1 ? 3 : undefined,\n          interval: unit === 1 ? undefined : step,\n          max: top,\n          axisLabel: { color: INK, fontSize: 11, hideOverlap: true, formatter: tick },\n        }),\n        yAxis: axis({\n          type: 'category',\n          inverse: true,\n          data: rows.map((r) => r.name),\n          axisLabel: { color: INK, fontSize: 11, fontFamily: MONO, width: 190, overflow: 'truncate', interval: 0 },\n          splitLine: { show: false },\n        }),\n        series: series,\n      });\n      if (legend !== undefined) option.legend = legend;\n      return option;\n    }\n\n    // Below this share of the ring a slice is too narrow to hold its own label,\n    // so it is identified by the legend and the tooltip instead.\n    const LABELLED_PCT = 6;\n\n    function pieOption(rows) {\n      const total = rows.reduce((sum, r) => sum + r.size, 0);\n      return Object.assign({}, base, {\n        tooltip: {\n          trigger: 'item',\n          formatter: (p) => {\n            const r = rows[p.dataIndex];\n            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B<br/>' + p.percent + '% of the code section';\n            if (r && r.members && r.members.length) text += '<br/>' + esc(r.members.join(', '));\n            return text;\n          },\n        },\n        legend: {\n          type: 'scroll', bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8,\n          textStyle: { color: INK, fontSize: 11 },\n        },\n        series: [{\n          type: 'pie',\n          radius: ['40%', '66%'],\n          center: ['50%', '47%'],\n          avoidLabelOverlap: true,\n          itemStyle: { borderColor: '#fff', borderWidth: 1 },\n          // Labels sit inside the ring, where they cannot collide with the\n          // legend or with each other, and only the slices wide enough to hold\n          // one keep it. Everything else is identified by the legend and the\n          // tooltip — never by a leader line pointing at empty space.\n          label: {\n            position: 'inside',\n            fontSize: 11,\n            color: '#fff',\n            textBorderColor: 'rgba(15,23,42,0.45)',\n            textBorderWidth: 2,\n            formatter: '{d}%',\n          },\n          labelLine: { show: false },\n          data: rows.map((r) => {\n            const labelled = r.size / total * 100 >= LABELLED_PCT;\n            return {\n              name: r.name,\n              value: r.size,\n              label: { show: labelled },\n              labelLine: { show: labelled },\n              itemStyle: r.members && r.members.length ? { color: '#94a3b8' } : undefined,\n            };\n          }),\n        }],\n      });\n    }\n\n    function treemapOption(rows) {\n      return Object.assign({}, base, {\n        tooltip: {\n          // Area remains raw encoded bytes; gzip is an independent measurement.\n          formatter: (p) => {\n            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B';\n            if (p.data && p.data.gzip !== null && p.data.gzip !== undefined) {\n              text += '<br/>independent gzip ' + NUM(p.data.gzip) + ' B (' + RATIO(p.value, p.data.gzip) + ')';\n            } else if (p.data && p.data.gzipError !== null && p.data.gzipError !== undefined) {\n              text += '<br/>independent gzip failed: ' + esc(p.data.gzipError);\n            }\n            if (p.data && p.data.dead) text += '<br/>unreachable';\n            return text;\n          },\n        },\n        series: [{\n          type: 'treemap',\n          roam: false,\n          nodeClick: false,\n          breadcrumb: { show: false },\n          width: '100%',\n          height: '100%',\n          top: 2,\n          left: 2,\n          right: 2,\n          bottom: 2,\n          upperLabel: { show: true, height: 22, fontSize: 11, color: '#fff' },\n          itemStyle: { borderColor: '#fff', borderWidth: 1, gapWidth: 1 },\n          levels: [\n            { itemStyle: { borderWidth: 0, gapWidth: 3 }, colorSaturation: [0.4, 0.55] },\n            { itemStyle: { borderWidth: 1, gapWidth: 1 }, colorSaturation: [0.35, 0.5] },\n          ],\n          data: rows.map((m) => ({\n            name: m.name,\n            value: m.size,\n            children: m.children.map((c) => ({\n              name: c.name,\n              value: c.value,\n              dead: c.dead,\n              gzip: c.gzip,\n              gzipError: c.gzipError,\n              itemStyle: c.dead ? { color: '#f87171' } : undefined,\n            })),\n          })),\n        }],\n      });\n    }\n\n    function emptyInto(id, message) {\n      const el = document.getElementById(id);\n      el.className = 'empty';\n      el.textContent = message;\n    }\n\n    const charts = [];\n\n    function mount(id, option) {\n      const chart = echarts.init(document.getElementById(id));\n      chart.setOption(option);\n      charts.push(chart);\n    }\n\n    function main() {\n      const sections = DATA.sections\n        .map((s) => ({ name: s.name, size: s.total, payload: s.payload, gzip: s.gzip, gzipError: s.gzipError }))\n        .sort((a, b) => b.size - a.size);\n      const top = DATA.functions.slice(0, 20).map((f) => ({ name: f.name, size: f.bodySize, gzipRawSize: f.size, gzip: f.gzip, gzipError: f.gzipError }));\n\n      // Give the two bar charts the height their rows need. A fixed box is what\n      // used to squeeze thirteen rows into a space that fits eight.\n      const barRows = Math.max(sections.length, top.length);\n      const barHeight = Math.max(320, barRows * 26 + 60);\n      ['sections', 'functions'].forEach((id) => {\n        document.getElementById(id).style.height = barHeight + 'px';\n      });\n\n      if (sections.length) mount('sections', barOption(sections, '#60a5fa', sections[0].size, '#a78bfa'));\n      else emptyInto('sections', 'no sections');\n\n      if (top.length) mount('functions', barOption(top, '#34d399', top[0].size));\n      else emptyInto('functions', 'no functions');\n\n      const modules = DATA.modules.filter((m) => m.size > 0);\n      // The ring needs room for the labels that sit outside it, so it is taller\n      // than the default box even though its row is sized by the bar charts.\n      document.getElementById('modules').style.height = '460px';\n      if (DATA.pie.length) mount('modules', pieOption(DATA.pie));\n      else emptyInto('modules', 'no functions');\n\n      if (modules.length) mount('treemap', treemapOption(modules));\n      else emptyInto('treemap', 'no functions');\n\n      window.addEventListener('resize', () => charts.forEach((c) => c.resize()));\n    }\n\n    main();"
 
 ///|
 /// A compressed size as JSON: the number, or `null` when the compressor gave
@@ -371,6 +399,14 @@ fn gzip_json(gzip : Result[Int, String]) -> Json {
   match gzip {
     Ok(size) => int_json(size)
     Err(_) => Json::null()
+  }
+}
+
+///|
+fn gzip_error_json(gzip : Result[Int, String]) -> Json {
+  match gzip {
+    Ok(_) => Json::null()
+    Err(message) => Json::string(message)
   }
 }
 
@@ -470,11 +506,28 @@ pub fn render_html(
   file_path : String,
   echarts? : String = "",
 ) -> String {
+  render_html_measured(
+    analysis,
+    file_path,
+    measure_compression(analysis),
+    echarts,
+  )
+}
+
+///|
+fn render_html_measured(
+  analysis : Analysis,
+  file_path : String,
+  compression : CompressionMeasurements,
+  echarts : String,
+) -> String {
   let parsed = analysis.parsed
   let file_size = parsed.file_size
   let code_size = section_size(parsed, Code)
   let dead = dead_size(analysis)
-  let json = escape_for_script(report_data(analysis, file_path).stringify())
+  let json = escape_for_script(
+    report_data(analysis, file_path, compression~).stringify(),
+  )
   let script = replace_all(HTML_SCRIPT, "__DATA__", json)
   let title = html_escape(file_path)
   let out = StringBuilder(size_hint=json.length() + echarts.length() + 16384)
@@ -514,10 +567,10 @@ pub fn render_html(
   )
   let (gzip_value, gzip_sub, gzip_title) = gzip_card_fields(
     file_size,
-    compressed_size(analysis.data),
+    compression.whole_file,
   )
   out.write_string(
-    card("Gzip size", gzip_value, gzip_sub, false, title=gzip_title),
+    card("Whole-file gzip", gzip_value, gzip_sub, false, title=gzip_title),
   )
   out.write_string(
     card(
@@ -537,13 +590,13 @@ pub fn render_html(
   out.write_string("</section>\n")
   out.write_string(
     "<section class=\"charts\">\n" +
-    "  <div class=\"panel\"><h2>Sections</h2><div id=\"sections\" class=\"chart\"></div></div>\n" +
+    "  <div class=\"panel\"><h2>Sections</h2><p>Each section is compressed separately. These sizes are not additive and do not represent whole-file transfer shares.</p><div id=\"sections\" class=\"chart\"></div></div>\n" +
     "  <div class=\"panel\"><h2>Top 20 functions by body size</h2>" +
-    "<div id=\"functions\" class=\"chart\"></div></div>\n" +
+    "<p>Function gzip uses independent streams including size prefixes, with ratios based on encoded size. It does not measure transfer savings from removal.</p><div id=\"functions\" class=\"chart\"></div></div>\n" +
     "  <div class=\"panel\"><h2>Modules — share of the code section</h2>" +
     "<div id=\"modules\" class=\"chart\"></div></div>\n" +
     "  <div class=\"panel wide\"><h2>Treemap — module → function, area is bytes</h2>" +
-    "<div id=\"treemap\" class=\"chart tall\"></div></div>\n" +
+    "<p>Area is raw encoded bytes. Tooltip gzip values are independent function streams, not additive transfer shares.</p><div id=\"treemap\" class=\"chart tall\"></div></div>\n" +
     "</section>\n",
   )
   out.write_string(

@@ -42,6 +42,8 @@ jobs:
         run: bash scripts/test-module-structure.sh _build/native/release/build/cmd/main/main.exe
       - name: Size-comparison CLI regressions
         run: bash scripts/test-size-comparison.sh _build/native/release/build/cmd/main/main.exe
+      - name: Compression-report CLI regressions
+        run: bash scripts/test-compression-report.sh _build/native/release/build/cmd/main/main.exe
 
   size-budget:
     name: Size budget
