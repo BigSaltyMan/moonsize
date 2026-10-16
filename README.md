@@ -1,7 +1,7 @@
 # moonsize
 
 ```sh
-moon add BigSaltyMan/moonsize
+moon add BigSaltyMan/moonsize@0.4.0
 ```
 
 A size analyzer for WebAssembly, built for MoonBit's output. It reads a `.wasm`
@@ -17,10 +17,21 @@ before interpreting a removal candidate.
 
 Chinese version: [README.zh.md](README.zh.md).
 
+Version **0.4.0** includes breaking library changes from public 0.3.0;
+read the [migration guide](docs/migration-0.4.md). The moon add command adds a library
+dependency; it does not install a standalone CLI. For the CLI, clone this source
+repository and run the build below.
+
+The [review evidence index](https://github.com/BigSaltyMan/moonsize/blob/main/docs/review-evidence.md)
+links measured rebuild cases, real PDFs and explicit model boundaries. The
+[0.4.0 release record](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)
+records the exact source SHA, target Linux CI, registry checksum and clean consumer
+verification; historic devlog counts are snapshots.
+
 ## Building
 
 ```sh
-moon build --release
+moon build --target native --release
 ./_build/native/release/build/cmd/main/main.exe app.wasm
 ```
 
@@ -46,7 +57,9 @@ than opening the report with `file://`.
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
 Report the section table of a WebAssembly binary, rank its heaviest
 functions, roll the bytes up by module, and follow the call graph to
@@ -62,14 +75,24 @@ identify candidates for investigation.
   --html <path>        write the charts as a self-contained HTML report
   --max-size <size>    fail with exit code 3 above this size, where size is
                        bytes or a KB/MB/GB count such as 10KB or 1.5MB
+  --budget <path>      validated multi-metric byte budgets; growth needs --baseline
+  --budget-json <path> write budget JSON; requires --budget, refuses existing paths
+  --budget-md <path>   write CI Markdown summary; requires --budget, refuses existing paths
   --baseline <path>    compare against another module and print the change;
                        --max-size then bounds the growth, not the file
   --diff-functions     append function and package changes; requires --baseline
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --why-index <n>      explain a shortest model reference path to function n
+  --why-root <n>       search from one actual model root (requires --why-index)
+  --why-json <path>    write path JSON; refuses existing paths
+                       query mode allows only these flags and --strict
+                       element functions are conservative roots; paths are
+                       not execution traces or predictions of savings
 
-Exit codes: 0 ok, 1 unreadable input, 2 bad command line, 3 over budget.
+Exit codes: 0 completed, 1 input/query/output/unavailable measurement, 2 bad arguments/config,
+            3 over budget, incomplete strict graph, or path search limited.
 ```
 
 Without flags it prints the section table, the heaviest functions and the

@@ -1,5 +1,11 @@
 # Offline HTML delivery and A4 printing
 
+Current review entry: [evidence index](review-evidence.md). The two historical,
+human-reviewed PDFs and their page-by-page record are now directly readable in
+[review-artifacts](review-artifacts/); their unchanged hashes match the local
+snapshot below. Release-specific clean CI and registry consumer verification are
+recorded after committing in the [0.4.0 release](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0).
+
 The native CLI compiles in the pinned ECharts 5.6.0 resource. It no longer reads
 `assets/echarts.min.js` from cwd, parents or another runtime location, and cannot
 silently turn its default report into a CDN page. An independent directory

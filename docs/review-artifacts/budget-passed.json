@@ -1,0 +1,97 @@
+{
+  "format": "moonsize-budget",
+  "schema_version": 1,
+  "config_version": 1,
+  "status": "passed",
+  "exit_code": 0,
+  "current": {
+    "path": "D:\\project\\moonsize\\_build\\budget-demo\\after.wasm",
+    "sha256": "25a6f692ea3c271af0db77ebc6871cb0b37c340b5b5d38d4dc9b4c616880c6ca",
+    "raw_bytes": 10655,
+    "code_bytes": 5054,
+    "whole_gzip_bytes": 5176,
+    "gzip_error": null,
+    "attribution": {
+      "functions": 47,
+      "function_bytes": 5050,
+      "unattributed_functions": 0,
+      "unattributed_bytes": 0,
+      "complete_within_symbol_model": true
+    }
+  },
+  "baseline": {
+    "path": "D:\\project\\moonsize\\_build\\budget-demo\\before.wasm",
+    "sha256": "c256357b567a057b0a531a30d8f54b2137b3ba8c051775a831fd93144a1905cd",
+    "raw_bytes": 10232,
+    "code_bytes": 5010,
+    "whole_gzip_bytes": 5027,
+    "gzip_error": null,
+    "attribution": {
+      "functions": 46,
+      "function_bytes": 5006,
+      "unattributed_functions": 0,
+      "unattributed_bytes": 0,
+      "complete_within_symbol_model": true
+    }
+  },
+  "compression": "whole file, one gzip stream; bikallem/compress current defaults; independent streams are never added",
+  "scope": "All sizes are bytes. Equality passes; growth compares current - baseline. file.gzip measures the entire file as one gzip stream with the current bikallem/compress defaults, not server transfer cost. code.raw includes its section header and count encoding. package.raw sums local function total_size under the existing symbol attribution; it is not total source-package cost or predicted deletion savings. Unknown attribution makes a package rule unavailable.",
+  "rules": [
+    {
+      "id": "file.raw",
+      "metric": "file.raw",
+      "package": null,
+      "mode": "growth",
+      "current": 10655,
+      "baseline": 10232,
+      "delta": 423,
+      "max_bytes": 423,
+      "status": "passed",
+      "reason": "current - baseline is within max_bytes (equality passes)",
+      "current_package_present": null,
+      "baseline_package_present": null
+    },
+    {
+      "id": "file.gzip",
+      "metric": "file.gzip",
+      "package": null,
+      "mode": "growth",
+      "current": 5176,
+      "baseline": 5027,
+      "delta": 149,
+      "max_bytes": 149,
+      "status": "passed",
+      "reason": "current - baseline is within max_bytes (equality passes)",
+      "current_package_present": null,
+      "baseline_package_present": null
+    },
+    {
+      "id": "code.raw",
+      "metric": "code.raw",
+      "package": null,
+      "mode": "growth",
+      "current": 5054,
+      "baseline": 5010,
+      "delta": 44,
+      "max_bytes": 44,
+      "status": "passed",
+      "reason": "current - baseline is within max_bytes (equality passes)",
+      "current_package_present": null,
+      "baseline_package_present": null
+    },
+    {
+      "id": "package.raw",
+      "metric": "package.raw",
+      "package": "demo::budgetdemo",
+      "mode": "growth",
+      "current": 54,
+      "baseline": 25,
+      "delta": 29,
+      "max_bytes": 29,
+      "status": "passed",
+      "reason": "current - baseline is within max_bytes (equality passes)",
+      "current_package_present": true,
+      "baseline_package_present": true
+    }
+  ]
+}

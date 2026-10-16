@@ -1,7 +1,7 @@
 # moonsize
 
 ```sh
-moon add BigSaltyMan/moonsize
+moon add BigSaltyMan/moonsize@0.4.0
 ```
 
 面向 MoonBit 产物的 WebAssembly 体积分析器。读取 `.wasm` 文件，测量每个段，把 code 段归因到具体函数，并根据引用图提供需要进一步调查的优化候选，不预测删除源码后的精确减量。
@@ -10,10 +10,14 @@ moon add BigSaltyMan/moonsize
 
 英文版见 [README.md](README.md)。
 
+当前交付版本为 **0.4.0**，相对公开 0.3.0 含破坏性库接口变化，见[迁移说明](docs/migration-0.4.md)。moon add 添加的是库依赖，不会安装独立 CLI；CLI 请克隆源码后按下方命令构建。
+
+[公开复审证据](https://github.com/BigSaltyMan/moonsize/blob/main/docs/review-evidence.md)提供指标边界、真实源码重建、路径、预算与两份 PDF；[0.4.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)记录对应源码 SHA、目标 Linux CI、实际包摘要和独立消费验证。历史开发日志中的数量保持当时快照。
+
 ## 构建
 
 ```sh
-moon build --release
+moon build --target native --release
 ./_build/native/release/build/cmd/main/main.exe app.wasm
 ```
 
@@ -26,6 +30,8 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+                 [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
   --retained           当前图模型中受支配函数的编码字节总和
@@ -42,7 +48,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
   --experiment <path>  生成前后产物优化实验报告，需 --baseline，输出路径不能已存在
   --experiment-context <path>  附上声明的构建设置与业务验证记录
 
-退出码：0 正常，1 输入无法读取，2 命令行错误，3 超出预算。
+退出码：0 完成，1 输入/查询/输出/测量不可用，2 参数或配置错误，3 超预算、strict 拒绝不完整图或路径搜索受限。
 ```
 
 不带参数时打印段表、最重的函数和按包聚合的结果。`--retained` 和 `--dead-code` 追加各自的章节，可以组合使用。`--call-graph` 和 `--html` 写文件而不是打印报告，因此单独使用：

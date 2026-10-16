@@ -1,0 +1,43 @@
+{
+  "toolchain": "moon 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moon.exe\nmoonc v0.10.13+cbb11c36f (2026-09-15) ~\\.moon\\bin\\moonc.exe\nmoonrun 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moonrun.exe\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg",
+  "cli_sha256": "124685dfa5468f895b6a8cba66c1294ab4ddddf9afdfb0555a4fefaa9dd922bf",
+  "target_index": 36,
+  "selected_root": 47,
+  "path": [
+    {
+      "index": 47,
+      "name": "____moonbit__main"
+    },
+    {
+      "index": 35,
+      "name": "demo::functionpath::path__upstream"
+    },
+    {
+      "index": 36,
+      "name": "demo::functionpath::path__target"
+    }
+  ],
+  "measurements": {
+    "before": {
+      "sha256": "d02d2b503a87986d1b0ecc3067349a24494af14fae1050dc32514cb85f8cff31",
+      "bytes": 10497,
+      "source_sha256": "0cd4898d9208d5b6ce044f90828c97f6e1bc99eef20b0248013d557638cee1c3",
+      "stdout": "base: 0\noptional explanation: even\nbase: 1\noptional explanation: odd\nbase: 2\noptional explanation: even\nbase: 3\noptional explanation: odd\n"
+    },
+    "after": {
+      "sha256": "65f08bf5e82a932a99165ce9801a07b9bf61a2fec963172e3c1e58df75c76d4c",
+      "bytes": 10235,
+      "source_sha256": "0bfe51a18264747d838142a9573941eb3d7e4e6910cdf99d830bf0302f5d5127",
+      "stdout": "base: 0\nbase: 1\nbase: 2\nbase: 3\n"
+    },
+    "rollback": {
+      "sha256": "d02d2b503a87986d1b0ecc3067349a24494af14fae1050dc32514cb85f8cff31",
+      "bytes": 10497,
+      "source_sha256": "0cd4898d9208d5b6ce044f90828c97f6e1bc99eef20b0248013d557638cee1c3",
+      "stdout": "base: 0\noptional explanation: even\nbase: 1\noptional explanation: odd\nbase: 2\noptional explanation: even\nbase: 3\noptional explanation: odd\n"
+    }
+  },
+  "raw_delta": -262,
+  "whole_gzip_delta": -101,
+  "interpretation": "Model reference path, not execution. Savings are whole-artifact rebuild measurements, never sums of path bytes."
+}

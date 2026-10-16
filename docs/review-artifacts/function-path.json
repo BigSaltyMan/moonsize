@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "format": "moonsize-function-path",
+  "query": {
+    "target_index": 36,
+    "root_index": 47,
+    "scope": "selected-root"
+  },
+  "status": "found",
+  "target": {
+    "index": 36,
+    "name": "demo::functionpath::path__target",
+    "raw_name": "_M0FP24demo12functionpath12path__target",
+    "imported": false,
+    "encoded_size": 29,
+    "import_module": null,
+    "import_name": null
+  },
+  "path_root": 47,
+  "selected_roots": [
+    47
+  ],
+  "model_roots": [
+    {
+      "index": 47,
+      "reasons": [
+        {
+          "function_index": 47,
+          "kind": "export",
+          "name": "_start",
+          "section_offset": 179,
+          "position_granularity": "section",
+          "ordinal": 1,
+          "table_index": null,
+          "element_mode": null,
+          "conservative": false
+        }
+      ]
+    }
+  ],
+  "root_ledger_complete": true,
+  "root_reasons": [
+    {
+      "function_index": 47,
+      "kind": "export",
+      "name": "_start",
+      "section_offset": 179,
+      "position_granularity": "section",
+      "ordinal": 1,
+      "table_index": null,
+      "element_mode": null,
+      "conservative": false
+    }
+  ],
+  "nodes": [
+    {
+      "index": 47,
+      "name": "____moonbit__main",
+      "raw_name": "_M0FP017____moonbit__main",
+      "imported": false,
+      "encoded_size": 43,
+      "import_module": null,
+      "import_name": null
+    },
+    {
+      "index": 35,
+      "name": "demo::functionpath::path__upstream",
+      "raw_name": "_M0FP24demo12functionpath14path__upstream",
+      "imported": false,
+      "encoded_size": 50,
+      "import_module": null,
+      "import_name": null
+    },
+    {
+      "index": 36,
+      "name": "demo::functionpath::path__target",
+      "raw_name": "_M0FP24demo12functionpath12path__target",
+      "imported": false,
+      "encoded_size": 29,
+      "import_module": null,
+      "import_name": null
+    }
+  ],
+  "steps": [
+    {
+      "caller": 47,
+      "callee": 35,
+      "kind": "direct",
+      "candidate": false,
+      "opcode": "call",
+      "offset": 5247,
+      "type_index": null,
+      "table_index": null
+    },
+    {
+      "caller": 35,
+      "callee": 36,
+      "kind": "direct",
+      "candidate": false,
+      "opcode": "call",
+      "offset": 3489,
+      "type_index": null,
+      "table_index": null
+    }
+  ],
+  "graph_complete": true,
+  "diagnostics": [],
+  "modeling_scope": "This is a path in the current reference model, not an execution trace or a prediction of recompiled or gzip savings. Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. Reference-call targets and dynamic table contents are not solved. Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. Element references are conservative roots, including private, passive and declarative segments. graph_complete means no gaps detected within this scope, not full Wasm certification. RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.",
+  "limits": {
+    "max_nodes": 100000,
+    "max_edges": 1000000,
+    "max_depth": 256
+  },
+  "search_stats": {
+    "root_sources": 1,
+    "prepared_roots": 1,
+    "indexed_edges": 75,
+    "visited_nodes": 5,
+    "checked_edges": 6,
+    "max_depth": 2,
+    "phase": "complete",
+    "limit_reason": null
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "toolchain": "moon 0.1.20260915 / moonc v0.10.13+cbb11c36f",
+  "public_baseline": "BigSaltyMan/moonsize@0.3.0",
+  "baseline_zip_sha256": "60339bdfebc95cfe30948ea1ba5b5dda75e032c0b61c1956e2512d3a4719246c",
+  "method": "moon info on downloaded public archive and current source; exact pub fn declarations; types/cases/fields reviewed separately in migration-0.4.md",
+  "changed": [
+    {
+      "before": "pub fn build(Bytes, Array[FunctionBody], Array[ElementSegment]) -> Result[CallGraph, WasmError]",
+      "after": "pub fn build(Bytes) -> Result[CallGraph, WasmError]"
+    },
+    {
+      "before": "pub fn compressed_size(Bytes) -> Int",
+      "after": "pub fn compressed_size(Bytes) -> Result[Int, String]"
+    },
+    {
+      "before": "pub fn render_compression(Int, Int, Array[SectionCompression]) -> String",
+      "after": "pub fn render_compression(Int, Result[Int, String], Array[SectionCompression]) -> String"
+    },
+    {
+      "before": "pub fn render_dead_code(Array[FunctionStat], @set.Set[Int], Int, Int) -> String",
+      "after": "pub fn render_dead_code(Analysis, Int) -> String"
+    },
+    {
+      "before": "pub fn render_retained(Array[FunctionStat], Array[RetainedSize], @set.Set[Int], Int, Int) -> String",
+      "after": "pub fn render_retained(Analysis, Int) -> String"
+    },
+    {
+      "before": "pub fn Reader::read_u32_leb(Self) -> Result[Int, WasmError]",
+      "after": "pub fn Reader::read_u32_leb(Self) -> Result[UInt, WasmError]"
+    },
+    {
+      "before": "pub fn Reader::seek(Self, Int) -> Unit",
+      "after": "pub fn Reader::seek(Self, Int) -> Result[Unit, WasmError]"
+    }
+  ],
+  "added": [
+    "pub fn budget_requires_baseline(CompiledBudget) -> Bool",
+    "pub fn check_experiment_context(Json) -> Result[Unit, String]",
+    "pub fn compare_modules(Bytes, Bytes) -> Result[ModuleSizeDiff, ComparisonError]",
+    "pub fn compile_budget(Json) -> Result[CompiledBudget, Array[BudgetProblem]]",
+    "pub fn compile_budget_text(String) -> Result[CompiledBudget, Array[BudgetProblem]]",
+    "pub fn describe_budget_error(BudgetError) -> String",
+    "pub fn describe_function_path_error(FunctionPathError) -> String",
+    "pub fn evaluate_budget(CompiledBudget, Bytes, baseline_data? : Bytes) -> Result[BudgetReport, BudgetError]",
+    "pub fn experiment_report(Bytes, Bytes, String, String, Json, top? : Int) -> Result[Json, String]",
+    "pub fn explain_function(Bytes, Int, root? : Int, limits? : PathLimits) -> Result[FunctionPathReport, FunctionPathError]",
+    "pub fn is_graph_complete(CallGraph) -> Bool",
+    "pub fn render_budget(BudgetReport) -> String",
+    "pub fn render_budget_json(BudgetReport, String, baseline_path? : String) -> String",
+    "pub fn render_budget_markdown(BudgetReport, String, baseline_path? : String) -> String",
+    "pub fn render_experiment_html(Json) -> String",
+    "pub fn render_function_diff(ModuleSizeDiff, Int) -> String",
+    "pub fn render_function_path(FunctionPathReport) -> String",
+    "pub fn render_function_path_json(FunctionPathReport) -> String",
+    "pub fn render_graph_warning(CallGraph) -> String",
+    "pub fn strict_exit_code(Options, Bool) -> Int",
+    "pub fn PathLimits::new(max_nodes? : Int, max_edges? : Int, max_depth? : Int) -> Self",
+    "pub fn Reader::new_range(Bytes, Int, Int) -> Result[Self, WasmError]"
+  ]
+}

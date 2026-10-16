@@ -2,6 +2,10 @@
 
 给验收者的一页说明：关键技术决策、AI 在其中的角色、参考来源。每一条都对应仓库里的证据，可以逐条复核。
 
+当前交付入口：[复审证据](review-evidence.md)、[0.4.0迁移](migration-0.4.md)、
+[发布与目标CI记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)。
+早期章节中的版本、测试数量和待验收状态保留为历史；当前状态见第20节及发布记录。
+
 ## 1. 项目周期与入口
 
 仓库建于 2026-10-02，第一个版本 0.1.0 于 10-03 发布，10-05 发布 0.3.0。全部提交位于公开仓库的默认分支 `main`，每个提交只做一件可描述的事。模块入口见 `moon.mod`；`moon check --target native --deny-warn`、`moon test`、`moon build --target wasm` 是本地与 CI 共用的门禁。
@@ -269,3 +273,17 @@ README 截图后续更新：两份 README 均直接展示 report-desktop.jpg 与
 详细复现见 docs/html-delivery.md，本地哈希/环境快照见 docs/html-delivery-results.json；PDF、页面 PNG 和逐页 manual-review.md 保存在 _build/html-delivery-verification/latest.json 指向的 run-JM2Zrx 目录。CI 新增锁定开发依赖、Chromium 实际离线/PDF 测试和 html-delivery-evidence；不会将适配器检查或 CI 自动检查冒充人工视觉验收。非 Chromium 浏览器、物理打印机和 file:// 双击路径未实测，A4/12mm 设置范围单独说明。目标远程状态以最终提交 SHA 的 CI 为准。
 
 Linux CI 首次执行已通过资源校验、336 项测试、全部旧回归和预算；新增 PDF 检查因提取文本的字形分段差异失败。下载实际 Linux PDF 并检查页面，Whole-file gzip 标签和 5207 B 卡片均正确；PDF.js 返回 Whole-、fi、le gzip 三段，测试自行 join 空格造成误判。后续修正仅在 PDF 文本比较时去除提取空白，保留全部文字、标点、数字及单位，增加连字分段正例和错字/错数反例；不跳过 PDF 内容断言，也不修改生产页面或测量。修正后重新运行实际浏览器/PDF 回归并正常推送，由新目标 SHA 的 CI 确认。
+
+## 20. 复审证据与 0.4.0 发布收口（2026-10-16）
+
+当前入口为 [复审证据索引](review-evidence.md)、[最终项目说明](october-proposal.md)与[逐项回复](october-review-response.md)。章节1—19保留当时的实现/测试状态，不能以其中旧版本、旧数量或待验收状态代替当前交付。分析实现基线3a07e03，本次不改算法；没有承诺完整Wasm语义、任意规模性能、精确删减或实际网络成本。
+
+实际下载Mooncakes最新0.3.0包并核对注册表SHA-256（60339bdfebc95cfe30948ea1ba5b5dda75e032c0b61c1956e2512d3a4719246c），确认旧包仍为三参数build、无统一图诊断/路径/实验/多预算。新版本选为0.4.0，迁移说明逐项列出七处签名变化、新错误和可读字段，分别解释报告JSON版本、模式约束、退出码与CLI/库资源区别。moon add仅安装库依赖，独立CLI需源码构建。
+
+公开证据保留未经改写的测量JSON，补路径、预算结果与两份实际PDF。PDF从既有run-JM2Zrx按原文件名复制，5+4页，摘要与既有验收记录一致；人工逐页记录一同公开。这是历史Windows人工验收，本轮重新执行的实际离线/PDF测试及未来Linux自动检查不会改称人工验收。已验证HTTP主文档映射的全新断网上下文、零外部请求、图表/数据和打印恢复；file://、非Chromium及实体打印机仍未验证。
+
+本轮本地实际运行336项native测试（0失败）、730个CLI场景、四个源码演示及预算0/3，资源生成校验与格式检查通过。独占/共享debug案例仍为R=52/16、重建减量656/127、whole gzip减量237/41 B。案例有意移除可选输出，仅验证保留的基础行为及字节级回退。路径/预算新快照记录当次工具链和输入哈希，不将路径字节相加解释为收益。
+
+新增scripts/verify-release-consumer.mjs，在仓库外新建项目、从注册表安装精确版本，编译并执行parse/stat/build、真实尾调用路径、差异、实验和预算0/3。发布采用明确提交的外部干净导出，检查实际ZIP清单及许可，排除临时产物和无关图片/规划；不得从混有用户文件的工作区直接发布。
+
+提交产生后的确切SHA、该SHA Linux CI、包校验和、干净导出和精确公开版本消费结果写入[0.4.0发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)，避免循环amend记录自身SHA。以上本地检查不代替后续注册表消费或目标远程CI，发布记录才是对应结果入口。用户原report.png及其他本地规划文件不纳入提交，没有复制个人联系方式或代交表单。

@@ -1,0 +1,43 @@
+{
+  "toolchain": "moon 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moon.exe\nmoonc v0.10.13+cbb11c36f (2026-09-15) ~\\.moon\\bin\\moonc.exe\nmoonrun 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moonrun.exe\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg",
+  "build": {
+    "command": "moon build --target wasm --debug --no-strip",
+    "target": "wasm",
+    "mode": "debug",
+    "strip": false
+  },
+  "cli_sha256": "124685dfa5468f895b6a8cba66c1294ab4ddddf9afdfb0555a4fefaa9dd922bf",
+  "artifacts": {
+    "before": {
+      "path": "D:\\project\\moonsize\\_build\\budget-demo\\before.wasm",
+      "sha256": "c256357b567a057b0a531a30d8f54b2137b3ba8c051775a831fd93144a1905cd",
+      "bytes": 10232,
+      "source_sha256": "3407f8f2a2871304ebe2588d0433fc2222a5933624e876cf7abc821ffb179b83",
+      "stdout": "base: 0\nbase: 1\nbase: 2\nbase: 3\n"
+    },
+    "after": {
+      "path": "D:\\project\\moonsize\\_build\\budget-demo\\after.wasm",
+      "sha256": "25a6f692ea3c271af0db77ebc6871cb0b37c340b5b5d38d4dc9b4c616880c6ca",
+      "bytes": 10655,
+      "source_sha256": "be21d05a9370de723007048dd5c9907b10692b65d50ee77b8f720a962e047f18",
+      "stdout": "base: 0\noptional report: even values now include a detailed explanation\nbase: 1\noptional report: odd values now include another detailed explanation\nbase: 2\noptional report: even values now include a detailed explanation\nbase: 3\noptional report: odd values now include another detailed explanation\n"
+    },
+    "rollback": {
+      "path": "D:\\project\\moonsize\\_build\\budget-demo\\rollback.wasm",
+      "sha256": "c256357b567a057b0a531a30d8f54b2137b3ba8c051775a831fd93144a1905cd",
+      "bytes": 10232,
+      "source_sha256": "3407f8f2a2871304ebe2588d0433fc2222a5933624e876cf7abc821ffb179b83",
+      "stdout": "base: 0\nbase: 1\nbase: 2\nbase: 3\n"
+    }
+  },
+  "deltas": {
+    "file.raw": 423,
+    "file.gzip": 149,
+    "code.raw": 44,
+    "package.raw": 29
+  },
+  "positive_exit": 0,
+  "negative_exit": 3,
+  "rollback_exact": true,
+  "interpretation": "Optional output is intentionally added. Base output is preserved; not full behavioral equivalence. Budgets measure complete artifacts and symbol-attributed function bytes, never hypothetical deletion savings."
+}

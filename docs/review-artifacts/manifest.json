@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-16",
+  "analysis_source_baseline": "3a07e035b4e0de914f43d1eeac43c19497522914",
+  "description": "Unmodified measurement JSON copied after current local source demos. Historical Windows PDF files copied byte-for-byte from recorded run-JM2Zrx; human review is historical, not clean release-SHA CI. Local paths inside raw JSON are recorded identities, not online entry points.",
+  "pdf_record": "../html-delivery-results.json",
+  "files": [
+    {
+      "file": "api-function-diff.json",
+      "bytes": 3330,
+      "sha256": "d80aacddfa95b88ff51c0c1b9013af50dbd599ae4a1b9ed877bb2518283db9aa"
+    },
+    {
+      "file": "budget-exceeded.json",
+      "bytes": 3137,
+      "sha256": "23aab1b525e393f6342b5bfb9ed1ca108f064832e0b1ffec168a393f75abccb3"
+    },
+    {
+      "file": "budget-passed.json",
+      "bytes": 3207,
+      "sha256": "867272291602642035fecd30a2c2e99408abf551d89d56b3c0c64b36dd32d8d2"
+    },
+    {
+      "file": "budget-results.json",
+      "bytes": 2237,
+      "sha256": "5ea1b21b042d0ca397681932ac36a42289cf39390b4135c2456888e1bebf8f91"
+    },
+    {
+      "file": "example.pdf",
+      "bytes": 140279,
+      "sha256": "f57e0cc23da2e1af2d039b3eff8d849199766b37548e1894ccacb2bce7e9ec12"
+    },
+    {
+      "file": "function-path-results.json",
+      "bytes": 1897,
+      "sha256": "80be9bcdcfdd2e04966e00ededf4a65862a84612d1b0b8c7c4158b8201f340f5"
+    },
+    {
+      "file": "function-path.json",
+      "bytes": 3493,
+      "sha256": "5d2c31962db4f95a22410689763eba09e6ff2baa6674cdceaf74bb129daaa4fb"
+    },
+    {
+      "file": "long-name-warning.pdf",
+      "bytes": 128386,
+      "sha256": "629dd87c7487ab6f7126928901030b8d44b01eb2a20642076c62287d5bcd1f30"
+    },
+    {
+      "file": "pdf-page-review.md",
+      "bytes": 1777,
+      "sha256": "4c3185985260ad47a7fa91fb1d177e2fa59a435a0726c004211c45b7b6e7d2a1"
+    }
+  ]
+}
