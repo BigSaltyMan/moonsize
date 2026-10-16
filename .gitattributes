@@ -4,3 +4,8 @@ scripts/test-graph-diagnostics.sh text eol=lf
 scripts/test-parser-boundaries.sh text eol=lf
 scripts/test-module-structure.sh text eol=lf
 scripts/test-size-comparison.sh text eol=lf
+
+# Pinned third-party bytes and hash-audited evidence must survive checkout/archive
+# unchanged, including on Windows with core.autocrlf=true.
+assets/echarts.min.js -text
+docs/review-artifacts/** -text

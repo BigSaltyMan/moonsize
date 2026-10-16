@@ -287,3 +287,5 @@ Linux CI 首次执行已通过资源校验、336 项测试、全部旧回归和�
 新增scripts/verify-release-consumer.mjs，在仓库外新建项目、从注册表安装精确版本，编译并执行parse/stat/build、真实尾调用路径、差异、实验和预算0/3。发布采用明确提交的外部干净导出，检查实际ZIP清单及许可，排除临时产物和无关图片/规划；不得从混有用户文件的工作区直接发布。
 
 提交产生后的确切SHA、该SHA Linux CI、包校验和、干净导出和精确公开版本消费结果写入[0.4.0发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)，避免循环amend记录自身SHA。以上本地检查不代替后续注册表消费或目标远程CI，发布记录才是对应结果入口。用户原report.png及其他本地规划文件不纳入提交，没有复制个人联系方式或代交表单。
+
+首次仓库外git archive被Windows的core.autocrlf转换了vendored JS换行，干净资源哈希校验明确失败；尚未发布。后续在.gitattributes为固定资源和有字节摘要的复审附件设置-text，保留原始blob字节，再从新提交完整导出验证。没有修改第三方资源、更新期望哈希或绕过失败；实际包与消费结果以最终发布记录为准。
