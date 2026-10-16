@@ -81,6 +81,7 @@ fn print_report(
   parsed : @lib.WasmModule,
   analysis : @lib.Analysis,
   options : @lib.Options,
+  whole_gzip? : Result[Int, String],
 ) -> Unit {
   let warning = @lib.render_graph_warning(analysis.graph)
   if warning.length() > 0 {
@@ -93,7 +94,7 @@ fn print_report(
     println(
       @lib.render_compression(
         parsed.file_size,
-        @lib.compressed_size(bytes),
+        whole_gzip.unwrap_or_else(fn() { @lib.compressed_size(bytes) }),
         @lib.compress_sections(bytes, parsed),
       ),
     )
@@ -271,6 +272,44 @@ fn run_function_path(options : @lib.Options, target_index : Int) -> Unit {
 }
 
 ///|
+/// Validate configuration and baseline requirements before business input I/O.
+fn read_budget(options : @lib.Options) -> @lib.CompiledBudget? {
+  let config_path = match options.budget {
+    Some(path) => path
+    None => return None
+  }
+  let config_text = @fs.read_file_to_string(config_path) catch {
+    _ => {
+      println("moonsize: cannot read budget configuration " + config_path)
+      @sys.exit(1)
+      return None
+    }
+  }
+  let compiled = match @lib.compile_budget_text(config_text) {
+    Ok(compiled) => compiled
+    Err(problems) => {
+      for problem in problems {
+        let location = match problem.rule_index {
+          Some(index) => "rules[" + index.to_string() + "]."
+          None => ""
+        }
+        println(
+          "moonsize: budget " + location + problem.field + ": " + problem.reason,
+        )
+      }
+      @sys.exit(2)
+      return None
+    }
+  }
+  if @lib.budget_requires_baseline(compiled) && options.baseline is None {
+    println("moonsize: growth budget rules require --baseline")
+    @sys.exit(2)
+    return None
+  }
+  Some(compiled)
+}
+
+///|
 /// Supply command-line arguments and filesystem access to the library.
 fn main {
   let options = match @lib.parse_options(@env.args()) {
@@ -281,6 +320,7 @@ fn main {
       return
     }
   }
+  let budget = read_budget(options)
   if options.why_index is Some(target) {
     run_function_path(options, target)
     return
@@ -304,6 +344,20 @@ fn main {
   let baseline_size = match baseline {
     Some((_, baseline_module)) => Some(baseline_module.file_size)
     None => None
+  }
+  let budget_report = match budget {
+    None => None
+    Some(compiled) => {
+      let baseline_data = baseline.map(fn(pair) { pair.0 })
+      match @lib.evaluate_budget(compiled, bytes, baseline_data?) {
+        Ok(report) => Some(report)
+        Err(error) => {
+          println("moonsize: " + @lib.describe_budget_error(error))
+          @sys.exit(1)
+          return
+        }
+      }
+    }
   }
   // Prepare every fallible comparison before printing any normal report. The
   // baseline bytes were read once; size comparison never constructs its graph.
@@ -349,6 +403,36 @@ fn main {
     @sys.exit(@lib.EXIT_OVER_SIZE)
     return
   }
+  if budget_report is Some(report) {
+    // No normal output before all fallible preparation and strict checking.
+    for target in [options.budget_json, options.budget_md] {
+      if target is Some(path) && @fs.path_exists(path) {
+        println("moonsize: budget output already exists: " + path)
+        @sys.exit(1)
+        return
+      }
+    }
+    if options.budget_json is Some(target) {
+      write_output(
+        target,
+        @lib.render_budget_json(
+          report,
+          options.path,
+          baseline_path?=options.baseline,
+        ),
+      )
+    }
+    if options.budget_md is Some(target) {
+      write_output(
+        target,
+        @lib.render_budget_markdown(
+          report,
+          options.path,
+          baseline_path?=options.baseline,
+        ),
+      )
+    }
+  }
   match options.call_graph {
     Some(target) =>
       write_output(target, @lib.render_graph(options.path, analysis, target))
@@ -363,7 +447,13 @@ fn main {
           write_output(target, contents)
           println("HTML report written to " + target)
         }
-        None => print_report(bytes, parsed, analysis, options)
+        None => {
+          let whole_gzip = match budget_report {
+            Some(report) => report.current.gzip
+            None => None
+          }
+          print_report(bytes, parsed, analysis, options, whole_gzip?)
+        }
       }
   }
   match baseline {
@@ -376,6 +466,14 @@ fn main {
   if function_diff is Some(diff) {
     println("")
     println(@lib.render_function_diff(diff, options.top))
+  }
+  if budget_report is Some(report) {
+    println("")
+    println(@lib.render_budget(report))
+    if report.exit_code != 0 {
+      @sys.exit(report.exit_code)
+    }
+    return
   }
   // The gate is last so the report a CI log shows is the one that explains the
   // failure, and it runs whatever the output mode was: a budget is a budget.

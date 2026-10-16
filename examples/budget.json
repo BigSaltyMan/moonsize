@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "rules": [
+    {"id": "file-size", "metric": "file.raw", "mode": "absolute", "max_bytes": 102400},
+    {"id": "gzip-growth", "metric": "file.gzip", "mode": "growth", "max_bytes": 1024},
+    {"id": "code-size", "metric": "code.raw", "mode": "absolute", "max_bytes": 65536},
+    {"id": "package-growth", "metric": "package.raw", "package": "demo::budgetdemo", "mode": "growth", "max_bytes": 512}
+  ]
+}

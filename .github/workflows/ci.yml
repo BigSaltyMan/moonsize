@@ -50,6 +50,21 @@ jobs:
         run: node scripts/test-optimization-experiment.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-path CLI regressions
         run: node scripts/test-function-path.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Multi-metric budget CLI regressions
+        run: node scripts/test-budget.mjs _build/native/release/build/cmd/main/main.exe
+      - name: MoonBit budget source demo and rollback
+        run: node scripts/demo-budget.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Budget source evidence artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: budget-source-evidence
+          path: |
+            _build/budget-demo/*.json
+            _build/budget-demo/*.md
+            _build/budget-demo/*.txt
+            _build/budget-demo/*.wasm
+            _build/budget-demo/run.log
+          if-no-files-found: error
       - name: MoonBit function-path source demo and rollback
         run: node scripts/demo-function-path.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-path evidence artifacts
@@ -111,6 +126,20 @@ jobs:
         run: moon build --target native --release
       - name: The example stays inside its budget
         run: '"$CLI" "$EXAMPLE" --max-size 100KB'
+      - name: Multi-metric budget for the freshly built example
+        run: |
+          "$CLI" "$EXAMPLE" --budget examples/ci-budget.json \
+            --budget-json _build/ci-budget-result.json \
+            --budget-md _build/ci-budget-summary.md
+          cat _build/ci-budget-summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Save actual example budget evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-budget-evidence
+          path: |
+            _build/ci-budget-result.json
+            _build/ci-budget-summary.md
+          if-no-files-found: error
       # Every valid module exceeds 0B. Only a budget refusal (3), accompanied
       # by its reason, proves that the gate fired; input/launch errors do not.
       - name: The gate actually fires

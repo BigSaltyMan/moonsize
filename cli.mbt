@@ -33,6 +33,10 @@ pub struct Options {
   why_index : Int?
   why_root : Int?
   why_json : String?
+  /// Validated multi-metric budgets, with optional evidence outputs.
+  budget : String?
+  budget_json : String?
+  budget_md : String?
   /// Print whole-file gzip and independent section gzip measurements.
   compress : Bool
   /// Refuse to report at all when the call graph is incomplete, rather than
@@ -64,6 +68,9 @@ pub fn Options::default(path : String) -> Options {
     why_index: None,
     why_root: None,
     why_json: None,
+    budget: None,
+    budget_json: None,
+    budget_md: None,
     compress: false,
     strict: false,
   }
@@ -270,6 +277,9 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut why_index : Int? = None
   let mut why_root : Int? = None
   let mut why_json : String? = None
+  let mut budget : String? = None
+  let mut budget_json : String? = None
+  let mut budget_md : String? = None
   let mut compress = false
   let mut strict = false
   let mut i = 1
@@ -291,6 +301,22 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
           )
       }
       i = i + 2
+    } else if arg == "--budget" ||
+      arg == "--budget-json" ||
+      arg == "--budget-md" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err("moonsize: " + arg + " needs a non-empty path\n\n" + usage())
+      }
+      if arg == "--budget" {
+        budget = Some(args[i + 1])
+      } else if arg == "--budget-json" {
+        budget_json = Some(args[i + 1])
+      } else {
+        budget_md = Some(args[i + 1])
+      }
+      i += 2
     } else if arg == "--why-index" || arg == "--why-root" {
       if i + 1 >= args.length() {
         return Err("moonsize: " + arg + " needs an index\n\n" + usage())
@@ -385,6 +411,39 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if budget is None && (budget_json is Some(_) || budget_md is Some(_)) {
+    return Err(
+      "moonsize: --budget-json and --budget-md require --budget\n\n" + usage(),
+    )
+  }
+  if budget is Some(_) {
+    if max_size is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      html is Some(_) ||
+      call_graph is Some(_) {
+      return Err(
+        "moonsize: --budget cannot be combined with --max-size, function-path queries, --experiment, --html or --call-graph\n\n" +
+        usage(),
+      )
+    }
+    if budget_json is Some(target) && !target.has_suffix(".json") {
+      return Err("moonsize: --budget-json wants a .json path\n\n" + usage())
+    }
+    if budget_md is Some(target) && !target.has_suffix(".md") {
+      return Err("moonsize: --budget-md wants a .md path\n\n" + usage())
+    }
+    if baseline is Some(target) &&
+      (target.trim().is_empty() || target.has_prefix("--")) {
+      return Err("moonsize: --baseline needs a non-empty path\n\n" + usage())
+    }
+    if path.trim().is_empty() {
+      return Err("moonsize: input path must not be empty\n\n" + usage())
+    }
   }
   if why_index is None && (why_root is Some(_) || why_json is Some(_)) {
     return Err(
@@ -486,6 +545,9 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     why_index,
     why_root,
     why_json,
+    budget,
+    budget_json,
+    budget_md,
     compress,
     strict,
   })

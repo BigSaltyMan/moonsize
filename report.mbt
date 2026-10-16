@@ -453,6 +453,7 @@ pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
   "                 [--compress] [--strict] [--call-graph <path>] [--html <path>]\n" +
   "                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]\n" +
+  "                 [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]\n" +
   "                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]\n" +
   "       moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
@@ -468,6 +469,9 @@ pub fn usage() -> String {
   "  --html <path>        write the charts as a self-contained HTML report\n" +
   "  --max-size <size>    fail with exit code 3 above this size, where size is\n" +
   "                       bytes or a KB/MB/GB count such as 10KB or 1.5MB\n" +
+  "  --budget <path>      validated multi-metric byte budgets; growth needs --baseline\n" +
+  "  --budget-json <path> write budget JSON; requires --budget, refuses existing paths\n" +
+  "  --budget-md <path>   write CI Markdown summary; requires --budget, refuses existing paths\n" +
   "  --baseline <path>    compare against another module and print the change;\n" +
   "                       --max-size then bounds the growth, not the file\n" +
   "  --diff-functions     append function and package changes; requires --baseline\n" +
@@ -480,7 +484,7 @@ pub fn usage() -> String {
   "                       query mode allows only these flags and --strict\n" +
   "                       element functions are conservative roots; paths are\n" +
   "                       not execution traces or predictions of savings\n\n" +
-  "Exit codes: 0 completed, 1 input/query/output error, 2 bad command line,\n" +
+  "Exit codes: 0 completed, 1 input/query/output/unavailable measurement, 2 bad arguments/config,\n" +
   "            3 over budget, incomplete strict graph, or path search limited."
 }
 

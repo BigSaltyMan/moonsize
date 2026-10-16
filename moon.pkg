@@ -2,13 +2,10 @@ import {
   "bikallem/compress/gzip",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/crypto",
+  "moonbitlang/core/json",
 }
 
 supported_targets = "+native"
-
-import {
-  "moonbitlang/core/json",
-} for "wbtest"
 
 import {
   "moonbitlang/core/string",

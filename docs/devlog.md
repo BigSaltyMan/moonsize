@@ -217,3 +217,25 @@ MoonBit `0.10.13+cbb11c36f` 的实际演示：文件 4,977→10,785 B（+5,808�
 两份 README、帮助和 CI 已加入查询、接口迁移、限额和演示说明，CI 保留既有回归并上传 function-path-evidence。moon info 的接口差异仅为查询类型、四个查询/描述/渲染入口及 Options 三个字段；旧 parse/analyze/build 等签名不变。格式、deny-warn、测试、release 构建和 diff 检查通过，三个源码演示继续成功；预算读取新构建的 10675 B 示例，100KB 返回 0，0B 精确返回 3。
 
 本地 HEAD 仍为 e5833fe，收益边界、优化实验及 HTML 前置工作尚有未提交改动。本功能保留为独立可审阅改动，未将前置功能、图片或规划混入提交；按既定约束不推送，Linux CI 尚未运行，不能将本地成功标为远程验证完成。
+
+## 17. 多指标体积预算与 CI 摘要（2026-10-16）
+
+本次用户授权整理前置依赖、提交、正常推送并核验目标 SHA 的 Linux CI。先将模型边界和可复现优化实验整理为 `51ace59`，用暂存区导出的独立工程确认 293 项测试和 native 构建；再将函数路径查询独立提交为 `0fd5153`，确认 310 项测试。此前小节中的“未提交/不推送”为当时状态，本次授权覆盖后续交付；未把尚未实施的 HTML 改版规划当成已完成，也未纳入已有图片或规划文档。
+
+新增 `budget.mbt` 的 compile_budget(Json)、compile_budget_text(String)、budget_requires_baseline 和 evaluate_budget。CompiledBudget 在外部接口中为 opaque type，私有规则数组不能被外部修改；修改原始配置对象也不改变已编译规则。配置检查版本、非空规则、唯一 id、显式 metric/mode、非负 Int 阈值、package 要求与未知字段，按规则位置/字段列出问题。文本入口额外检查整数原始 token，防止极小小数被通用 JSON Double 转换舍入后误通过；配置和 growth 缺 baseline 在 Wasm I/O 前返回 2。
+
+支持 file.raw、整文件单流 file.gzip、完整 code.raw，以及按现有符号标签累计本地函数 total_size 的 package.raw。absolute 检查 current，growth 检查 current − baseline，等号通过，缩小保留负数，空模块的 code 是真实零。每次预算求值每侧所需指标只测一次，多条包规则共用统计/聚合，不建图或计算支配树；absolute 不请求无关 baseline 归因。CLI 每个输入文件只读一次，常规分析不按规则重复；已有 whole gzip 测量供 compress 文本复用。
+
+缺名、受损名称和未识别的 MoonBit mangling 导致未归因函数时，包预算保守返回 unavailable，保留覆盖数量/字节与观察到的标签存在性。充分归因的 growth 比较允许标签单侧缺失记零，并解释新出现/消失；两侧均无标签不能零值放行。文件、code、gzip 的成功测量不被归因失败抹掉，压缩失败保持 null 和实际错误，不回退为 raw/零。包指标不是完整源码成本或删除收益，gzip 不模拟服务端网络编码。
+
+新增 --budget、--budget-json、--budget-md；与 max-size、路径查询、实验、HTML 和调用图模式冲突时先返回 2。适用的普通文本选项保持可用，原 max-size 行为不变。准备完成后输出，strict 仍先以 3 拒绝不完整图，不创建或覆盖报告。所有目标路径在第一次写入前一起检查，拒绝已有文件、目录、输入/证据别名；后续 I/O 失败返回 1，不声称所有输出成功。部分已成功写入的证据允许保留。
+
+budget_report.mbt 提供逐规则英文文本、独立版本 1 JSON 和 Markdown；都保留 id、指标/包、mode、current/baseline/delta、limit、passed/exceeded/unavailable 和原因。JSON 还记录实际产物 SHA-256、输入路径、覆盖信息、压缩口径、整体状态及退出码；Markdown 对竖线、换行、反引号与 HTML/Markdown 字符转义。全部通过为 0，可评估且超限为 3，输入/测量/归因/写入错误为 1，配置/参数为 2；unavailable 优先于 exceeded，所有失败原因分别保留。不发 PR 评论或外部通知。
+
+新增 20 项库/参数/渲染回归，native 合计 **330/330**；包括四指标 absolute/growth、等号/正负增量、函数长度 LEB 边界、真实零和未知区别、包新出现/消失/缺失、归因覆盖不足、所需侧区分、导入索引空间、配置私有快照、数值类型和舍入、两侧输入错误、Markdown 转义。白盒仅在已有测量结果边界注入压缩 Err，确认 unavailable/退出 1/null/错误一致，无生产故障开关。
+
+新增 scripts/test-budget.mjs，V8 独立确认 6 个完整模块，**113 个实际进程场景**涵盖所有指标、重复规则、JSON/SHA 对账、混合失败优先级、配置先于业务输入、模式冲突、新建/已有目标/硬链接/目录/部分写入失败、strict 新建与已有输出、坏 current/baseline 不产生正常报告，以及旧 max-size 的精确正反例。既有九个回归脚本的 606 场景继续通过，合计 **719 个 CLI 场景**。
+
+scripts/demo-budget.mjs 在 `_build/budget-demo/` 同路径工程内以 wasm/debug/no-strip 构建 before→after→rollback，记录源码、命令、toolchain、实际哈希、运行输出和 JSON/Markdown。新增可选输出后，当前工具链实测 file.raw +423 B、whole gzip +149 B、code.raw +44 B、demo::budgetdemo +29 B；限额来自实际测量，不固定跨平台 gzip 字节。通过反例精确为 0/3，另验证坏输入为 1；回退恢复完整字节、原输出和规则结果。基础输出保持、可选输出有意增加，不声称行为完全等价。原有三个源码演示全部通过。
+
+两份 README、帮助、docs/budgets.md 和两个实际配置同步更新。examples/budget.json 用于真实演示包；examples/ci-budget.json 对本次新构建示例设置 file/gzip/code 绝对预算。CI 保留全部原有任务，新增预算回归与源码演示、上传预算证据，并将新示例的实际 Markdown 写入 GITHUB_STEP_SUMMARY。原生检查、测试、release、格式和 diff 检查通过；新构建 10675 B 示例的旧 100KB/0B 预算分别为 0/3，多指标配置通过。接口增量限定为预算 opaque/结果/错误类型、入口/渲染和 Options 三字段，原有公开函数签名不变。远端验证以本次最终 SHA 对应的实际 Actions 运行记录为准。

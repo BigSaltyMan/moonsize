@@ -62,6 +62,49 @@ moonsize after.wasm --baseline before.wasm --experiment experiment.html \
 
 离线 HTML 或 CI 使用的 JSON 报告汇总产物 SHA-256、实测文件与整文件 gzip 差值、段/函数/包差异、图诊断，以及声明的构建条件和业务验证记录。配置不同、验证失败和缺少记录均会显示；不会把文件变小直接判为成功优化。说明中的命令只记录，不执行；已存在的输出路径不会被覆盖。见[完整格式与复现流程](docs/optimization-experiments.md)和[报告示例](examples/optimization-experiment.html)。
 
+## 多指标预算与 CI 摘要
+
+用版本化 JSON 配置同时检查多个实际字节指标：
+
+```sh
+moonsize after.wasm --baseline before.wasm --budget moonsize-budget.json \
+  --budget-json budget-result.json --budget-md budget-summary.md
+```
+
+版本 1 使用非空 `rules` 数组，每条规则包含唯一非空 `id`、`metric`、`mode`、
+`max_bytes`。阈值使用 0 到 2147483647 的非负十进制整数，零合法；未知字段、
+小数、指数和错误类型在读取 Wasm 前拒绝。支持 `file.raw`、整文件 `file.gzip`、
+完整 `code.raw` 和 `package.raw`；包规则另需报告中的精确 `package` 标签。
+`absolute` 判断当前字节，`growth` 判断 current − baseline 并要求 `--baseline`。
+等于阈值通过，缩小保留负增量。
+
+code 指标包含段头、长度前缀和函数数量编码。包指标沿用符号归因，累计本地函数
+`total_size`（包含函数体长度前缀），不表示完整源码包成本或删除收益。缺名或
+无法确认的归属使包规则 unavailable；充分归因的增长比较允许单侧标签缺失记零，
+说明新出现/消失，两侧均无该标签则无法评估。文件、code 和 gzip 的成功结果仍保留。
+gzip 采用当前压缩器默认配置，将完整文件压成一个流，不预测服务端编码或网络成本，
+不累加独立段/函数 gzip。
+
+每条规则分别给出 passed、exceeded 或 unavailable、数值和原因。全部通过返回
+`0`；可评估且有超限返回 `3`；输入、测量、归因或输出错误返回 `1`，优先于超限；
+参数和配置错误返回 `2`。strict 仍在普通报告写入前以 `3` 拒绝不完整图。
+JSON/Markdown 可同时输出，包含输入哈希、覆盖率和指标边界，拒绝已有路径。
+`--budget` 与 `--max-size`、路径查询、实验、HTML 和调用图输出冲突，可组合适用的
+普通文本附加选项。
+
+[配置、API 迁移及详细约定](docs/budgets.md) 与[实际演示配置](examples/budget.json)
+均可复核。先运行源码演示，再对它的真实产物使用示例包标签：
+
+```sh
+node scripts/demo-budget.mjs _build/native/release/build/cmd/main/main.exe
+_build/native/release/build/cmd/main/main.exe _build/budget-demo/after.wasm \
+  --baseline _build/budget-demo/before.wasm --budget examples/budget.json
+```
+
+CI 保留既有回归，新增预算回归和源码/回退演示，保存 JSON/Markdown，并对本次
+新构建示例应用[文件、gzip、code 配置](examples/ci-budget.json)，将实际生成的
+Markdown 加入 CI step summary。
+
 ## 查询函数引入路径
 
 从报告中找到大函数的 index 后，可以查询哪个模型入口引用了它：

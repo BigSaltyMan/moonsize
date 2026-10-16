@@ -85,6 +85,56 @@ equivalent behavior. Context commands are recorded, never executed. Existing
 output paths are refused. See the [format and reproducible workflow](docs/optimization-experiments.md)
 and [sample report](examples/optimization-experiment.html).
 
+## Multi-metric budgets and CI summaries
+
+Use a versioned JSON configuration to check several measured byte limits:
+
+```sh
+moonsize after.wasm --baseline before.wasm --budget moonsize-budget.json \
+  --budget-json budget-result.json --budget-md budget-summary.md
+```
+
+Version 1 has a nonempty `rules` array. Every rule needs a unique nonempty `id`,
+`metric`, `mode` and integer `max_bytes` (0 through 2147483647). Supported metrics
+are `file.raw`, whole-file `file.gzip`, complete `code.raw`, and `package.raw`;
+the last also requires an exact `package` label from the report. Unknown fields,
+fractional/exponent tokens and invalid values are rejected before reading Wasm.
+`absolute` checks current bytes; `growth` checks current minus baseline and
+requires `--baseline`. Equality passes and shrinkage retains its negative delta.
+
+Package bytes sum local function `total_size` under existing symbol attribution,
+including body size prefixes. Missing names or unresolved ownership make package
+rules unavailable. A fully attributed growth comparison can record a newly
+observed/disappeared label as zero on the missing side; a label absent on both
+sides is unavailable. Successful file/code/gzip measurements are retained.
+Package totals are not total source-package costs or deletion savings; gzip is
+one whole-file measurement with the current compressor defaults, not predicted
+network cost. Independent gzip streams are never added.
+
+Each rule reports `passed`, `exceeded` or `unavailable`, its measurements and
+reason. Exits are 0 for all passed, 3 for evaluable rules with an exceeded limit,
+1 for input/measurement/attribution/output errors (taking precedence over exceeded),
+and 2 for arguments/configuration. Strict retains its existing refusal code 3
+before normal reports are written. JSON/Markdown refuse existing destinations;
+they include artifact hashes, coverage and metric scope. Both outputs can be
+requested together. `--budget` conflicts with `--max-size`, path queries,
+experiments, HTML and graph export; ordinary text options remain available.
+
+[Configuration, APIs, migration and exact semantics](docs/budgets.md) include a
+reproducible source demo and the actual
+[demo configuration](examples/budget.json). Run it before this example, whose
+package label belongs to that demo:
+
+```sh
+node scripts/demo-budget.mjs _build/native/release/build/cmd/main/main.exe
+_build/native/release/build/cmd/main/main.exe _build/budget-demo/after.wasm \
+  --baseline _build/budget-demo/before.wasm --budget examples/budget.json
+```
+
+CI runs the budget regression and source/rollback demo, saves JSON/Markdown, and
+applies [file/gzip/code budgets](examples/ci-budget.json) to the freshly built
+example. Its generated Markdown is also appended to the CI step summary.
+
 ## Explaining a function's reference path
 
 After locating a large function's index in the report, ask which modeled entry
