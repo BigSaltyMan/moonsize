@@ -80,10 +80,11 @@ generated page from `c90f0d2` was compared with the regenerated page: every
 existing payload field/value is unchanged, with only the additive leaf index.
 
 `examples/report.png` is the existing user-modified image and was not overwritten.
-It remains labeled as an earlier screenshot in the READMEs. New real-browser
-captures are `examples/report-desktop.jpg` (1440 × 1000) and
-`examples/report-mobile.jpg` (390 × 844). The browser returns JPEG captures,
-so the extensions reflect their actual format.
+The READMEs directly display both new real-browser screenshots. The
+captures use 1440 × 1000 and 390 × 844 browser viewports. The actual JPEG
+files are `examples/report-desktop.jpg` (1440 × 1000 pixels) and
+`examples/report-mobile.jpg` (375 × 812 pixels); the browser scaled the mobile
+capture. The extensions reflect the returned JPEG format.
 
 ## Verification and browser acceptance
 

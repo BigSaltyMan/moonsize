@@ -670,9 +670,10 @@ record the real HTTP-browser checks, screenshots and remaining print/offline lim
 
 ![Current report at 1440 px](examples/report-desktop.jpg)
 
-[390 px mobile capture](examples/report-mobile.jpg). Both captures use the real
-HTTP browser. The [earlier image](examples/report.png) is preserved separately
-and predates this redesign.
+![Current report at 390 px](examples/report-mobile.jpg)
+
+Both screenshots were captured from the generated report in a real browser at
+`http://localhost:5173/`.
 
 ## CI integration
 
@@ -938,8 +939,10 @@ moon run cmd/main -- \
 The first step builds `examples/` and leaves the artifact at
 `_build/wasm/debug/build/examples/examples.wasm`. The second step updates the
 repository's `examples/fib.wasm` copy; the third generates HTML from that copy.
-After checking the new report, separately update the screenshot at 1400px wide
-and full height. Rebuilding alone does not update the stored binary or report.
+After checking the new report at `http://localhost:5173/`, update
+`examples/report-desktop.jpg` with a 1440 × 1000 viewport and
+`examples/report-mobile.jpg` with a 390 × 844 viewport. Rebuilding alone does
+not update the stored binary or report.
 
 `.moonignore` keeps the rendered page out of the published package — it is
 1.2 MB of what would otherwise be a 2.4 MB module, and nobody `moon add`s this

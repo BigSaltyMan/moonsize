@@ -425,8 +425,9 @@ gzip 比率仍使用包含长度前缀的完整编码范围。index 包含前置
 
 ![1440 px 实际报告截图](examples/report-desktop.jpg)
 
-[390 px 手机截图](examples/report-mobile.jpg)。两图均来自真实 HTTP 浏览器；
-[原有历史图片](examples/report.png)单独保留，不代表本次页面。
+![390 px 手机实际报告截图](examples/report-mobile.jpg)
+
+两张截图均来自 `http://localhost:5173/` 中实际生成的报告页面。
 
 ## CI 集成
 
@@ -588,6 +589,6 @@ moon run cmd/main -- \
   examples/fib.wasm
 ```
 
-第一步构建 `examples/`，产物落在 `_build/wasm/debug/build/examples/examples.wasm`；第二步更新仓库里的 `examples/fib.wasm` 副本；第三步依据该副本生成 HTML。确认新报告后，再另行更新 1400px 宽、整页高度的截图。仅运行构建不会更新仓库示例副本或报告。
+第一步构建 `examples/`，产物落在 `_build/wasm/debug/build/examples/examples.wasm`；第二步更新仓库里的 `examples/fib.wasm` 副本；第三步依据该副本生成 HTML。在 `http://localhost:5173/` 确认新报告后，再分别使用 1440 × 1000 和 390 × 844 视口更新 `examples/report-desktop.jpg` 与 `examples/report-mobile.jpg`。仅运行构建不会更新仓库示例副本或报告。
 
 `.moonignore` 把渲染出来的页面挡在发布包之外——它占了原本 2.4 MB 模块中的 1.2 MB，而没人会为了看一张截图去 `moon add` 这个模块——源码、示例二进制和图表库都照常发布。

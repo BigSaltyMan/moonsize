@@ -251,3 +251,5 @@ scripts/demo-budget.mjs 在 `_build/budget-demo/` 同路径工程内以 wasm/deb
 新增 6 项库测试，native 共 **336/336**。新 scripts/test-html-report.mjs 用 6 个 V8 验证的模块及长路径/CDN 场景运行 **8 个真实进程场景**，与原有 719 个合计 **727 个 CLI 场景**；对实际输出逐行核对排序、索引、原始范围、数值与错误，并执行生成脚本的可观察图表/DOM 适配器，验证轴、分母、颜色、空/失败、切换、resize 和打印状态。这些适配器不冒充浏览器布局。原十个脚本、四个源码演示与回退检查、预算 100KB/0B 正反例继续通过。CI 追加新回归，保留既有任务。
 
 按用户指定，通过 npm run dev 的 HTTP 页面 http://localhost:5173 做真实 Chromium 验收，复用已运行的 5173 服务器。1440/1024/768/390 宽度均无页面横向溢出，图表绘制和 gzip 切换正常；验证实际 tooltip、手机局部表格滚动、Enter 展开/收起、454 字符 Unicode 名称与重名索引、移除图表库后的静态回退和真实缺口警告。两张 JPEG 来自真实视口。初始 file 协议被浏览器拒绝后未绕过，用户指定 HTTP 后在该地址验收。实际断网下打开迁移文件、打印/PDF 输出未完成，现有浏览器 API 没有网络切断、打印或 PDF 导出能力；资源自包含及打印事件回归不能替代这两项实测。详细边界见 docs/html-report.md。远端 Linux 结果以推送后目标 SHA 的实际 CI 记录为准。
+
+README 截图后续更新：两份 README 均直接展示 report-desktop.jpg 与 report-mobile.jpg，并将再生成说明同步为实际视口尺寸和 localhost:5173 地址；旧 report.png 保留在工作区，未覆盖或提交。仅修改文档，核对两张 JPEG 的实际尺寸、引用路径及 diff，无需重复运行分析实现测试。
