@@ -25,6 +25,10 @@ pub struct Options {
   baseline : String?
   /// Append symbol-based function and package differences (requires baseline).
   diff_functions : Bool
+  /// Write an optimization experiment as .html or .json (requires baseline).
+  experiment : String?
+  /// Optional self-reported build settings and business validation record.
+  experiment_context : String?
   /// Print whole-file gzip and independent section gzip measurements.
   compress : Bool
   /// Refuse to report at all when the call graph is incomplete, rather than
@@ -51,6 +55,8 @@ pub fn Options::default(path : String) -> Options {
     max_size: None,
     baseline: None,
     diff_functions: false,
+    experiment: None,
+    experiment_context: None,
     compress: false,
     strict: false,
   }
@@ -229,6 +235,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut max_size : Int? = None
   let mut baseline : String? = None
   let mut diff_functions = false
+  let mut experiment : String? = None
+  let mut experiment_context : String? = None
   let mut compress = false
   let mut strict = false
   let mut i = 1
@@ -282,6 +290,16 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
           )
       }
       i = i + 2
+    } else if arg == "--experiment" || arg == "--experiment-context" {
+      if i + 1 >= args.length() {
+        return Err("moonsize: " + arg + " needs a path\n\n" + usage())
+      }
+      if arg == "--experiment" {
+        experiment = Some(args[i + 1])
+      } else {
+        experiment_context = Some(args[i + 1])
+      }
+      i = i + 2
     } else if arg == "--diff-functions" {
       diff_functions = true
       i = i + 1
@@ -307,6 +325,32 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if experiment_context is Some(_) && experiment is None {
+    return Err(
+      "moonsize: --experiment-context requires --experiment\n\n" + usage(),
+    )
+  }
+  if experiment is Some(target) {
+    if baseline is None {
+      return Err("moonsize: --experiment requires --baseline\n\n" + usage())
+    }
+    if !(target.has_suffix(".json") || target.has_suffix(".html")) {
+      return Err(
+        "moonsize: --experiment wants a .json or .html path\n\n" + usage(),
+      )
+    }
+    if html is Some(_) ||
+      call_graph is Some(_) ||
+      retained ||
+      dead_code ||
+      compress ||
+      diff_functions {
+      return Err(
+        "moonsize: --experiment includes its own measurements; cannot combine with --html, --call-graph, --retained, --dead-code, --compress or --diff-functions\n\n" +
+        usage(),
+      )
+    }
   }
   if diff_functions && baseline is None {
     return Err("moonsize: --diff-functions requires --baseline\n\n" + usage())
@@ -351,6 +395,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     max_size,
     baseline,
     diff_functions,
+    experiment,
+    experiment_context,
     compress,
     strict,
   })

@@ -46,8 +46,26 @@ jobs:
         run: bash scripts/test-compression-report.sh _build/native/release/build/cmd/main/main.exe
       - name: Function-diff CLI regressions
         run: bash scripts/test-function-diff.sh _build/native/release/build/cmd/main/main.exe
+      - name: Optimization-experiment CLI regressions
+        run: node scripts/test-optimization-experiment.mjs _build/native/release/build/cmd/main/main.exe
       - name: MoonBit function-diff source demo and rollback
         run: bash scripts/demo-function-diff.sh _build/native/release/build/cmd/main/main.exe
+      - name: Retained model versus rebuilt size evidence
+        run: node scripts/demo-retained-boundaries.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Retained boundary evidence artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: retained-boundary-evidence
+          path: |
+            _build/retained-boundaries/results.json
+            _build/retained-boundaries/*/*.wasm
+            _build/retained-boundaries/*/*.wasm.report.txt
+            _build/retained-boundaries/*/*.wasm.graph.json
+            _build/retained-boundaries/*/*.wasm.comparison.txt
+            _build/retained-boundaries/*/*.stdout.txt
+            _build/retained-boundaries/*/experiment*.json
+            _build/retained-boundaries/*/experiment.html
+          if-no-files-found: error
 
   size-budget:
     name: Size budget

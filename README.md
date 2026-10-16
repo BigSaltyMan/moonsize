@@ -6,11 +6,14 @@ moon add BigSaltyMan/moonsize
 
 A size analyzer for WebAssembly, built for MoonBit's output. It reads a `.wasm`
 file, measures every section, attributes the code section to named functions,
-follows the call graph, and reports what could be deleted.
+follows a reference graph, and highlights candidates for investigation. It does
+not predict the exact bytes a source deletion will save after rebuilding.
 
 The analysis model follows [Twiggy](https://github.com/rustwasm/twiggy): sizes
 are attributed to individual functions, functions are grouped by package, and
-reachability from the module's roots decides what is really used.
+reachability is calculated from the current model's roots. Read the
+[retained-size boundaries and measured rebuild cases](docs/retained-size-boundaries.md)
+before interpreting a removal candidate.
 
 Chinese version: [README.zh.md](README.zh.md).
 
@@ -30,13 +33,14 @@ it builds with `--target native` as well.
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]
 
 Report the section table of a WebAssembly binary, rank its heaviest
 functions, roll the bytes up by module, and follow the call graph to
-find what can be deleted.
+identify candidates for investigation.
 
   --top <n>            how many functions to rank (default 10)
-  --retained           what deleting each function would free
+  --retained           dominated function bytes in the current graph model
   --dead-code          functions no root can reach
   --compress           whole-file gzip and independent section gzip sizes
   --strict             refuse to report when the call graph is incomplete,
@@ -48,6 +52,9 @@ find what can be deleted.
   --baseline <path>    compare against another module and print the change;
                        --max-size then bounds the growth, not the file
   --diff-functions     append function and package changes; requires --baseline
+  --experiment <path>  write measured before/after results; requires --baseline
+                       refuses to overwrite an existing path
+  --experiment-context <path>  attach declared build settings and validation
 
 Exit codes: 0 ok, 1 unreadable input, 2 bad command line, 3 over budget.
 ```
@@ -62,6 +69,21 @@ moonsize app.wasm --retained --dead-code        # the full text report
 moonsize app.wasm --html report.html            # charts, opens in a browser
 moonsize app.wasm --call-graph graph.dot        # for Graphviz
 ```
+
+## Optimization experiments
+
+```sh
+moonsize after.wasm --baseline before.wasm --experiment experiment.html \
+  --experiment-context context.json --top 20
+```
+
+The offline HTML report (or `.json` for CI) combines artifact SHA-256, measured
+file and whole-file gzip changes, section/function/package differences, graph
+diagnostics, and declared build/validation records. Different build settings,
+failed checks, and missing records remain visible; smaller output does not prove
+equivalent behavior. Context commands are recorded, never executed. Existing
+output paths are refused. See the [format and reproducible workflow](docs/optimization-experiments.md)
+and [sample report](examples/optimization-experiment.html).
 
 ## Using the library
 
@@ -323,30 +345,32 @@ file or changing an existing one, for all three formats.
 
 ### Retained size
 
-`SIZE` is a function on its own. `RETAINED` is what deleting it would actually
-free: its own bytes plus every function that becomes unreachable with it, with
-`DIES` counting how many that is.
+`SIZE` is a defined function's encoded size, including its body-length prefix.
+`RETAINED` sums those encoded sizes for the reachable defined functions dominated
+by the selected function in the current graph/root model, including itself.
+`DIES` counts the other functions in that model set.
 
-That set is exactly the functions the deleted one *dominates* — those every path
-from a root has to pass through. Taking the module's graph, adding a virtual root
-above the real ones, and computing the dominator tree gives every function's
-retained size in one pass. Cycles fall out of the fixpoint rather than needing a
-special case, and the answer is exact rather than an approximation from local
-predecessor counts: if two branches both call a function, deleting one branch
-does not free it, but deleting the point where both branches meet does.
+The dominator computation answers a question about a fixed graph: every path
+from a root to a dominated function passes through the selected function. Its
+graph result does not model editing callers, recompiling, changing indices or
+removing data and metadata. Element functions are conservatively rooted even
+for private/passive/declarative segments. A clean diagnostic list or successful
+`--strict` therefore does not turn this result into exact deletion savings.
 
 Reading the table:
 
-- `RETAINED == SIZE` — the function is load-bearing only for itself. Deleting it
-  saves its own bytes and nothing more.
-- `RETAINED ≫ SIZE` with a high `DIES` — a good candidate. Removing it takes a
-  whole subtree with it.
+- `RETAINED == SIZE` — the model attributes no other function's encoded bytes to
+  this dominator; an actual source change may affect other sections and callers.
+- `RETAINED ≫ SIZE` with a high `DIES` — investigate the corresponding dependency
+  branch, then rebuild to measure the actual effect.
 - `IND` — the function can be reached through a `call_indirect`, so removing it
   requires checking every dependent table entry and indirect call before removal.
 
-Both numbers are printed on purpose. `SIZE` says how much the compiler could win
-by making the function smaller; `RETAINED` says how much it wins by removing it,
-which is usually the cheaper change.
+Actual raw-file reduction is `before.wasm` size minus rebuilt `after.wasm` size.
+Whole-file gzip reduction is measured separately on the two complete files with
+the same compressor settings. Neither is predicted by retained size or by
+summing independently compressed functions. Reproducible cases and the exact
+definitions are in [the boundary report](docs/retained-size-boundaries.md).
 
 ### Dead code
 
@@ -415,11 +439,10 @@ now returns `Err` for invalid metadata ranges instead of measuring empty bytes.
 
 ### Judging what can be deleted
 
-1. Start with `--dead-code`. Every row there is free to remove; check that
-   nothing outside the module calls it by name (an exported name would have made
-   it a root, so this is already accounted for).
+1. Check graph diagnostics, root assumptions and the runtime integration contract.
+   `--dead-code` lists functions unreachable in this model; it is not a safe-deletion list.
 2. Then look at `--retained` for large `RETAINED` values with `DIES` above zero.
-   Those are the functions whose removal cascades.
+   These identify modelled dependency branches to investigate, not promised savings.
 3. Treat `IND` rows with care: an indirect candidate can only be removed when the
    table entry and the call sites go with it.
 

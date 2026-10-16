@@ -473,6 +473,16 @@ test "every section and function carries its compressed size" {
 }
 
 ///|
+test "HTML always explains model retention versus actual savings" {
+  let analysis = analysis_of_module(static_table_module())
+  assert_true(is_graph_complete(analysis.graph))
+  let html = render_html(analysis, "complete.wasm")
+  assert_true(html.contains("does not predict recompiled file reduction"))
+  assert_true(html.contains("even when --strict passes"))
+  assert_true(html.contains("not a safe-deletion list"))
+}
+
+///|
 test "the sections chart offers both views of the same bars" {
   let html = render_html(analysis_with_name("demo::fib"), "app.wasm")
   // Two series over one axis, with the compressed one hidden until it is asked

@@ -20,7 +20,8 @@ pub struct Analysis {
   roots : Set[Int]
   /// Everything the roots can reach within the current graph model.
   reachable : Set[Int]
-  /// Retention within the current graph model; diagnostics limit its accuracy.
+  /// Dominated encoded function bytes within this graph/root model. Even with
+  /// no diagnostics, this is not recompiled file reduction or gzip savings.
   retained : Array[RetainedSize]
   /// Functions an ordinary or tail indirect call could reach.
   indirect : Set[Int]

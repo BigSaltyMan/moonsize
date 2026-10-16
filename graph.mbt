@@ -1,5 +1,5 @@
 ///|
-/// The reference graph between functions, and what deleting one of them frees.
+/// The reference graph between functions and their modelled domination weights.
 ///
 /// The model follows Twiggy: a module is a graph of functions rooted at whatever
 /// the outside world can reach — exported functions, the start function and
@@ -386,9 +386,9 @@ pub fn reachable_from_roots(graph : CallGraph, roots : Set[Int]) -> Set[Int] {
 /// The roots of a module: what the outside world can reach without going through
 /// code the module already has.
 ///
-/// Exported functions are the module's public surface, the start function runs
-/// at instantiation, and anything an element section puts in a table can be
-/// called from outside or through `call_indirect`.
+/// Exported functions and start are roots. Every function referenced by an
+/// element segment is also conservatively rooted, including private, passive
+/// and declarative segments. This does not assert that each can actually run.
 pub fn roots_of(
   exports : Array[Export],
   elements : Array[ElementSegment],
@@ -425,15 +425,15 @@ pub fn indirect_targets(graph : CallGraph) -> Set[Int] {
 }
 
 ///|
-/// What deleting one function would free.
+/// Encoded function weights in a dominator subtree of the current graph model.
 pub struct RetainedSize {
   index : Int
   /// The function's own encoded bytes, its size prefix included.
   own_size : Int
-  /// Bytes freed by deleting it: its own bytes plus every function that becomes
-  /// unreachable with it.
+  /// Sum of own_size over its modelled dominated functions, including itself.
+  /// Excludes data, metadata and caller rewrites; not actual recompilation savings.
   retained : Int
-  /// How many other functions die with it.
+  /// How many other defined functions it dominates in this model.
   retained_functions : Int
 }
 
@@ -457,8 +457,9 @@ fn intersect(a : Int, b : Int, idom : Array[Int], order : Array[Int]) -> Int {
 ///|
 /// The retained size of every reachable function.
 ///
-/// Deleting a function makes exactly the functions it *dominates* unreachable:
-/// those every path from a root has to pass through. Computing that with an
+/// Within the fixed graph/root model, removing a node disconnects its dominated
+/// nodes: those every path from a root has to pass through. This is a graph
+/// operation, not source removal, relinking or gzip prediction. Computing it with an
 /// explicit "remove it and see what dies" walk would be correct but quadratic,
 /// and it would still need cycle handling; the dominator tree answers the same
 /// question for every function at once, and cycles fall out of the fixpoint

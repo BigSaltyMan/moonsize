@@ -431,15 +431,27 @@ test "retained size is reported as a table of two numbers" {
     ),
     content=(
       #|Retained size
+      #|  RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.
       #|
       #|    #  INDEX  SIZE  RETAINED  DIES    SHARE  IND  FUNCTION
       #|    1      1   101       302     1    30.2%       app::main
       #|    2      2   201       201     0    20.1%       app::helper
       #|
-      #|  DIES counts the other functions that become unreachable with this one.
+      #|  DIES counts other functions dominated by this function in the current model.
       #|  IND marks a function an indirect call could reach.
     ),
   )
+}
+
+///|
+test "strict-compatible graphs still explain retained modelling boundaries" {
+  let analysis = analysis_of_module(static_table_module())
+  assert_true(is_graph_complete(analysis.graph))
+  let text = render_retained(analysis, 10)
+  assert_true(text.contains("within the current graph/root model"))
+  assert_true(text.contains("does not predict recompiled file reduction"))
+  assert_true(text.contains("even when --strict passes"))
+  assert_true(render_retained(analysis, 0).contains("whole-file gzip savings"))
 }
 
 ///|

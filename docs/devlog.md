@@ -12,7 +12,7 @@
 
 **分析模型参考 Twiggy，实现独立。** 体积归因到函数、函数按包聚合、从模块根出发判定可达性，这三个选择来自 Rust 生态的 [Twiggy](https://github.com/rustwasm/twiggy)（MIT/Apache-2.0）。本项目未移植其源码，仅采用同一套分析模型；差异见 `README.md` 与"已知边界"一节。
 
-**调用图宁多不少。** `call x` 是精确边；`call_indirect` 无法静态确定目标，因此对元素段放进该表的每个函数都连一条保守边（`wasm.mbt`）。多算一个函数的后果是体积被高估，少算一条边的后果是"把这个函数报成死代码"—— 后者是本工具最不该犯的错。
+**调用图保留已知关系并暴露缺口。** `call x` 是精确边；表调用保留静态候选，动态表和引用调用带诊断。额外的边或根会改变可达集合和支配关系，不能据此给实际删减收益统一承诺上界或下界；漏边还可能把实际使用的函数误报为不可达。根、边、诊断和重编译实测需要一起解释。
 
 **Retained Size 用虚拟根加支配树。** 加一个虚拟根连到所有真实根，就能一次算出全部函数的 retained size，而不是每个函数各跑一次可达性；调用图里的环由不动点自然收敛（`graph.mbt`）。支配树与更弱的"唯一前驱"启发式之间的差别，被固定成测试期望，避免后续有人把它改回去（见提交"记录支配树与唯一前驱启发式的差异"）。
 
@@ -173,3 +173,29 @@ HTML 卡片标记 `Whole-file gzip`，段图例改为 `independent gzip`，图�
 MoonBit `0.10.13+cbb11c36f` 的实际演示：文件 4,977→10,785 B（+5,808）；classify 29→55 B（+26），weighted_score 新符号 103 B，demo::functiondiff 包 29→158 B（+129）。原有 29 个符号仍匹配，current 另有 18 个唯一新增符号（包含运行时辅助函数）共 2,055 B；已匹配增量 +70 B，函数编码总增量 +2,125 B，code 开销两侧均为 4 B。回退文件和函数差异均为零，不把手写数字作为测试依据。
 
 公开 `.mbti` 增量限定为 raw_name、Options.diff_functions，以及比较状态/错误/结果类型、compare_modules 和文本渲染入口。原有解析、建图、压缩、预算 API 不变。检查、七个脚本、真实源码演示及预算正反例完成后提交；取得目标提交的 Linux CI 成功记录后，再标记远程验证完成。图片和优化计划继续保留在工作区。
+
+## 14. 初审反馈后的收益边界与重编译案例
+
+初审反馈指出保守引用图和逐段压缩不足以支撑精确删减收益承诺。原申报及 README 的“删掉谁能省多少”“实际能释放”表述已撤回。retained 定义为固定图/根集合中的支配子树函数编码权重；它不模拟调用者改写、重新编译、数据和名称删减，也不是整文件 gzip 减量。所有 element 引用保守作为根的策略单独说明；无诊断和 strict 通过也不证明该集合等于真实执行，或能预测重编译收益。
+
+两份 README、CLI 帮助、retained 表格、公共类型注释、导出模型说明和 HTML 同步修订；retained 表格即使图完整或 top=0 也保留边界。HTML 始终显示模型与真实收益的区别，示例 HTML 已重新生成，已有图片未修改。新增两个测试固定无诊断情况下的文本/HTML 说明，不改变图算法、数值字段或公开接口。
+
+`scripts/demo-retained-boundaries.mjs` 在忽略目录内建立同路径工程，对独占分支和共享依赖各执行 debug/release 的 before→after→rollback，统一 `--target wasm --no-strip`，V8 验证模块，moonrun 执行并核对基础输出和回退字节。`#inline(never)` 保留调查对象，after 有意移除可选输出，不声称业务语义完全不变。Windows 本机独占 debug 为 retained 52 B、Wasm 减少 656 B、整文件 gzip 减少 237 B；共享 debug 为 16 B、127 B、41 B。release 的 gzip 减量分别为 228 B、39 B。各段独立 gzip 的减少量也不等于整流减少量。
+
+另有明确标为手工 Wasm 的私有表对照：run() 始终返回 42，element 保守根使目标不被报告为死代码，retained 5 B、文件减少 38 B、gzip 减少 27 B；不冒充 MoonBit 重编译案例。运行时写表对照合法且可执行，仍产生两条分析缺口并由 strict 返回 3，不提供删除收益结论。
+
+边界、案例和原始测量快照见 `docs/retained-size-boundaries.md` 与 `docs/retained-boundaries-results.json`；项目说明与复审文字分别在 `docs/october-proposal.md`、`docs/october-review-response.md`。CI 运行案例并上传 `retained-boundary-evidence`，包含 JSON、Wasm、原始分析/比较报告及运行输出，使用性质断言而非强制跨平台字节数相等。本地 286 项测试、七个脚本 498 个进程场景、函数差异源码演示及边界案例通过；目标提交的 Linux 结果以其运行记录为准。
+
+## 15. 优化实验报告（2026-10-16，本地未提交）
+
+为“调查候选—修改源码—重建—验证实际变化”增加通用输出模式。`--experiment report.html|report.json` 必须配合 baseline；`--experiment-context context.json` 可附上实验假设、两侧源码标识、构建命令、工具链、target、mode、strip、features 和业务验证状态。说明中的命令不会被执行，所有构建与验证信息均标为调用者声明。缺失上下文显示 not-recorded；条件不同逐字段提示；validation failed/not-run 原样保留，文件变小也不会自动成为业务正确的优化。
+
+核心实现 `experiment.mbt` 使用已有比较、分析和整文件压缩 API，SHA-256 使用已依赖的 `moonbitlang/x/crypto`，不引入新模块依赖。报告记录两侧实际字节哈希、文件和整文件 gzip 差值、图完整性及诊断、完整段差异、按原始符号匹配的函数变化、尽力包归因、匹配覆盖率和 code 开销。数值统一 current − baseline；top 只限制函数/包明细，不裁掉汇总。gzip 失败保留 null 和原因。HTML 无脚本或外部资源，路径、名称和声明均转义。
+
+新增公开函数 `check_experiment_context`、`experiment_report`、`render_experiment_html`，Options 增加 experiment/experiment_context 两个可读字段。通过 `moon info` 核对现有函数签名与类型字段未被删除。CLI 对说明先做参数/结构检查；两侧完成分析后才写报告。strict 检查前后两侧，任一不完整返回 3 且不创建文件。预算继续只约束原始文件增长，拒绝时保留报告及预算状态并返回 3；业务验证声明不改变测量命令的退出码。已存在的输出路径一律返回 1，防止覆盖报告或通过路径别名覆盖输入。
+
+新增 7 项库/参数测试，native 合计 **293/293**。新增 `scripts/test-optimization-experiment.mjs` 的 **41 个真实 CLI 场景**，覆盖增长、缩减、自比、独立 SHA-256 核对、整文件 gzip 对账、未匹配覆盖和 code 开销、错误配置/JSON、两侧输入错误、两侧 strict、HTML 转义、预算报告、新建失败和已有路径保护。原七个脚本 **498 个场景**和函数差异源码演示全部通过，合计 **539 个 CLI 场景**。
+
+边界案例脚本为四组真实 MoonBit 源码重编译和一组人工 Wasm 对照生成实验说明、HTML、JSON，核对新报告与原始测量的哈希和差值一致。`unique-debug` 示例为文件 10824→10168 B、整文件 gzip 5236→4999 B；通过源码回退、原始输出与基础行为检查，明确有意移除可选输出。示例保存到 `examples/optimization-experiment.html/json`，用法和库接口见 `docs/optimization-experiments.md`，两份 README 和复审材料已同步。
+
+本次完成本地格式、deny-warn、native 测试/release 构建及原有回归检查。CI 配置已加入新回归并上传实验报告；按用户要求不提交、不推送，因此本次没有远端 Linux CI 结果。浏览器工具拒绝 file 协议，未进行浏览器视觉验收；已检查 HTML 结构、转义、测量与离线资源约束。原有图片和优化计划保留。

@@ -452,12 +452,13 @@ pub fn render_module_summary(
 pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
   "                 [--compress] [--strict] [--call-graph <path>] [--html <path>]\n" +
-  "                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]\n\n" +
+  "                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]\n" +
+  "                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
-  "find what can be deleted.\n\n" +
+  "identify candidates for investigation.\n\n" +
   "  --top <n>            how many functions to rank (default 10)\n" +
-  "  --retained           what deleting each function would free\n" +
+  "  --retained           dominated function bytes in the current graph model\n" +
   "  --dead-code          functions no root can reach\n" +
   "  --compress           whole-file gzip and independent section gzip sizes\n" +
   "  --strict             refuse to report when the call graph is incomplete,\n" +
@@ -468,7 +469,10 @@ pub fn usage() -> String {
   "                       bytes or a KB/MB/GB count such as 10KB or 1.5MB\n" +
   "  --baseline <path>    compare against another module and print the change;\n" +
   "                       --max-size then bounds the growth, not the file\n" +
-  "  --diff-functions     append function and package changes; requires --baseline\n\n" +
+  "  --diff-functions     append function and package changes; requires --baseline\n" +
+  "  --experiment <path>  write measured before/after results; requires --baseline\n" +
+  "                       refuses to overwrite an existing path\n" +
+  "  --experiment-context <path>  attach declared build settings and validation\n\n" +
   "Exit codes: 0 ok, 1 unreadable input, 2 bad command line, 3 over budget."
 }
 
@@ -609,7 +613,15 @@ fn graph_modeling_scope() -> String {
   "Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. " +
   "Reference-call targets and dynamic table contents are not solved. " +
   "Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. " +
-  "graph_complete means no gaps detected within this scope, not full Wasm certification."
+  "Element references are conservative roots, including private, passive and declarative segments. " +
+  "graph_complete means no gaps detected within this scope, not full Wasm certification. " +
+  retained_modeling_scope()
+}
+
+///|
+fn retained_modeling_scope() -> String {
+  "RETAINED sums dominated encoded function bytes within the current graph/root model. " +
+  "It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes."
 }
 
 ///|
@@ -653,11 +665,10 @@ pub fn render_graph_warning(graph : CallGraph) -> String {
 ///|
 /// The retained-size table, computed within the current graph model.
 ///
-/// `SIZE` is the function on its own and `RETAINED` is that plus every function
-/// that becomes unreachable with it, with `DIES` counting how many others that
-/// is. A row where the two sizes match is load-bearing only for itself; a row
-/// where `RETAINED` dwarfs `SIZE` is a good place to look when shrinking a
-/// binary, because removing it takes everything underneath with it.
+/// `SIZE` is the function's encoded bytes. `RETAINED` sums the encoded bytes of
+/// reachable defined functions it dominates in this graph/root model, including
+/// itself. `DIES` counts the other members of that model set. None of these
+/// numbers predicts a source edit's recompiled file or gzip reduction.
 pub fn render_retained(analysis : Analysis, top : Int) -> String {
   let stats = analysis.stats
   let retained = analysis.retained
@@ -688,6 +699,7 @@ pub fn render_retained(analysis : Analysis, top : Int) -> String {
     index_width = number_width(entry.index, index_width)
   }
   let mut out = "Retained size\n"
+  out = out + "  " + retained_modeling_scope() + "\n"
   out = out + incomplete_note(analysis.graph)
   if shown == 0 {
     return out + "\n  no reachable functions to rank"
@@ -731,7 +743,7 @@ pub fn render_retained(analysis : Analysis, top : Int) -> String {
     rank = rank + 1
   }
   out = out +
-    "\n  DIES counts the other functions that become unreachable with this one.\n" +
+    "\n  DIES counts other functions dominated by this function in the current model.\n" +
     "  IND marks a function an indirect call could reach."
   out
 }

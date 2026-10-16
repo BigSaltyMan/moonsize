@@ -1,0 +1,128 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Optimization experiment: unique-debug</title><style>body{font:16px/1.6 system-ui,sans-serif;background:#f4f6fa;color:#172338;max-width:1120px;margin:32px auto;padding:0 20px}section{background:white;border:1px solid #dce3ee;border-radius:12px;padding:20px;margin:18px 0}h1,h2{line-height:1.25}table{border-collapse:collapse;width:100%}th,td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid #dce3ee;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 ui-monospace,monospace}.notice{border-left:5px solid #b7791f}.scroll{overflow:auto}code{overflow-wrap:anywhere}</style><h1>Optimization experiment: unique-debug</h1><p>Measured artifact comparison · moonsize</p><section class="notice"><h2>Interpretation</h2><p>Delta = current minus baseline. Negative means fewer bytes.</p><p>Declared build comparability: <strong>same-declared-settings</strong>. Different fields: [].</p><p>Business validation (self-reported): <strong>passed</strong>. A smaller artifact alone does not establish a successful optimization.</p><p>Self-reported; moonsize did not execute builds or business validation.</p></section><section><h2>Measured sizes</h2><table><tr><th>Bytes</th><th>Baseline</th><th>Current</th><th>Delta</th></tr><tr><th>Whole file</th><td>10824</td><td>10168</td><td>-656</td></tr><tr><th>Whole-file gzip</th><td>5236</td><td>4999</td><td>-237</td></tr></table><p>Gzip errors: baseline none; current none.</p></section><section><details><summary>Artifacts and graph diagnostics</summary><p>Graph completeness concerns the current model; it does not certify deletion safety.</p><h3>baseline</h3><pre>{
+  &quot;path&quot;: &quot;_build\\retained-boundaries\\unique-debug\\before.wasm&quot;,
+  &quot;sha256&quot;: &quot;388aa4712779c8d7501bb28f462e8298e27dbf6713fc2646563c97da2f0b8dd3&quot;,
+  &quot;raw_bytes&quot;: 10824,
+  &quot;whole_gzip_bytes&quot;: 5236,
+  &quot;gzip_error&quot;: null,
+  &quot;graph_complete&quot;: true,
+  &quot;diagnostics&quot;: []
+}</pre><h3>current</h3><pre>{
+  &quot;path&quot;: &quot;_build\\retained-boundaries\\unique-debug\\after.wasm&quot;,
+  &quot;sha256&quot;: &quot;319c48a4338e00e1387f298f2a0b7a65294b035a72b720a67cd89ac01019b1e9&quot;,
+  &quot;raw_bytes&quot;: 10168,
+  &quot;whole_gzip_bytes&quot;: 4999,
+  &quot;gzip_error&quot;: null,
+  &quot;graph_complete&quot;: true,
+  &quot;diagnostics&quot;: []
+}</pre></details></section><section><details><summary>Build and business validation record (self-reported)</summary><pre>{
+  &quot;title&quot;: &quot;Optimization experiment: unique-debug&quot;,
+  &quot;hypothesis&quot;: &quot;MoonBit source rebuild; same project path, toolchain and flags; optional call removed&quot;,
+  &quot;baseline&quot;: {
+    &quot;command&quot;: &quot;moon build --target wasm --debug --no-strip&quot;,
+    &quot;toolchain&quot;: &quot;moon 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moon.exe\nmoonc v0.10.13+cbb11c36f (2026-09-15) ~\\.moon\\bin\\moonc.exe\nmoonrun 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moonrun.exe\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg&quot;,
+    &quot;target&quot;: &quot;wasm&quot;,
+    &quot;mode&quot;: &quot;debug&quot;,
+    &quot;strip&quot;: false,
+    &quot;features&quot;: [],
+    &quot;revision&quot;: &quot;b406697ea67260a1423e5406d0f1352e6e3cdba3cecd38b57df21f1f37458ae6&quot;
+  },
+  &quot;current&quot;: {
+    &quot;command&quot;: &quot;moon build --target wasm --debug --no-strip&quot;,
+    &quot;toolchain&quot;: &quot;moon 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moon.exe\nmoonc v0.10.13+cbb11c36f (2026-09-15) ~\\.moon\\bin\\moonc.exe\nmoonrun 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moonrun.exe\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg&quot;,
+    &quot;target&quot;: &quot;wasm&quot;,
+    &quot;mode&quot;: &quot;debug&quot;,
+    &quot;strip&quot;: false,
+    &quot;features&quot;: [],
+    &quot;revision&quot;: &quot;421adaf93cd02f8cbea399093a9b38f147b3a02526f9884400ac63060c9fd268&quot;
+  },
+  &quot;validation&quot;: {
+    &quot;status&quot;: &quot;passed&quot;,
+    &quot;command&quot;: &quot;node scripts/demo-retained-boundaries.mjs&quot;,
+    &quot;notes&quot;: &quot;Base output is preserved; optional output is intentionally removed. Rollback restores exact Wasm bytes and complete output. This is not full behavioral equivalence.&quot;
+  }
+}</pre></details></section><section><h2>Section changes</h2><div class="scroll"><pre>SIZE COMPARISON
+
+                      baseline  current  delta
+  total                  10824    10168  -656  (-6.0%)
+  code                    5068     5001  -67  (-1.3%)
+  custom (name)           4846     4667  -179  (-3.6%)
+  data                     628      220  -408  (-64.9%)
+  custom (producers)        71       71  0  (0.0%)
+  type                      59       59  0  (0.0%)
+  function                  50       48  -2  (-4.0%)
+  import                    37       37  0  (0.0%)
+  export                    21       21  0  (0.0%)
+  global                    13       13  0  (0.0%)
+  element                    8        8  0  (0.0%)
+  table                      7        7  0  (0.0%)
+  memory                     5        5  0  (0.0%)
+  datacount                  3        3  0  (0.0%)
+</pre></div></section><section><h2>Functions, packages and matching coverage</h2><div class="scroll"><pre>FUNCTION SIZE CHANGES
+
+  Encoded bytes = body length prefix + locals + instructions.
+  TOTAL                 BASELINE       CURRENT         DELTA
+  file                     10824         10168          -656
+  function encoding          5064          4997           -67
+
+  STATUS          BASE_INDEX  CURRENT_INDEX  BASE_ENCODED   CUR_ENCODED         DELTA  RAW_SYMBOL
+  removed-symbol          36              -            29             0           -29  &quot;_M0FP24demo18retainedboundaries14boundary__leaf&quot;
+  removed-symbol          35              -            23             0           -23  &quot;_M0FP24demo18retainedboundaries16boundary__target&quot;
+  matched                 47             45            84            69           -15  &quot;_M0FP017____moonbit__main&quot;
+  matched                 42             40           122           122             0  &quot;_M0FPB12dec__count32&quot;
+  matched                 41             39            40            40             0  &quot;_M0FPB12hex__count32&quot;
+  matched                 40             38            65            65             0  &quot;_M0FPB14radix__count32&quot;
+  matched                 43             41           633           633             0  &quot;_M0FPB20int__to__string__dec&quot;
+  matched                 45             43           227           227             0  &quot;_M0FPB20int__to__string__hex&quot;
+  matched                 44             42           266           266             0  &quot;_M0FPB24int__to__string__generic&quot;
+  matched                 37             35            24            24             0  &quot;_M0FPB7printlnGsE&quot;
+  matched                 46             44             4             4             0  &quot;_M0FPC15abort5abortGuE&quot;
+  matched                 38             36             9             9             0  &quot;_M0IPC16string6StringPB4Show10to__string&quot;
+  matched                 39             37           301           301             0  &quot;_M0MPC13int3Int18to__string_2einner&quot;
+  matched                 26             26            80            80             0  &quot;moonbit.add_string&quot;
+  matched                 17             17            11            11             0  &quot;moonbit.array_length&quot;
+  matched                 28             28            49            49             0  &quot;moonbit.decref&quot;
+  matched                 33             33           206           206             0  &quot;moonbit.fprintln&quot;
+  matched                 10             10            82            82             0  &quot;moonbit.free&quot;
+  matched                 29             29           409           409             0  &quot;moonbit.gc.free&quot;
+  matched                 11             11            30            30             0  &quot;moonbit.gc.malloc&quot;
+
+PACKAGE SIZE CHANGES
+
+  Best-effort symbol package attribution; includes unmatched functions.
+  package totals:         5064          4997           -67
+
+  BASE_FUNCS  CURRENT_FUNCS  BASE_ENCODED   CUR_ENCODED         DELTA  PACKAGE
+           2              0            52             0           -52  &quot;demo::retainedboundaries&quot;
+           8              8          1461          1446           -15  &quot;(top-level)&quot;
+           1              1             4             4             0  &quot;abort&quot;
+           1              1           301           301             0  &quot;int::Int&quot;
+          22             22          1030          1030             0  &quot;moonbit&quot;
+           2              2           439           439             0  &quot;moonbit.gc&quot;
+           1              1           482           482             0  &quot;moonbit.utf8&quot;
+           2              2           111           111             0  &quot;moonbit.wasi&quot;
+           1              1             9             9             0  &quot;string::String::Show&quot;
+           7              7          1175          1175             0  &quot;tlsf&quot;
+
+MATCHING SUMMARY
+
+  CATEGORY          BASE_COUNT   CUR_COUNT    BASE_BYTES     CUR_BYTES
+  matched                   45          45          5012          4997
+  added-symbol               0           0             0             0
+  removed-symbol             2           0            52             0
+  ambiguous                  0           0             0             0
+  missing-symbol             0           0             0             0
+
+  Matched coverage: baseline 95.7% of functions / 98.9% of encoded bytes; current 100.0% of functions / 100.0% of encoded bytes.
+  Only symbols unique on both sides are matched. Added/removed symbols may reflect renames or toolchain changes, not source additions/deletions.
+  Function delta = matched -15 + added 0 - removed 52 + unmatched current 0 - unmatched baseline 0 = -67 B.
+
+CODE OVERHEAD
+
+  RAW BYTES             BASELINE       CURRENT         DELTA
+  code section              5068          5001           -67
+  function encoding          5064          4997           -67
+  code overhead                4             4             0
+
+  Code overhead includes the section header and function-count encoding.
+  Function changes do not sum to file changes; see the existing section comparison for name, data and other sections.
+</pre></div></section><section><h2>Measurement boundaries</h2><p>Raw and whole-file gzip deltas measure only these supplied artifacts. Gzip uses bikallem/compress defaults, not a measured network transfer. Function/package differences use encoded bytes and best-effort symbol identity. Build declarations do not prove controlled conditions or behavioral equivalence.</p><p>Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. Reference-call targets and dynamic table contents are not solved. Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. Element references are conservative roots, including private, passive and declarative segments. graph_complete means no gaps detected within this scope, not full Wasm certification. RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.</p></section></html>

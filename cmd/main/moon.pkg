@@ -1,6 +1,7 @@
 import {
   "BigSaltyMan/moonsize" @lib,
   "moonbitlang/core/env",
+  "moonbitlang/core/json",
   "moonbitlang/x/fs",
   "moonbitlang/x/sys",
 }

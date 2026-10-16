@@ -553,6 +553,11 @@ fn render_html_measured(
   if warning.length() > 0 {
     out.write_string("<div class=\"warn\">" + html_escape(warning) + "</div>\n")
   }
+  out.write_string(
+    "<p class=\"model-scope\">" +
+    html_escape(retained_modeling_scope()) +
+    " Unreachable functions are candidates for investigation, not a safe-deletion list.</p>\n",
+  )
   out.write_string("<section class=\"cards\">\n")
   out.write_string(
     card("File size", grouped(file_size) + " B", human_bytes(file_size), false),

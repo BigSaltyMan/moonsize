@@ -1,0 +1,531 @@
+{
+  "schema_version": 1,
+  "kind": "moonsize-optimization-experiment",
+  "producer": "BigSaltyMan/moonsize",
+  "gzip_configuration": "bikallem/compress gzip.compress defaults; one complete artifact per stream",
+  "delta_convention": "current minus baseline; negative means fewer bytes",
+  "baseline": {
+    "path": "_build\\retained-boundaries\\unique-debug\\before.wasm",
+    "sha256": "388aa4712779c8d7501bb28f462e8298e27dbf6713fc2646563c97da2f0b8dd3",
+    "raw_bytes": 10824,
+    "whole_gzip_bytes": 5236,
+    "gzip_error": null,
+    "graph_complete": true,
+    "diagnostics": []
+  },
+  "current": {
+    "path": "_build\\retained-boundaries\\unique-debug\\after.wasm",
+    "sha256": "319c48a4338e00e1387f298f2a0b7a65294b035a72b720a67cd89ac01019b1e9",
+    "raw_bytes": 10168,
+    "whole_gzip_bytes": 4999,
+    "gzip_error": null,
+    "graph_complete": true,
+    "diagnostics": []
+  },
+  "raw_delta": -656,
+  "whole_gzip_delta": -237,
+  "baseline_code": {
+    "section_bytes": 5068,
+    "function_count": 47,
+    "function_bytes": 5064,
+    "overhead_bytes": 4
+  },
+  "current_code": {
+    "section_bytes": 5001,
+    "function_count": 45,
+    "function_bytes": 4997,
+    "overhead_bytes": 4
+  },
+  "context": {
+    "title": "Optimization experiment: unique-debug",
+    "hypothesis": "MoonBit source rebuild; same project path, toolchain and flags; optional call removed",
+    "baseline": {
+      "command": "moon build --target wasm --debug --no-strip",
+      "toolchain": "moon 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moon.exe\nmoonc v0.10.13+cbb11c36f (2026-09-15) ~\\.moon\\bin\\moonc.exe\nmoonrun 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moonrun.exe\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg",
+      "target": "wasm",
+      "mode": "debug",
+      "strip": false,
+      "features": [],
+      "revision": "b406697ea67260a1423e5406d0f1352e6e3cdba3cecd38b57df21f1f37458ae6"
+    },
+    "current": {
+      "command": "moon build --target wasm --debug --no-strip",
+      "toolchain": "moon 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moon.exe\nmoonc v0.10.13+cbb11c36f (2026-09-15) ~\\.moon\\bin\\moonc.exe\nmoonrun 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moonrun.exe\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg",
+      "target": "wasm",
+      "mode": "debug",
+      "strip": false,
+      "features": [],
+      "revision": "421adaf93cd02f8cbea399093a9b38f147b3a02526f9884400ac63060c9fd268"
+    },
+    "validation": {
+      "status": "passed",
+      "command": "node scripts/demo-retained-boundaries.mjs",
+      "notes": "Base output is preserved; optional output is intentionally removed. Rollback restores exact Wasm bytes and complete output. This is not full behavioral equivalence."
+    }
+  },
+  "context_provenance": "Self-reported; moonsize did not execute builds or business validation.",
+  "build_comparability": "same-declared-settings",
+  "different_build_fields": [],
+  "validation_status": "passed",
+  "sections": [
+    {
+      "label": "code",
+      "baseline_bytes": 5068,
+      "current_bytes": 5001,
+      "delta": -67
+    },
+    {
+      "label": "custom (name)",
+      "baseline_bytes": 4846,
+      "current_bytes": 4667,
+      "delta": -179
+    },
+    {
+      "label": "data",
+      "baseline_bytes": 628,
+      "current_bytes": 220,
+      "delta": -408
+    },
+    {
+      "label": "custom (producers)",
+      "baseline_bytes": 71,
+      "current_bytes": 71,
+      "delta": 0
+    },
+    {
+      "label": "type",
+      "baseline_bytes": 59,
+      "current_bytes": 59,
+      "delta": 0
+    },
+    {
+      "label": "function",
+      "baseline_bytes": 50,
+      "current_bytes": 48,
+      "delta": -2
+    },
+    {
+      "label": "import",
+      "baseline_bytes": 37,
+      "current_bytes": 37,
+      "delta": 0
+    },
+    {
+      "label": "export",
+      "baseline_bytes": 21,
+      "current_bytes": 21,
+      "delta": 0
+    },
+    {
+      "label": "global",
+      "baseline_bytes": 13,
+      "current_bytes": 13,
+      "delta": 0
+    },
+    {
+      "label": "element",
+      "baseline_bytes": 8,
+      "current_bytes": 8,
+      "delta": 0
+    },
+    {
+      "label": "table",
+      "baseline_bytes": 7,
+      "current_bytes": 7,
+      "delta": 0
+    },
+    {
+      "label": "memory",
+      "baseline_bytes": 5,
+      "current_bytes": 5,
+      "delta": 0
+    },
+    {
+      "label": "datacount",
+      "baseline_bytes": 3,
+      "current_bytes": 3,
+      "delta": 0
+    }
+  ],
+  "functions": [
+    {
+      "status": "removed-symbol",
+      "raw_name": "_M0FP24demo18retainedboundaries14boundary__leaf",
+      "baseline": {
+        "index": 36,
+        "encoded_bytes": 29
+      },
+      "current": null,
+      "delta": -29
+    },
+    {
+      "status": "removed-symbol",
+      "raw_name": "_M0FP24demo18retainedboundaries16boundary__target",
+      "baseline": {
+        "index": 35,
+        "encoded_bytes": 23
+      },
+      "current": null,
+      "delta": -23
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FP017____moonbit__main",
+      "baseline": {
+        "index": 47,
+        "encoded_bytes": 84
+      },
+      "current": {
+        "index": 45,
+        "encoded_bytes": 69
+      },
+      "delta": -15
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FPB12dec__count32",
+      "baseline": {
+        "index": 42,
+        "encoded_bytes": 122
+      },
+      "current": {
+        "index": 40,
+        "encoded_bytes": 122
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FPB12hex__count32",
+      "baseline": {
+        "index": 41,
+        "encoded_bytes": 40
+      },
+      "current": {
+        "index": 39,
+        "encoded_bytes": 40
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FPB14radix__count32",
+      "baseline": {
+        "index": 40,
+        "encoded_bytes": 65
+      },
+      "current": {
+        "index": 38,
+        "encoded_bytes": 65
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FPB20int__to__string__dec",
+      "baseline": {
+        "index": 43,
+        "encoded_bytes": 633
+      },
+      "current": {
+        "index": 41,
+        "encoded_bytes": 633
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FPB20int__to__string__hex",
+      "baseline": {
+        "index": 45,
+        "encoded_bytes": 227
+      },
+      "current": {
+        "index": 43,
+        "encoded_bytes": 227
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FPB24int__to__string__generic",
+      "baseline": {
+        "index": 44,
+        "encoded_bytes": 266
+      },
+      "current": {
+        "index": 42,
+        "encoded_bytes": 266
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FPB7printlnGsE",
+      "baseline": {
+        "index": 37,
+        "encoded_bytes": 24
+      },
+      "current": {
+        "index": 35,
+        "encoded_bytes": 24
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0FPC15abort5abortGuE",
+      "baseline": {
+        "index": 46,
+        "encoded_bytes": 4
+      },
+      "current": {
+        "index": 44,
+        "encoded_bytes": 4
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0IPC16string6StringPB4Show10to__string",
+      "baseline": {
+        "index": 38,
+        "encoded_bytes": 9
+      },
+      "current": {
+        "index": 36,
+        "encoded_bytes": 9
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "_M0MPC13int3Int18to__string_2einner",
+      "baseline": {
+        "index": 39,
+        "encoded_bytes": 301
+      },
+      "current": {
+        "index": 37,
+        "encoded_bytes": 301
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "moonbit.add_string",
+      "baseline": {
+        "index": 26,
+        "encoded_bytes": 80
+      },
+      "current": {
+        "index": 26,
+        "encoded_bytes": 80
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "moonbit.array_length",
+      "baseline": {
+        "index": 17,
+        "encoded_bytes": 11
+      },
+      "current": {
+        "index": 17,
+        "encoded_bytes": 11
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "moonbit.decref",
+      "baseline": {
+        "index": 28,
+        "encoded_bytes": 49
+      },
+      "current": {
+        "index": 28,
+        "encoded_bytes": 49
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "moonbit.fprintln",
+      "baseline": {
+        "index": 33,
+        "encoded_bytes": 206
+      },
+      "current": {
+        "index": 33,
+        "encoded_bytes": 206
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "moonbit.free",
+      "baseline": {
+        "index": 10,
+        "encoded_bytes": 82
+      },
+      "current": {
+        "index": 10,
+        "encoded_bytes": 82
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "moonbit.gc.free",
+      "baseline": {
+        "index": 29,
+        "encoded_bytes": 409
+      },
+      "current": {
+        "index": 29,
+        "encoded_bytes": 409
+      },
+      "delta": 0
+    },
+    {
+      "status": "matched",
+      "raw_name": "moonbit.gc.malloc",
+      "baseline": {
+        "index": 11,
+        "encoded_bytes": 30
+      },
+      "current": {
+        "index": 11,
+        "encoded_bytes": 30
+      },
+      "delta": 0
+    }
+  ],
+  "packages": [
+    {
+      "name": "demo::retainedboundaries",
+      "baseline_bytes": 52,
+      "current_bytes": 0,
+      "baseline_functions": 2,
+      "current_functions": 0,
+      "delta": -52
+    },
+    {
+      "name": "(top-level)",
+      "baseline_bytes": 1461,
+      "current_bytes": 1446,
+      "baseline_functions": 8,
+      "current_functions": 8,
+      "delta": -15
+    },
+    {
+      "name": "abort",
+      "baseline_bytes": 4,
+      "current_bytes": 4,
+      "baseline_functions": 1,
+      "current_functions": 1,
+      "delta": 0
+    },
+    {
+      "name": "int::Int",
+      "baseline_bytes": 301,
+      "current_bytes": 301,
+      "baseline_functions": 1,
+      "current_functions": 1,
+      "delta": 0
+    },
+    {
+      "name": "moonbit",
+      "baseline_bytes": 1030,
+      "current_bytes": 1030,
+      "baseline_functions": 22,
+      "current_functions": 22,
+      "delta": 0
+    },
+    {
+      "name": "moonbit.gc",
+      "baseline_bytes": 439,
+      "current_bytes": 439,
+      "baseline_functions": 2,
+      "current_functions": 2,
+      "delta": 0
+    },
+    {
+      "name": "moonbit.utf8",
+      "baseline_bytes": 482,
+      "current_bytes": 482,
+      "baseline_functions": 1,
+      "current_functions": 1,
+      "delta": 0
+    },
+    {
+      "name": "moonbit.wasi",
+      "baseline_bytes": 111,
+      "current_bytes": 111,
+      "baseline_functions": 2,
+      "current_functions": 2,
+      "delta": 0
+    },
+    {
+      "name": "string::String::Show",
+      "baseline_bytes": 9,
+      "current_bytes": 9,
+      "baseline_functions": 1,
+      "current_functions": 1,
+      "delta": 0
+    },
+    {
+      "name": "tlsf",
+      "baseline_bytes": 1175,
+      "current_bytes": 1175,
+      "baseline_functions": 7,
+      "current_functions": 7,
+      "delta": 0
+    }
+  ],
+  "function_record_count": 47,
+  "package_record_count": 10,
+  "top": 20,
+  "matching": {
+    "matched_baseline": {
+      "count": 45,
+      "bytes": 5012
+    },
+    "matched_current": {
+      "count": 45,
+      "bytes": 4997
+    },
+    "added_symbols": {
+      "count": 0,
+      "bytes": 0
+    },
+    "removed_symbols": {
+      "count": 2,
+      "bytes": 52
+    },
+    "ambiguous_baseline": {
+      "count": 0,
+      "bytes": 0
+    },
+    "ambiguous_current": {
+      "count": 0,
+      "bytes": 0
+    },
+    "missing_baseline": {
+      "count": 0,
+      "bytes": 0
+    },
+    "missing_current": {
+      "count": 0,
+      "bytes": 0
+    }
+  },
+  "section_comparison_text": "SIZE COMPARISON\n\n                      baseline  current  delta\n  total                  10824    10168  -656  (-6.0%)\n  code                    5068     5001  -67  (-1.3%)\n  custom (name)           4846     4667  -179  (-3.6%)\n  data                     628      220  -408  (-64.9%)\n  custom (producers)        71       71  0  (0.0%)\n  type                      59       59  0  (0.0%)\n  function                  50       48  -2  (-4.0%)\n  import                    37       37  0  (0.0%)\n  export                    21       21  0  (0.0%)\n  global                    13       13  0  (0.0%)\n  element                    8        8  0  (0.0%)\n  table                      7        7  0  (0.0%)\n  memory                     5        5  0  (0.0%)\n  datacount                  3        3  0  (0.0%)\n",
+  "function_comparison_text": "FUNCTION SIZE CHANGES\n\n  Encoded bytes = body length prefix + locals + instructions.\n  TOTAL                 BASELINE       CURRENT         DELTA\n  file                     10824         10168          -656\n  function encoding          5064          4997           -67\n\n  STATUS          BASE_INDEX  CURRENT_INDEX  BASE_ENCODED   CUR_ENCODED         DELTA  RAW_SYMBOL\n  removed-symbol          36              -            29             0           -29  \"_M0FP24demo18retainedboundaries14boundary__leaf\"\n  removed-symbol          35              -            23             0           -23  \"_M0FP24demo18retainedboundaries16boundary__target\"\n  matched                 47             45            84            69           -15  \"_M0FP017____moonbit__main\"\n  matched                 42             40           122           122             0  \"_M0FPB12dec__count32\"\n  matched                 41             39            40            40             0  \"_M0FPB12hex__count32\"\n  matched                 40             38            65            65             0  \"_M0FPB14radix__count32\"\n  matched                 43             41           633           633             0  \"_M0FPB20int__to__string__dec\"\n  matched                 45             43           227           227             0  \"_M0FPB20int__to__string__hex\"\n  matched                 44             42           266           266             0  \"_M0FPB24int__to__string__generic\"\n  matched                 37             35            24            24             0  \"_M0FPB7printlnGsE\"\n  matched                 46             44             4             4             0  \"_M0FPC15abort5abortGuE\"\n  matched                 38             36             9             9             0  \"_M0IPC16string6StringPB4Show10to__string\"\n  matched                 39             37           301           301             0  \"_M0MPC13int3Int18to__string_2einner\"\n  matched                 26             26            80            80             0  \"moonbit.add_string\"\n  matched                 17             17            11            11             0  \"moonbit.array_length\"\n  matched                 28             28            49            49             0  \"moonbit.decref\"\n  matched                 33             33           206           206             0  \"moonbit.fprintln\"\n  matched                 10             10            82            82             0  \"moonbit.free\"\n  matched                 29             29           409           409             0  \"moonbit.gc.free\"\n  matched                 11             11            30            30             0  \"moonbit.gc.malloc\"\n\nPACKAGE SIZE CHANGES\n\n  Best-effort symbol package attribution; includes unmatched functions.\n  package totals:         5064          4997           -67\n\n  BASE_FUNCS  CURRENT_FUNCS  BASE_ENCODED   CUR_ENCODED         DELTA  PACKAGE\n           2              0            52             0           -52  \"demo::retainedboundaries\"\n           8              8          1461          1446           -15  \"(top-level)\"\n           1              1             4             4             0  \"abort\"\n           1              1           301           301             0  \"int::Int\"\n          22             22          1030          1030             0  \"moonbit\"\n           2              2           439           439             0  \"moonbit.gc\"\n           1              1           482           482             0  \"moonbit.utf8\"\n           2              2           111           111             0  \"moonbit.wasi\"\n           1              1             9             9             0  \"string::String::Show\"\n           7              7          1175          1175             0  \"tlsf\"\n\nMATCHING SUMMARY\n\n  CATEGORY          BASE_COUNT   CUR_COUNT    BASE_BYTES     CUR_BYTES\n  matched                   45          45          5012          4997\n  added-symbol               0           0             0             0\n  removed-symbol             2           0            52             0\n  ambiguous                  0           0             0             0\n  missing-symbol             0           0             0             0\n\n  Matched coverage: baseline 95.7% of functions / 98.9% of encoded bytes; current 100.0% of functions / 100.0% of encoded bytes.\n  Only symbols unique on both sides are matched. Added/removed symbols may reflect renames or toolchain changes, not source additions/deletions.\n  Function delta = matched -15 + added 0 - removed 52 + unmatched current 0 - unmatched baseline 0 = -67 B.\n\nCODE OVERHEAD\n\n  RAW BYTES             BASELINE       CURRENT         DELTA\n  code section              5068          5001           -67\n  function encoding          5064          4997           -67\n  code overhead                4             4             0\n\n  Code overhead includes the section header and function-count encoding.\n  Function changes do not sum to file changes; see the existing section comparison for name, data and other sections.\n",
+  "modeling_scope": "Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. Reference-call targets and dynamic table contents are not solved. Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. Element references are conservative roots, including private, passive and declarative segments. graph_complete means no gaps detected within this scope, not full Wasm certification. RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.",
+  "measurement_scope": "Raw and whole-file gzip deltas measure only these supplied artifacts. Gzip uses bikallem/compress defaults, not a measured network transfer. Function/package differences use encoded bytes and best-effort symbol identity. Build declarations do not prove controlled conditions or behavioral equivalence.",
+  "raw_growth_budget_bytes": null,
+  "raw_growth_budget_passed": true
+}

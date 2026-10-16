@@ -115,6 +115,124 @@ fn print_report(
 }
 
 ///|
+/// A separate output mode: validate all evidence before writing a new report.
+/// Existing paths are refused, including input aliases and existing reports.
+fn run_experiment(options : @lib.Options, target : String) -> Unit {
+  if @fs.path_exists(target) {
+    println("moonsize: experiment output already exists: " + target)
+    @sys.exit(@lib.EXIT_INPUT)
+    return
+  }
+  let context = match options.experiment_context {
+    None => Json::null()
+    Some(path) => {
+      let text = @fs.read_file_to_string(path) catch {
+        _ => {
+          println("moonsize: cannot read experiment context " + path)
+          @sys.exit(@lib.EXIT_INPUT)
+          return
+        }
+      }
+      @json.parse(text) catch {
+        error => {
+          println(
+            "moonsize: invalid experiment context " +
+            path +
+            ": " +
+            error.to_string(),
+          )
+          @sys.exit(@lib.EXIT_INPUT)
+          return
+        }
+      }
+    }
+  }
+  match @lib.check_experiment_context(context) {
+    Err(error) => {
+      println("moonsize: " + error)
+      @sys.exit(@lib.EXIT_INPUT)
+      return
+    }
+    Ok(_) => ()
+  }
+  let baseline_path = match options.baseline {
+    Some(path) => path
+    None => return // parse_options rejects this before I/O.
+  }
+  let baseline = read_input(baseline_path)
+  let current = read_input(options.path)
+  let report = match
+    @lib.experiment_report(
+      baseline,
+      current,
+      baseline_path,
+      options.path,
+      context,
+      top=options.top,
+    ) {
+    Ok(report) => report
+    Err(error) => {
+      println("moonsize: " + error)
+      @sys.exit(@lib.EXIT_INPUT)
+      return
+    }
+  }
+  if options.strict && report is Object(fields) {
+    for side in ["baseline", "current"] {
+      match fields.get(side) {
+        Some(Object(artifact)) if artifact.get("graph_complete") ==
+          Some(Json::boolean(false)) => {
+          println(
+            "moonsize: --strict: refusing experiment with an incomplete " +
+            side +
+            " call graph",
+          )
+          match artifact.get("diagnostics") {
+            Some(diagnostics) => println(diagnostics.stringify(indent=2))
+            None => ()
+          }
+          @sys.exit(@lib.EXIT_OVER_SIZE)
+          return
+        }
+        _ => ()
+      }
+    }
+  }
+  let code = @lib.size_exit_code(
+    options,
+    current.length(),
+    Some(baseline.length()),
+  )
+  if report is Object(fields) {
+    fields.set(
+      "raw_growth_budget_bytes",
+      match options.max_size {
+        Some(size) => Json::number(size.to_double(), repr=size.to_string())
+        None => Json::null()
+      },
+    )
+    fields.set("raw_growth_budget_passed", Json::boolean(code == @lib.EXIT_OK))
+  }
+  let contents = if target.has_suffix(".html") {
+    @lib.render_experiment_html(report)
+  } else {
+    report.stringify(indent=2) + "\n"
+  }
+  write_output(target, contents)
+  println("Optimization experiment written to " + target)
+  if code != @lib.EXIT_OK {
+    println(
+      @lib.describe_size_failure(
+        options,
+        current.length(),
+        Some(baseline.length()),
+      ),
+    )
+    @sys.exit(code)
+  }
+}
+
+///|
 /// Everything the tool does lives in the library, so it can be tested without a
 /// process around it. This entry point only supplies the real environment: the
 /// command line and the filesystem.
@@ -126,6 +244,10 @@ fn main {
       @sys.exit(@lib.EXIT_USAGE)
       return
     }
+  }
+  if options.experiment is Some(target) {
+    run_experiment(options, target)
+    return
   }
   let bytes = read_input(options.path)
   let parsed = match @lib.parse_module(bytes) {

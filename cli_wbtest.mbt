@@ -1,4 +1,35 @@
 ///|
+test "experiment output requires baseline and reserves one output mode" {
+  for
+    args in [
+      ["moonsize", "missing", "--experiment"],
+      ["moonsize", "missing", "--experiment", "report.html"],
+      ["moonsize", "missing", "--experiment-context", "context.json"],
+      ["moonsize", "missing", "--baseline", "old", "--experiment", "report.txt"],
+      [
+        "moonsize", "missing", "--baseline", "old", "--experiment", "report.html",
+        "--retained",
+      ],
+      [
+        "moonsize", "missing", "--baseline", "old", "--experiment", "report.html",
+        "--html", "another.html",
+      ],
+    ] {
+    match parse_options(args) {
+      Err(message) => assert_true(message.contains("--experiment"))
+      Ok(_) => fail("invalid experiment invocation accepted")
+    }
+  }
+  let options = options_of([
+    "moonsize", "after", "--baseline", "before", "--experiment", "report.json", "--experiment-context",
+    "context.json", "--strict", "--max-size", "0B", "--top", "0",
+  ])
+  assert_eq(options.experiment, Some("report.json"))
+  assert_eq(options.experiment_context, Some("context.json"))
+  assert_true(options.strict)
+}
+
+///|
 test "defaults to the ten heaviest functions" {
   match parse_options(["moonsize", "app.wasm"]) {
     Ok(options) => {

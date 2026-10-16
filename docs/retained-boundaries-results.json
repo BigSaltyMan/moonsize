@@ -1,0 +1,191 @@
+{
+  "base_commit": "e5833febb861ff5dfae38a386dff88b6f629783d",
+  "working_tree_is_dirty": true,
+  "analyzed_source_sha256": "0537508691f18332d47b76cbcc4646f196ee4f85cef7eef8525c37f5510627f1",
+  "cli_sha256": "0ef62d0451d90920a3f1b8abd5e26145dd0b9e74db4693516d7965142e98c2e3",
+  "script_sha256": "3935c9451b164cf8caa497958af4113db823a0c922fa8eb1b88238af7df15c0a",
+  "platform": "win32",
+  "arch": "x64",
+  "node": "v24.18.0",
+  "toolchain": "moon 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moon.exe\nmoonc v0.10.13+cbb11c36f (2026-09-15) ~\\.moon\\bin\\moonc.exe\nmoonrun 0.1.20260915 (2e1a46d 2026-09-15) ~\\.moon\\bin\\moonrun.exe\n\nFeature flags enabled: rr_moon_mod,rr_moon_pkg",
+  "source_sha256": {
+    "unique-before": "b406697ea67260a1423e5406d0f1352e6e3cdba3cecd38b57df21f1f37458ae6",
+    "unique-after": "421adaf93cd02f8cbea399093a9b38f147b3a02526f9884400ac63060c9fd268",
+    "shared-before": "5de3cda837d2d6576225aef13edc44918999d88d3cc8e041092e81da54bdaa2e",
+    "shared-after": "26eb85308989cc6a864ddfd1436d2b2f083b8d7e902abccb31e50f83e7c0fa7e"
+  },
+  "results": [
+    {
+      "case": "unique-debug",
+      "provenance": "MoonBit source rebuild; same project path, toolchain and flags; optional call removed",
+      "mode": "debug",
+      "target_name": "demo::retainedboundaries::boundary__target",
+      "target_index": 35,
+      "own_bytes": 23,
+      "model_retained_bytes": 52,
+      "model_other_functions": 1,
+      "before": {
+        "bytes": 10824,
+        "sha256": "388aa4712779c8d7501bb28f462e8298e27dbf6713fc2646563c97da2f0b8dd3",
+        "gzip": 5236,
+        "independent_section_gzip_sum": 5371,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "after": {
+        "bytes": 10168,
+        "sha256": "319c48a4338e00e1387f298f2a0b7a65294b035a72b720a67cd89ac01019b1e9",
+        "gzip": 4999,
+        "independent_section_gzip_sum": 5145,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "measured_raw_reduction": 656,
+      "measured_whole_gzip_reduction": 237,
+      "experiment_report": "_build/retained-boundaries/unique-debug/experiment.html"
+    },
+    {
+      "case": "shared-debug",
+      "provenance": "MoonBit source rebuild; same project path, toolchain and flags; optional call removed",
+      "mode": "debug",
+      "target_name": "demo::retainedboundaries::boundary__target",
+      "target_index": 32,
+      "own_bytes": 16,
+      "model_retained_bytes": 16,
+      "model_other_functions": 0,
+      "before": {
+        "bytes": 10295,
+        "sha256": "8631db14e74ee5179f06908ee25eb5f1f970f6fbbc9d584e7e0cf0c42f868f45",
+        "gzip": 5038,
+        "independent_section_gzip_sum": 5175,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "after": {
+        "bytes": 10168,
+        "sha256": "f4ead5df2984d92c070d2cc117ce59d33757f7125e1a1bc1b339f8afa4bc5598",
+        "gzip": 4997,
+        "independent_section_gzip_sum": 5139,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "measured_raw_reduction": 127,
+      "measured_whole_gzip_reduction": 41,
+      "experiment_report": "_build/retained-boundaries/shared-debug/experiment.html"
+    },
+    {
+      "case": "unique-release",
+      "provenance": "MoonBit source rebuild; same project path, toolchain and flags; optional call removed",
+      "mode": "release",
+      "target_name": "demo::retainedboundaries::boundary__target",
+      "target_index": 34,
+      "own_bytes": 23,
+      "model_retained_bytes": 52,
+      "model_other_functions": 1,
+      "before": {
+        "bytes": 10516,
+        "sha256": "0f82d829ab02fc79f1e3db66163f2c261250c8ba1aa5764d3003865cbe8c23ea",
+        "gzip": 5079,
+        "independent_section_gzip_sum": 5226,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "after": {
+        "bytes": 9860,
+        "sha256": "e352a4e35cc51580cb2482ef5b3cf83fee9fd26f5f680e028202a9d4a110fd65",
+        "gzip": 4851,
+        "independent_section_gzip_sum": 5006,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "measured_raw_reduction": 656,
+      "measured_whole_gzip_reduction": 228,
+      "experiment_report": "_build/retained-boundaries/unique-release/experiment.html"
+    },
+    {
+      "case": "shared-release",
+      "provenance": "MoonBit source rebuild; same project path, toolchain and flags; optional call removed",
+      "mode": "release",
+      "target_name": "demo::retainedboundaries::boundary__target",
+      "target_index": 32,
+      "own_bytes": 16,
+      "model_retained_bytes": 16,
+      "model_other_functions": 0,
+      "before": {
+        "bytes": 10074,
+        "sha256": "59b91a8834cee42219b8bd87d74504f20f72f89da0f648968b23a37158a233bf",
+        "gzip": 4898,
+        "independent_section_gzip_sum": 5054,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "after": {
+        "bytes": 9947,
+        "sha256": "0e6c3f9bb6e7e0f5240ec0ea340717cc34abdf027eb8199db02e8cbba1e294bc",
+        "gzip": 4859,
+        "independent_section_gzip_sum": 5017,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "measured_raw_reduction": 127,
+      "measured_whole_gzip_reduction": 39,
+      "experiment_report": "_build/retained-boundaries/shared-release/experiment.html"
+    },
+    {
+      "case": "conservative-table-control",
+      "provenance": "Hand-encoded Wasm control; NOT a MoonBit recompile; identical exported run() result",
+      "mode": "binary-control",
+      "target_name": "boundary_target",
+      "target_index": 1,
+      "own_bytes": 5,
+      "model_retained_bytes": 5,
+      "model_other_functions": 0,
+      "before": {
+        "bytes": 91,
+        "sha256": "5b1e53a19872d37fddd1af2769afe241db37a9d4dee016d0f4fc92304d5d3076",
+        "gzip": 104,
+        "independent_section_gzip_sum": 251,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "after": {
+        "bytes": 53,
+        "sha256": "8679f8c2b112cc4e2a06b8964fdf61763369c8c8ca7301cab8734d9925a8f4e6",
+        "gzip": 77,
+        "independent_section_gzip_sum": 165,
+        "graph_complete": true,
+        "diagnostic_count": 0,
+        "strict_exit": 0
+      },
+      "measured_raw_reduction": 38,
+      "measured_whole_gzip_reduction": 27,
+      "experiment_report": "_build/retained-boundaries/conservative-table-control/experiment.html"
+    }
+  ],
+  "policy_cases": [
+    {
+      "case": "runtime-table-write",
+      "bytes": 64,
+      "sha256": "6e87bf8085886fc4e8fad3bf1f17f40b45ffc566244152f715fc1b63de0a3c4a",
+      "gzip": 84,
+      "independent_section_gzip_sum": 200,
+      "graph_complete": false,
+      "diagnostic_count": 2,
+      "strict_exit": 3,
+      "reason_codes": [
+        "runtime_table_mutation",
+        "no_static_table_targets"
+      ],
+      "interpretation": "Valid executable module; strict refuses the unsolved table model. No removal saving is claimed."
+    }
+  ]
+}

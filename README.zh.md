@@ -4,9 +4,9 @@
 moon add BigSaltyMan/moonsize
 ```
 
-面向 MoonBit 产物的 WebAssembly 体积分析器。读取 `.wasm` 文件，测量每个段，把 code 段归因到具体函数，跟随调用图，并报告哪些部分可以删除。
+面向 MoonBit 产物的 WebAssembly 体积分析器。读取 `.wasm` 文件，测量每个段，把 code 段归因到具体函数，并根据引用图提供需要进一步调查的优化候选，不预测删除源码后的精确减量。
 
-分析模型参考 [Twiggy](https://github.com/rustwasm/twiggy)：体积归因到单个函数，函数按包聚合，从模块根出发的可达性决定哪些是真正被用到的。
+分析模型参考 [Twiggy](https://github.com/rustwasm/twiggy)：体积归因到单个函数，函数按包聚合，可达性取决于当前模型的根和边。解释删除候选前，请阅读[retained size 边界与重编译实测案例](docs/retained-size-boundaries.md)。
 
 英文版见 [README.md](README.md)。
 
@@ -25,9 +25,10 @@ moon build --release
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]
 
   --top <n>            排名显示多少个函数（默认 10）
-  --retained           删除每个函数能连带释放多少
+  --retained           当前图模型中受支配函数的编码字节总和
   --dead-code          从根不可达的函数
   --compress           整文件 gzip 与各段独立 gzip 大小
   --strict             调用图不完整时拒绝输出报告，而不是带着警告输出
@@ -38,6 +39,8 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
   --baseline <path>    与另一个模块对比并打印变化；此时 --max-size 限制的是
                        增量，而不是文件本身
   --diff-functions     追加函数与包级差异，必须配合 --baseline
+  --experiment <path>  生成前后产物优化实验报告，需 --baseline，输出路径不能已存在
+  --experiment-context <path>  附上声明的构建设置与业务验证记录
 
 退出码：0 正常，1 输入无法读取，2 命令行错误，3 超出预算。
 ```
@@ -49,6 +52,15 @@ moonsize app.wasm --retained --dead-code        # 完整文本报告
 moonsize app.wasm --html report.html            # 图表，浏览器打开
 moonsize app.wasm --call-graph graph.dot        # 给 Graphviz
 ```
+
+## 优化实验报告
+
+```sh
+moonsize after.wasm --baseline before.wasm --experiment experiment.html \
+  --experiment-context context.json --top 20
+```
+
+离线 HTML 或 CI 使用的 JSON 报告汇总产物 SHA-256、实测文件与整文件 gzip 差值、段/函数/包差异、图诊断，以及声明的构建条件和业务验证记录。配置不同、验证失败和缺少记录均会显示；不会把文件变小直接判为成功优化。说明中的命令只记录，不执行；已存在的输出路径不会被覆盖。见[完整格式与复现流程](docs/optimization-experiments.md)和[报告示例](examples/optimization-experiment.html)。
 
 ## 作为库使用
 
@@ -181,21 +193,21 @@ JSON 保留 `module`、`functions`、`roots`、`edges`、`indirect_sites` 和 `s
 
 ### Retained Size
 
-`SIZE` 是函数自身的体积。`RETAINED` 是删掉它实际能释放的体积：它自己的字节加上所有随之变得不可达的函数，`DIES` 是后者的个数。
+`SIZE` 是本地定义函数的编码体积，包含函数体长度前缀。`RETAINED` 是当前图与根集合下，该函数支配的所有可达本地函数的编码体积之和，包含自身；`DIES` 统计其中其它函数的数量。
 
-这个集合恰好是被删函数所**支配**的函数集合——从根出发的每一条路径都必须经过的那些。把模块的图取出，在真实根之上加一个虚拟根，求支配树，一次就能得到所有函数的 retained size。环由不动点自然收敛，不需要特判；结果是精确的，而不是靠局部前驱数量做的近似：如果两条分支都调用某个函数，删掉其中一条分支不会释放它，但删掉两条分支汇合的那个点会。
+支配关系回答固定图中的路径问题：从根到被支配函数的所有路径都经过所选函数。该计算不模拟修改调用者、重新编译、索引重编码，以及数据和元数据的删减。element 引用的函数会保守地作为根，包括私有表、passive 和 declarative 段。因此，诊断为空或 `--strict` 通过，也不能将 retained size 解释为精确删除收益。
 
 怎么读这张表：
 
-- `RETAINED == SIZE` —— 这个函数只对自己负责，删掉它只省下它自己的字节。
-- `RETAINED ≫ SIZE` 且 `DIES` 较大 —— 好的候选。删掉它会带走一整棵子树。
+- `RETAINED == SIZE` —— 当前支配模型没有向它归因其它函数；真实源码改动仍可能影响调用者、数据和元数据。
+- `RETAINED ≫ SIZE` 且 `DIES` 较大 —— 值得调查对应的依赖分支，实际收益需要修改并重编译后测量。
 - `IND` —— 该函数属于普通或尾部间接调用的候选；考虑删除前还需检查依赖它的 table 槽位和调用点。
 
-两个数都打印是有意的。`SIZE` 说明编译期把函数改小能省多少；`RETAINED` 说明直接删掉它省多少，后者通常是更便宜的改动。
+实际 Wasm 减量等于修改前文件大小减去重编译后文件大小。整文件 gzip 减量应使用相同压缩配置分别测量两个完整文件；两者都不是 retained size 或函数独立 gzip 的预测结果。定义与可复现案例见[边界说明](docs/retained-size-boundaries.md)。
 
 ### 死代码
 
-从根不可达的一切都不会运行：没有导出能到达它，没有 start 函数，没有 table 槽位，也没有从上述任何一处出发的调用链。它的字节已经付出代价却从未被使用，所以这份清单就是一份删除清单。
+列表表示当前根与边模型中不可达的函数。需要结合诊断、保守根策略、宿主行为和运行时契约调查，不能直接当作安全删除清单。
 
 MoonBit 编译器的死代码消除做得很好，因此小程序通常报告为零——这本身也是一个结论。
 
@@ -240,7 +252,7 @@ COMPRESSED SIZE
 ### 判断哪些可以删
 
 1. 先检查诊断和建模范围，再看 `--dead-code`。列表表示当前模型中不可达的函数；图不完整时，不能把它作为可以删除函数的证明。
-2. 再看 `--retained` 中 `RETAINED` 很大且 `DIES` 大于零的行。这些是删除后会连锁的函数。
+2. 再看 `--retained` 中 `RETAINED` 很大且 `DIES` 大于零的行，调查对应的模型依赖分支；实际减量仍需重编译测量。
 3. 对带 `IND` 的行，继续核对 table 槽位、调用点和宿主行为，再决定如何修改。
 
 ## 输出示例
@@ -271,7 +283,7 @@ Dead code
   every function is reachable
 ```
 
-`____moonbit__main` retained 5,162 字节——占文件的 48.3%，牵连 46 个函数——这正是单入口程序的样子：所有东西都挂在它下面。`int__to__string__dec` 是最大的单个函数（633 字节），但只 retained 自己，所以要缩小它属于改代码，而不是删代码。
+这份历史示例中，`____moonbit__main` 支配的函数编码合计为 5,162 字节，包含另外 46 个函数；它是该图的主要入口。`int__to__string__dec` 自身为 633 字节，模型 retained 同为 633。两项都不是删除相应源码后的文件或 gzip 减量承诺。
 
 `--call-graph graph.dot` 把同一张图写给 Graphviz，死函数画成虚线，间接边画成点线；`--call-graph graph.json` 则输出根、每条边以及每个间接调用点的候选集。
 
