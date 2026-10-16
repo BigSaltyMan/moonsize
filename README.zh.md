@@ -105,7 +105,7 @@ fn main {
 - `call_indirect`、`return_call_indirect` —— 根据静态候选，向 element 段放进该 table 的**每个**函数建立保守边。table 的内容静态不可知，而漏一条边就等于漏一个函数、把一个还在用的函数报成死代码。
 - `call_ref`、`return_call_ref` —— 识别调用点，记录 `UnmodeledReferenceCall` 诊断。本版本尚未求解目标函数，即使前面紧邻 `ref.func` 也不猜测目标。
 
-静态候选有其局限。模块可以在运行时填充 table——`table.set`、`table.init`，或者由宿主塞进去——而**完全没有 element 段**的 table 就等于什么也没说。无候选的间接调用（包括间接尾调用）贡献不了任何边，会产生不完整诊断；死代码和 retained size 结果可能不准确。报告会在最前面说明这一点：
+静态 element 段提供的是**已知候选**。导入、导出、运行时写入或未建模初始化可能使候选不完整；本版本对此保守诊断，严格模式拒绝报告。普通和尾间接调用即使候选非空也会记录风险，已知候选边继续保留；没有静态候选的调用另有独立诊断。死代码和 retained size 结果可能不准确，报告会在最前面说明：
 
 ```
 WARNING: the call graph has 1 analysis gap.
@@ -116,9 +116,11 @@ Dead-code and retained-size results may be inaccurate; do not use them as proof 
 
 `--dead-code` 和 `--retained` 会在各自标题下重复不完整提示；`--strict` 对这些已识别的不完整情况拒绝输出报告，返回退出码 `3`。
 
+建图先扫描所有函数的 `table.set`、`table.init`、`table.copy`（仅目标表）、`table.grow` 和 `table.fill`，再判断间接调用。`table.get`、`table.size` 不算写入。调用之后的写入、尚不可达函数中的写入也会导致保守拒绝：当前实现没有证明它不会执行。表索引使用「导入表在前、本地表在后」的完整空间，与导入函数数量、import 条目总序号无关。显式初始化表达式被完整消费并标为未建模，不猜测其实际目标。
+
 `call_ref` 和 `return_call_ref` 会令图不完整，即使所有表调用都有候选。`analyze` 仍返回 `Ok(Analysis)`：建模缺口与二进制解析错误不同。诊断保留类别、完整 caller 索引、文件字节偏移、真实 opcode、类型索引和可选表索引。
 
-`graph_complete` 表示本期检测范围内未发现缺口，即 `analysis.graph.diagnostics` 为空。动态 table 写入、宿主提供的表内容及所有 Wasm 调用机制仍未完整建模，不能将 strict 成功解释为完整性认证。
+`graph_complete` 表示本期检测范围内未发现缺口，即 `analysis.graph.diagnostics` 为空。动态 table 写入、宿主内容和显式初始化已保守诊断，但尚未求解；所有 Wasm 调用机制仍未完整建模，不能将 strict 成功解释为完整性认证。
 
 如果外部世界能到达一个函数，它就是**根**：它被导出、它是 start 函数，或者被 element 段引用。可达性与 retained size 描述的是当前调用图模型中的路径。
 
@@ -150,13 +152,29 @@ function 段的本地声明数必须等于 code 段函数体数，导入函数�
 
 ### 诊断 API 与导出迁移
 
-这是有意的 API 扩展。`CallGraph` 新增 `diagnostics : Array[GraphDiagnostic]`，`GraphDiagnosticKind` 分为 `NoStaticTableTargets` 与 `UnmodeledReferenceCall`。总缺口数从该数组读取；`Analysis.unresolved_count` 仍只统计没有静态候选的表调用，因此引用调用存在时它仍可能是零。
+公开 `build(data, bodies, elements)` 改为 `build(data)`，传入完整模块字节，由入口统一解析函数体、element 和表上下文，不能通过省略写表函数或传空上下文绕过诊断。`analyze(data, parsed)` 签名保持不变，使用同一套内部规则；`count_imported_functions` 仍只统计函数导入。
+
+`CallGraph.diagnostics` 的条目数是**原因数量**，不是调用点数量；同一调用点可以有多种原因、多个写入来源。一个表的多个导出别名合并成一条宿主暴露原因；运行时来源按文件指令偏移去重。`Analysis.unresolved_count` 保持原义，只统计没有静态候选的表调用，其他原因导致图不完整时它仍可为零。
+
+外部穷举匹配 `GraphDiagnosticKind` 时需要处理新增分支：
+
+| 分支 | 稳定 JSON 代码 |
+|---|---|
+| `NoStaticTableTargets` | `no_static_table_targets` |
+| `UnmodeledReferenceCall` | `unmodeled_reference_call` |
+| `ImportedTableContents` | `imported_table_contents` |
+| `ExportedTableContents` | `exported_table_contents` |
+| `RuntimeTableMutation` | `runtime_table_mutation` |
+| `UnmodeledTableInitializer` | `unmodeled_table_initializer` |
+| `UnknownTableContents` | `unknown_table_contents` |
+
+最后一项表示目标表缺失于解析上下文，不表示已完成索引和类型验证。`GraphDiagnostic.source : GraphDiagnosticSource?` 将风险来源与调用点自身的 caller、offset、opcode 分开保存。运行时来源含完整函数索引、指令偏移和 opcode；导入/导出来源指向描述符 kind 字节，初始化来源指向表达式起点，后两类的 caller/opcode 为空。无法安全读取或不支持的表编码返回 `InvalidTableEncoding(offset, reason)`，CLI 返回输入错误 `1`；建模缺口仍返回 `Ok(Analysis)`，严格模式拒绝码为 `3`。表元数据支持多字节 reference type 和 i32 limits，table64/shared limits 明确拒绝，避免静默误读。外部穷举匹配 `WasmError` 时也须增加 `InvalidTableEncoding` 分支。
 
 `scan_calls` 为 `call_ref`、`return_call_ref` 返回 `CallKind::Reference`，携带 `type_index = Some(type)` 和原始偏移。外部代码穷举匹配 `CallKind` 时必须处理新增分支。`ref.func` 仍只建立引用边，不进入调用列表。
 
 报告接口改为 `render_graph_warning(analysis.graph)`、`render_dead_code(analysis, top)`、`render_retained(analysis, top)`。后两者内部读取诊断，移除原先分开的数组、文件大小及可选 `unresolved` 参数；上方示例与 `_probe/` 已同步更新。
 
-JSON 保留 `module`、`functions`、`roots`、`edges`、`indirect_sites`，新增 `schema_version: 1`、`graph_complete`、`modeling_scope`、`diagnostics`。每条诊断包含 `code`、`caller`、`offset`、`opcode`、`type_index`、`table_index`，引用调用的表索引为 null。稳定代码为 `no_static_table_targets`、`unmodeled_reference_call`；完整样本的诊断数组为空。诊断按 caller、offset 排序。
+JSON 保留 `module`、`functions`、`roots`、`edges`、`indirect_sites` 和 `schema_version: 1`、`graph_complete`、`modeling_scope`、`diagnostics`。每条诊断包含 `code`、`caller`、`offset`、`opcode`、`type_index`、`table_index`，引用调用的表索引为 null。带来源的原因额外包含 `source: {caller, offset, opcode}`，元数据来源的 caller/opcode 为 null；旧的空候选/引用诊断保留原有字段形状。完整样本的诊断数组为空，按 caller、调用偏移、稳定原因代码、来源偏移排序。JSON 和 HTML 在版本 `1` 下增补这些原因和来源字段。
 
 非严格模式生成的文件自身保留限制：JSON 含结构化诊断与建模范围，DOT 含图级警告标签，HTML 顶部展示诊断并在死代码区域保留提示。文件被单独分享后，这些信息仍在。严格模式对三种格式都在写文件前拒绝；既不生成新文件，也不修改已有文件，退出码为 `3`。
 

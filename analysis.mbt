@@ -27,7 +27,7 @@ pub struct Analysis {
   /// Whether graph.diagnostics is empty: no gaps detected within this scope.
   /// True does not certify all Wasm mechanisms or dynamic table contents.
   graph_complete : Bool
-  /// Ordinary and tail indirect sites with no resolvable target, for reports.
+  /// Ordinary and tail indirect sites with no static element candidates.
   unresolved_count : Int
 }
 
@@ -89,7 +89,11 @@ pub fn analyze(
       }
     None => None
   }
-  let graph = match build(data, bodies, elements) {
+  let tables = match table_context(data, sections) {
+    Ok(tables) => tables
+    Err(error) => return Err(error)
+  }
+  let graph = match build_graph(data, bodies, elements, tables) {
     Ok(graph) => graph
     Err(error) => return Err(error)
   }

@@ -507,8 +507,26 @@ fn sorted_diagnostics(graph : CallGraph) -> Array[GraphDiagnostic] {
   diagnostics.sort_by(fn(a, b) {
     if a.caller != b.caller {
       a.caller - b.caller
-    } else {
+    } else if a.offset != b.offset {
       a.offset - b.offset
+    } else {
+      let reason = String::compare(
+        diagnostic_code(a.kind),
+        diagnostic_code(b.kind),
+      )
+      if reason != 0 {
+        reason
+      } else {
+        let left = match a.source {
+          Some(source) => source.offset
+          None => -1
+        }
+        let right = match b.source {
+          Some(source) => source.offset
+          None => -1
+        }
+        left - right
+      }
     }
   })
   diagnostics
@@ -519,6 +537,11 @@ fn diagnostic_code(kind : GraphDiagnosticKind) -> String {
   match kind {
     NoStaticTableTargets => "no_static_table_targets"
     UnmodeledReferenceCall => "unmodeled_reference_call"
+    ImportedTableContents => "imported_table_contents"
+    ExportedTableContents => "exported_table_contents"
+    RuntimeTableMutation => "runtime_table_mutation"
+    UnmodeledTableInitializer => "unmodeled_table_initializer"
+    UnknownTableContents => "unknown_table_contents"
   }
 }
 
@@ -528,6 +551,47 @@ fn diagnostic_reason(kind : GraphDiagnosticKind) -> String {
     NoStaticTableTargets => "no static table targets are resolvable."
     UnmodeledReferenceCall =>
       "reference-call target analysis is not implemented."
+    ImportedTableContents =>
+      "imported table contents are supplied or shared by the host."
+    ExportedTableContents =>
+      "exported table contents may be changed by the host."
+    RuntimeTableMutation => "runtime table contents may change."
+    UnmodeledTableInitializer =>
+      "explicit table initializer contents are not modelled."
+    UnknownTableContents =>
+      "target table is absent from the parsed table context."
+  }
+}
+
+///|
+fn diagnostic_details(diagnostic : GraphDiagnostic) -> String {
+  let reason = diagnostic_reason(diagnostic.kind)
+  match diagnostic.source {
+    Some(source) => {
+      let table = match diagnostic.table_index {
+        Some(index) => "table " + index.to_string()
+        None => "table"
+      }
+      match (source.caller, source.opcode) {
+        (Some(caller), Some(opcode)) =>
+          table +
+          " contents may change through " +
+          opcode.name() +
+          " at function " +
+          caller.to_string() +
+          ", offset " +
+          source.offset.to_string() +
+          "."
+        _ =>
+          table +
+          ": " +
+          reason +
+          " Source offset " +
+          source.offset.to_string() +
+          "."
+      }
+    }
+    None => reason
   }
 }
 
@@ -535,6 +599,7 @@ fn diagnostic_reason(kind : GraphDiagnosticKind) -> String {
 fn graph_modeling_scope() -> String {
   "Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. " +
   "Reference-call targets and dynamic table contents are not solved. " +
+  "Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. " +
   "graph_complete means no gaps detected within this scope, not full Wasm certification."
 }
 
@@ -567,7 +632,7 @@ pub fn render_graph_warning(graph : CallGraph) -> String {
       ": " +
       diagnostic.opcode.name() +
       ": " +
-      diagnostic_reason(diagnostic.kind) +
+      diagnostic_details(diagnostic) +
       "\n"
   }
   warning +

@@ -39,8 +39,8 @@ pub struct IndirectSite {
   type_index : Int
   /// Offset of the ordinary or tail indirect call instruction.
   offset : Int
-  /// Every function any element segment places in that table. These are static
-  /// candidates; dynamic table contents are outside the current model.
+  /// Known element candidates. Dynamic risks are diagnosed separately; a
+  /// nonempty list is not proof that all possible targets are represented.
   candidates : Array[Int]
 }
 
@@ -51,10 +51,33 @@ pub enum GraphDiagnosticKind {
   NoStaticTableTargets
   /// Reference-call target data flow is not modelled yet.
   UnmodeledReferenceCall
+  /// The host supplies or shares the target table's contents.
+  ImportedTableContents
+  /// The host can modify an exported target table.
+  ExportedTableContents
+  /// A module instruction may write the target table.
+  RuntimeTableMutation
+  /// An explicit table initializer has not been evaluated.
+  UnmodeledTableInitializer
+  /// A call names a table absent from the parsed context; never assume static.
+  UnknownTableContents
 }
 
 ///|
-/// One call site whose dependencies the current model cannot establish.
+/// Provenance of a gap, distinct from the call instruction's own position.
+pub struct GraphDiagnosticSource {
+  /// Some for a runtime write; None for a declaration/initializer/export.
+  caller : Int?
+  /// Absolute writer opcode offset, import/export descriptor kind offset, or
+  /// explicit initializer expression start, according to the diagnostic kind.
+  offset : Int
+  /// Only runtime writer sources carry an opcode.
+  opcode : Opcode?
+}
+
+///|
+/// One reason a call site's dependencies may be incomplete. A site can have
+/// multiple distinct reasons and multiple runtime writer positions.
 pub struct GraphDiagnostic {
   kind : GraphDiagnosticKind
   /// Full function index, including preceding imports.
@@ -65,6 +88,7 @@ pub struct GraphDiagnostic {
   type_index : Int?
   /// None for reference calls.
   table_index : Int?
+  source : GraphDiagnosticSource?
 }
 
 ///|
@@ -85,7 +109,7 @@ pub struct CallGraph {
   /// a missing edge is a function wrongly called dead, so the sites are kept
   /// here and every report says out loud what they cost.
   unresolved_indirect : Array[IndirectSite]
-  /// Unified source of detected analysis gaps, one entry per call site.
+  /// Analysis reasons, not a count of call sites. Identical sources are deduped.
   diagnostics : Array[GraphDiagnostic]
   /// Every edge with its kind and site, for export.
   edges : Array[CallEdge]
@@ -96,8 +120,8 @@ pub struct CallGraph {
 ///
 /// Missing edges can make dead-code and retained-size results inaccurate.
 /// Callers such as `--dead-code`, `--retained` and `--strict` report this hole.
-/// A true result does not prove that dynamic tables or every Wasm call mechanism
-/// are fully modelled. Reference calls are recognised and diagnosed, not solved.
+/// A true result does not prove every Wasm call mechanism is fully modelled.
+/// Dynamic table risks and reference calls are diagnosed, not solved.
 pub fn is_graph_complete(graph : CallGraph) -> Bool {
   graph.diagnostics.is_empty()
 }
@@ -118,7 +142,9 @@ fn table_functions(elements : Array[ElementSegment], table : Int) -> Array[Int] 
 }
 
 ///|
-/// Build the call graph of a module.
+/// Build from complete module bytes, parsing canonical bodies, elements and
+/// table context internally. Callers cannot supply an empty table context or
+/// omit a writer body. Use analyze when sizes and retention are also needed.
 ///
 /// Every body is decoded once: `call` and `return_call` give precise edges,
 /// `ref.func` gives a reference edge, and `call_indirect` and
@@ -126,10 +152,52 @@ fn table_functions(elements : Array[ElementSegment], table : Int) -> Array[Int] 
 /// plus a record of each site, including sites with no candidates.
 /// Reference calls are kept as diagnostics without guessing a target, even when
 /// the preceding instruction is ref.func.
-pub fn build(
+pub fn build(data : Bytes) -> Result[CallGraph, WasmError] {
+  let parsed = match parse_module(data) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let sections = find_sections(parsed)
+  let imported = match sections.imports {
+    Some(section) =>
+      match count_imported_functions(data, section) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+    None => 0
+  }
+  let bodies = match sections.code {
+    Some(section) =>
+      match parse_code_section(data, section, base_index=imported) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+    None => []
+  }
+  let elements = match sections.elements {
+    Some(section) =>
+      match parse_element_section(data, section) {
+        Ok(value) => value
+        Err(error) => return Err(error)
+      }
+    None => []
+  }
+  let tables = match table_context(data, sections) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  build_graph(data, bodies, elements, tables)
+}
+
+///|
+/// Internal entry: analyze already has canonical parsed bodies and elements.
+/// Decode once, retaining only dependency instructions and writer provenance,
+/// then resolve calls with the complete writer set. Even unreachable writes count.
+fn build_graph(
   data : Bytes,
   bodies : Array[FunctionBody],
   elements : Array[ElementSegment],
+  tables : Array[TableInfo],
 ) -> Result[CallGraph, WasmError] {
   let calls : Map[Int, Set[Int]] = Map([])
   let called_by : Map[Int, Set[Int]] = Map([])
@@ -137,6 +205,9 @@ pub fn build(
   let sites : Array[IndirectSite] = []
   let unresolved : Array[IndirectSite] = []
   let diagnostics : Array[GraphDiagnostic] = []
+  let events : Array[(Int, Instruction)] = []
+  let writes : Map[Int, Array[GraphDiagnosticSource]] = Map([])
+  let seen_writes : Set[Int] = Set([])
   for body in bodies {
     let start = body.offset + body.total_size - body.body_size
     let instructions = match decode_instructions(data, start, body.body_size) {
@@ -145,75 +216,100 @@ pub fn build(
     }
     for instruction in instructions {
       match instruction.opcode {
-        Call | ReturnCall =>
-          add_edge(
-            calls,
-            called_by,
-            edges,
-            body.index,
-            instruction.operands[0],
-            Direct,
-            instruction.offset,
-          )
-        RefFunc =>
-          add_edge(
-            calls,
-            called_by,
-            edges,
-            body.index,
-            instruction.operands[0],
-            Reference,
-            instruction.offset,
-          )
-        CallRef | ReturnCallRef =>
-          diagnostics.push({
-            kind: UnmodeledReferenceCall,
-            caller: body.index,
-            offset: instruction.offset,
-            opcode: instruction.opcode,
-            type_index: Some(instruction.operands[0]),
-            table_index: None,
-          })
-        CallIndirect | ReturnCallIndirect => {
-          let type_index = instruction.operands[0]
-          let table_index = instruction.operands[1]
-          let candidates = table_functions(elements, table_index)
-          let site : IndirectSite = {
-            caller: body.index,
-            table_index,
-            type_index,
-            offset: instruction.offset,
-            candidates,
-          }
-          sites.push(site)
-          // A site with nothing to point at still gets recorded: the report has
-          // to be able to say how many of them there are, because every one is a
-          // call this graph cannot follow.
-          if candidates.length() == 0 {
-            unresolved.push(site)
-            diagnostics.push({
-              kind: NoStaticTableTargets,
-              caller: body.index,
-              offset: instruction.offset,
-              opcode: instruction.opcode,
-              type_index: Some(type_index),
-              table_index: Some(table_index),
-            })
-          }
-          for candidate in candidates {
-            add_edge(
-              calls,
-              called_by,
-              edges,
-              body.index,
-              candidate,
-              Indirect,
-              instruction.offset,
-            )
-          }
-        }
+        Call
+        | ReturnCall
+        | RefFunc
+        | CallRef
+        | ReturnCallRef
+        | CallIndirect
+        | ReturnCallIndirect => events.push((body.index, instruction))
         _ => ()
       }
+      match written_table(instruction) {
+        Some(table) =>
+          if !seen_writes.contains(instruction.offset) {
+            seen_writes.add(instruction.offset)
+            let source : GraphDiagnosticSource = {
+              caller: Some(body.index),
+              offset: instruction.offset,
+              opcode: Some(instruction.opcode),
+            }
+            match writes.get(table) {
+              Some(sources) => sources.push(source)
+              None => writes.set(table, [source])
+            }
+          }
+        None => ()
+      }
+    }
+  }
+  for (caller, instruction) in events {
+    match instruction.opcode {
+      Call | ReturnCall =>
+        add_edge(
+          calls,
+          called_by,
+          edges,
+          caller,
+          instruction.operands[0],
+          Direct,
+          instruction.offset,
+        )
+      RefFunc =>
+        add_edge(
+          calls,
+          called_by,
+          edges,
+          caller,
+          instruction.operands[0],
+          Reference,
+          instruction.offset,
+        )
+      CallRef | ReturnCallRef =>
+        diagnostics.push({
+          kind: UnmodeledReferenceCall,
+          caller,
+          offset: instruction.offset,
+          opcode: instruction.opcode,
+          type_index: Some(instruction.operands[0]),
+          table_index: None,
+          source: None,
+        })
+      CallIndirect | ReturnCallIndirect => {
+        let type_index = instruction.operands[0]
+        let table_index = instruction.operands[1]
+        let candidates = table_functions(elements, table_index)
+        let site : IndirectSite = {
+          caller,
+          table_index,
+          type_index,
+          offset: instruction.offset,
+          candidates,
+        }
+        sites.push(site)
+        // A site with nothing to point at still gets recorded: the report has
+        // to be able to say how many of them there are, because every one is a
+        // call this graph cannot follow.
+        if candidates.length() == 0 {
+          unresolved.push(site)
+          diagnostics.push(
+            table_gap(site, instruction.opcode, NoStaticTableTargets, None),
+          )
+        }
+        table_diagnostics(site, instruction.opcode, tables, writes, diagnostics)
+        for candidate in candidates {
+          add_edge(
+            calls,
+            called_by,
+            edges,
+            caller,
+            candidate,
+            Indirect,
+            instruction.offset,
+          )
+        }
+      }
+      _ => ()
     }
   }
   Ok({

@@ -296,6 +296,24 @@ fn diagnostics_json(graph : CallGraph) -> Json {
     row.set("opcode", Json::string(diagnostic.opcode.name()))
     row.set("type_index", optional_index_json(diagnostic.type_index))
     row.set("table_index", optional_index_json(diagnostic.table_index))
+    // Add source only for the new provenance-bearing reasons. Existing
+    // diagnostic fields and shapes remain compatible for old reason codes.
+    match diagnostic.source {
+      Some(source) => {
+        let origin : Map[String, Json] = Map([])
+        origin.set("caller", optional_index_json(source.caller))
+        origin.set("offset", int_json(source.offset))
+        origin.set(
+          "opcode",
+          match source.opcode {
+            Some(opcode) => Json::string(opcode.name())
+            None => Json::null()
+          },
+        )
+        row.set("source", Json::object(origin))
+      }
+      None => ()
+    }
     rows.push(Json::object(row))
   }
   Json::array(rows)

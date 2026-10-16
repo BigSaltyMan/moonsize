@@ -153,12 +153,13 @@ opcodes its `wasm-gc` backend uses. Each body contributes:
   `UnmodeledReferenceCall` diagnostic. Target analysis is not implemented,
   including when `ref.func` immediately precedes the call. No target is guessed.
 
-Static candidates have limits. A module may fill a table at run time
-— `table.set`, `table.init`, or the host handing it functions — and a table with
-**no element segment at all** then says nothing about who sits in it. Those
-indirect call sites, including indirect tail calls, contribute no edges and
-produce incomplete-graph diagnostics. Dead-code and retained-size results may
-then be inaccurate. The report says so above everything else:
+Static element segments supply **known candidates**, not proof of a complete
+target set. Imports, exports, runtime writes or unmodelled explicit initializers
+can make that set incomplete. This version conservatively diagnoses each such
+risk for ordinary and tail indirect calls, even when candidates are nonempty;
+known candidate edges remain in the graph. Calls with no static candidates also
+retain their separate diagnostic. Dead-code and retained-size results may be
+inaccurate. The report says so above everything else:
 
 ```
 WARNING: the call graph has 1 analysis gap.
@@ -170,6 +171,15 @@ Dead-code and retained-size results may be inaccurate; do not use them as proof 
 `--dead-code` and `--retained` repeat it under their titles, and `--strict` turns
 these recognised incomplete cases into a refusal — no report, exit code 3.
 
+Writes are collected from all functions before checking any table call:
+`table.set`, `table.init`, `table.copy` (destination only), `table.grow` and
+`table.fill`. Reads via `table.get` and `table.size` are not writes. A writer
+that appears after the call, or in an unreachable function, still causes a
+conservative refusal: this version does not prove whether that write executes.
+Imported tables precede local tables in their own index space, independently of
+function imports. Explicit initializer expressions are consumed completely and
+reported as unmodelled; their targets are not guessed.
+
 `call_ref` and `return_call_ref` make the graph incomplete even if every table
 call has candidates. `analyze` still returns `Ok(Analysis)`: a modelling gap is
 distinct from malformed input. Diagnostics retain their category, full caller
@@ -177,8 +187,9 @@ index, file offset, actual opcode, type index and optional table index.
 
 `graph_complete` means no gaps were detected within the current scope:
 `analysis.graph.diagnostics` is empty. Dynamic table writes, host-provided
-contents and all Wasm call mechanisms are not fully modelled. A successful
-`--strict` run is not a completeness certificate.
+contents and explicit initializers are diagnosed but not solved. Other Wasm
+modelling limitations remain. A successful `--strict` run is not a completeness
+certificate.
 
 A function is a **root** if the outside world can reach it: it is exported, it is
 the start function, or it is referenced by an element segment. Reachability and
@@ -247,11 +258,41 @@ present, otherwise the function section. These failures return input error
 
 ### Diagnostic API and export migration
 
-This is an intentional API extension. `CallGraph` now has
-`diagnostics : Array[GraphDiagnostic]`; match `GraphDiagnosticKind` on
-`NoStaticTableTargets` or `UnmodeledReferenceCall`. Total gaps come from this
-array. `Analysis.unresolved_count` still counts only table calls with no static
-candidates; it can be zero while the graph has reference-call gaps.
+`build(data, bodies, elements)` is replaced by `build(data)`. Pass complete
+module bytes: the public entry parses canonical bodies, elements and table
+context, so callers cannot omit writers or imply completeness with an empty
+context. `analyze(data, parsed)` keeps its signature and uses the same internal
+rules. `count_imported_functions` still counts function imports only.
+
+`CallGraph.diagnostics` counts **reason entries**, not call sites. One call can
+have multiple reasons or distinct writer sources. Export aliases collapse to
+one host-exposure reason per table; runtime writers deduplicate by file offset.
+`Analysis.unresolved_count` is unchanged: only table calls with no static
+candidates, even when other reasons make the graph incomplete.
+
+External exhaustive matches on `GraphDiagnosticKind` need the new variants:
+
+| Variant | Stable JSON code |
+|---|---|
+| `NoStaticTableTargets` | `no_static_table_targets` |
+| `UnmodeledReferenceCall` | `unmodeled_reference_call` |
+| `ImportedTableContents` | `imported_table_contents` |
+| `ExportedTableContents` | `exported_table_contents` |
+| `RuntimeTableMutation` | `runtime_table_mutation` |
+| `UnmodeledTableInitializer` | `unmodeled_table_initializer` |
+| `UnknownTableContents` | `unknown_table_contents` |
+
+The last reason covers a target absent from the parsed context, without claiming
+full index/type validation. `GraphDiagnostic.source : GraphDiagnosticSource?`
+records provenance separately from the call's own `caller`, `offset`, `opcode`.
+Writer sources have their full function index, opcode and absolute file offset.
+Import/export sources point to their descriptor kind byte; initializer sources
+point to the expression start, with no function/opcode. Unsupported or malformed
+table encodings return `InvalidTableEncoding(offset, reason)` (CLI `1`), while
+analysis gaps return `Ok(Analysis)` and strict refusal `3`. Table metadata handles
+multi-byte reference types and i32 limits; table64/shared limits are explicitly
+unsupported rather than silently misread. Exhaustive `WasmError` matches must
+add `InvalidTableEncoding`.
 
 `scan_calls` now returns `CallKind::Reference` for `call_ref` and
 `return_call_ref`, with `type_index = Some(type)` and the original offset.
@@ -266,9 +307,12 @@ are removed. The library example above and `_probe/` use these signatures.
 JSON exports retain `module`, `functions`, `roots`, `edges` and `indirect_sites`,
 and add `schema_version: 1`, `graph_complete`, `modeling_scope` and `diagnostics`.
 Each diagnostic has `code`, `caller`, `offset`, `opcode`, `type_index` and
-`table_index` (null for reference calls). Stable codes are
-`no_static_table_targets` and `unmodeled_reference_call`; complete graphs carry
-an empty array. Diagnostics sort by caller and offset.
+`table_index` (null for reference calls). Provenance-bearing reasons add
+`source: {caller, offset, opcode}`; metadata sources have null caller/opcode.
+Existing no-target/reference diagnostics retain their original shape. Complete
+graphs carry an empty array. Diagnostics sort by caller, call offset, stable
+reason code, then source offset. JSON and HTML keep schema version `1` with
+these additive reason/source fields.
 
 Non-strict JSON, DOT and HTML exports carry their own limitations: JSON contains
 structured diagnostics and scope, DOT has a graph-level warning label, and HTML

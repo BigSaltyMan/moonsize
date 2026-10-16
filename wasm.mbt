@@ -302,6 +302,11 @@ pub fn describe_error(error : WasmError) -> String {
       kind.name() +
       " section at offset " +
       offset.to_string()
+    InvalidTableEncoding(offset, reason) =>
+      "invalid or unsupported table encoding at offset " +
+      offset.to_string() +
+      ": " +
+      reason
     InvalidImportKind(kind) =>
       "unknown import kind " + kind.to_string() + " (expected 0..4)"
     UnknownOpcode(offset, byte) =>
@@ -455,16 +460,11 @@ fn skip_import_desc(reader : Reader) -> Result[Bool, WasmError] {
         Err(error) => Err(error)
       }
     // table: reftype limits
-    1 => {
-      match reader.read_byte() {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
-      match skip_limits(reader) {
+    1 =>
+      match read_table_type(reader) {
         Ok(_) => Ok(false)
         Err(error) => Err(error)
       }
-    }
     // memory: limits
     2 =>
       match skip_limits(reader) {
@@ -473,7 +473,7 @@ fn skip_import_desc(reader : Reader) -> Result[Bool, WasmError] {
       }
     // global: valtype mut
     3 => {
-      match reader.read_byte() {
+      match reader.read_valtype() {
         Ok(_) => ()
         Err(error) => return Err(error)
       }
@@ -931,6 +931,72 @@ pub fn parse_table_section(
   data : Bytes,
   section : Section,
 ) -> Result[Array[TableType], WasmError] {
+  match decode_tables(data, section) {
+    Ok(tables) => Ok(tables.map(table => table.table_type))
+    Err(error) => Err(error)
+  }
+}
+
+///|
+priv struct DecodedTable {
+  table_type : TableType
+  offset : Int
+  initializer_offset : Int?
+}
+
+///|
+/// Share reference-type and limits decoding with imported-table handling.
+fn read_table_type(reader : Reader) -> Result[TableType, WasmError] {
+  let at = reader.position()
+  let first = match reader.read_byte() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  if first != REF_NULL_TYPE &&
+    first != REF_TYPE &&
+    (first < 0x68 || first > 0x75) {
+    return Err(InvalidTableEncoding(at, "expected a supported reference type"))
+  }
+  match reader.seek(at) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let element_type = match reader.read_reftype() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let limits_at = reader.position()
+  let flags = match reader.read_byte() {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  // Table64/shared limits need a different numeric/model design. Reject their
+  // flags explicitly rather than misreading their widths as i32 table limits.
+  if flags != 0 && flags != 1 {
+    return Err(
+      InvalidTableEncoding(
+        limits_at, "only i32 table limits flags 0 and 1 are supported",
+      ),
+    )
+  }
+  match reader.seek(limits_at) {
+    Ok(_) => ()
+    Err(error) => return Err(error)
+  }
+  let limits = match parse_limits(reader) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  Ok({ element_type, minimum: limits.0, maximum: limits.1, })
+}
+
+///|
+/// Decode and bound complete explicit initializer expressions, without guessing
+/// their values. Metadata and the public table parser share this exact walker.
+fn decode_tables(
+  data : Bytes,
+  section : Section,
+) -> Result[Array[DecodedTable], WasmError] {
   let reader = match reader_at_payload(data, section) {
     Ok(reader) => reader
     Err(error) => return Err(error)
@@ -939,41 +1005,56 @@ pub fn parse_table_section(
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  let tables : Array[TableType] = []
+  let tables : Array[DecodedTable] = []
   let mut i = 0
   while i < count {
     // A table with an explicit initialiser leads with `0x40 0x00`; everything
     // else starts straight at the reference type.
-    let mut first = match reader.read_byte() {
+    let offset = reader.position()
+    let first = match reader.read_byte() {
       Ok(value) => value
       Err(error) => return Err(error)
     }
-    if first == 0x40 {
+    let explicit = first == 0x40
+    if explicit {
+      let reserved_at = reader.position()
       match reader.read_byte() {
-        Ok(_) => ()
-        Err(error) => return Err(error)
-      }
-      first = match reader.read_byte() {
-        Ok(value) => value
-        Err(error) => return Err(error)
-      }
-    }
-    let element_type = if first == REF_NULL_TYPE || first == REF_TYPE {
-      match reader.read_signed_leb(33) {
-        Ok(_) => 0
+        Ok(0) => ()
+        Ok(_) =>
+          return Err(
+            InvalidTableEncoding(
+              reserved_at, "explicit initializer reserved byte must be zero",
+            ),
+          )
         Err(error) => return Err(error)
       }
     } else {
-      first
+      match reader.seek(offset) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
     }
-    let limits = match parse_limits(reader) {
-      Ok(limits) => limits
+    let table_type = match read_table_type(reader) {
+      Ok(value) => value
       Err(error) => return Err(error)
     }
-    tables.push({ element_type, minimum: limits.0, maximum: limits.1, })
+    let initializer_offset = if explicit {
+      let at = reader.position()
+      match skip_constant_expression(reader) {
+        Ok(_) => ()
+        Err(error) => return Err(error)
+      }
+      Some(at)
+    } else {
+      None
+    }
+    tables.push({ table_type, offset, initializer_offset, })
     i = i + 1
   }
-  Ok(tables)
+  match finish_section(reader, Table) {
+    Ok(_) => Ok(tables)
+    Err(error) => Err(error)
+  }
 }
 
 ///|

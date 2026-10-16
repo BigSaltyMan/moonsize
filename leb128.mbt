@@ -23,6 +23,8 @@ pub enum WasmError {
   FunctionCodeCountMismatch(Int, SectionId, Int, Int)
   /// First unconsumed payload byte and section kind.
   TrailingSectionBytes(Int, SectionId)
+  /// Unsupported or malformed table encoding, with its field offset and reason.
+  InvalidTableEncoding(Int, String)
   /// An import descriptor whose kind byte is outside the assigned range.
   InvalidImportKind(Int)
   /// A byte where an opcode was expected that no instruction uses.

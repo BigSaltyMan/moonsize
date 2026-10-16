@@ -168,6 +168,56 @@ fn json_array(value : Json) -> Array[Json] raise {
 }
 
 ///|
+test "dynamic writer provenance survives JSON DOT HTML and text rendering" {
+  let data = b"\x00asm\x01\x00\x00\x00\x01\x04\x01\x60\x00\x00" +
+    b"\x03\x03\x02\x00\x00\x04\x04\x01\x70\x00\x01" +
+    b"\x07\x07\x01\x03run\x00\x00\x09\x07\x01\x00\x41\x00\x0b\x01\x01" +
+    b"\x0a\x12\x02\x0d\x00\x41\x00\x11\x00\x00\x41\x00\xd2\x01\x26\x00\x0b\x02\x00\x0b"
+  let analysis = analysis_of(data)
+  let root = json_object(
+    @json.parse(render_graph("app.wasm", analysis, "graph.json")),
+  )
+  let rows = json_array(root.get("diagnostics").unwrap())
+  assert_eq(rows.length(), 1)
+  let diagnostic = json_object(rows[0])
+  assert_eq(
+    diagnostic.get("code"),
+    Some(Json::string("runtime_table_mutation")),
+  )
+  assert_eq(diagnostic.get("caller"), Some(int_json(0)))
+  assert_eq(diagnostic.get("offset"), Some(int_json(50)))
+  assert_eq(diagnostic.get("table_index"), Some(int_json(0)))
+  assert_eq(diagnostic.get("type_index"), Some(int_json(0)))
+  assert_eq(diagnostic.get("opcode"), Some(Json::string("call_indirect")))
+  let source = json_object(diagnostic.get("source").unwrap())
+  assert_eq(source.get("caller"), Some(int_json(0)))
+  assert_eq(source.get("offset"), Some(int_json(57)))
+  assert_eq(source.get("opcode"), Some(Json::string("table.set")))
+  assert_eq(root.get("graph_complete"), Some(Json::boolean(false)))
+  assert_eq(json_array(root.get("edges").unwrap()).length(), 2)
+  let embedded = json_object(report_data(analysis, "app.wasm"))
+  assert_eq(embedded.get("diagnostics"), root.get("diagnostics"))
+  for
+    text in [
+      render_graph_warning(analysis.graph),
+      render_graph("app.wasm", analysis, "graph.dot"),
+      render_html(analysis, "app.wasm"),
+      render_dead_code(analysis, 5),
+      render_retained(analysis, 5),
+    ] {
+    assert_true(
+      text.contains(
+        "table 0 contents may change through table.set at function 0, offset 57.",
+      ),
+    )
+    assert_true(text.contains("function 0, offset 50: call_indirect"))
+    assert_true(
+      text.contains("do not use them as proof that a function can be removed."),
+    )
+  }
+}
+
+///|
 test "JSON exports parse as objects with exact diagnostic fields and old graph data" {
   let analysis = analysis_of(
     diagnostic_module(b"\x41\x00\x11\x00\x00\xd2\x01\x14\x00", table=true),

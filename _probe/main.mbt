@@ -850,6 +850,20 @@ fn main {
           println(analysis.graph_complete)
           println(analysis.unresolved_count)
           for diagnostic in analysis.graph.diagnostics {
+            match diagnostic.source {
+              Some(source) => {
+                println(source.offset)
+                match source.caller {
+                  Some(caller) => println(caller)
+                  None => println("declaration")
+                }
+                match source.opcode {
+                  Some(opcode) => println(opcode.name())
+                  None => println("metadata")
+                }
+              }
+              None => ()
+            }
             println(diagnostic.caller)
             println(diagnostic.offset)
             println(diagnostic.opcode.name())
@@ -863,6 +877,11 @@ fn main {
               NoStaticTableTargets => println("no static table targets")
               UnmodeledReferenceCall =>
                 println("reference targets not modelled")
+              ImportedTableContents => println("imported table")
+              ExportedTableContents => println("exported table")
+              RuntimeTableMutation => println("runtime table write")
+              UnmodeledTableInitializer => println("explicit initializer")
+              UnknownTableContents => println("missing table context")
             }
           }
           for stat in analysis.stats {

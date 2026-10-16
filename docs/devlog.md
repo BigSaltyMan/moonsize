@@ -114,4 +114,22 @@ PR 工作流继续在同一套已安装工具链下，以默认 debug Wasm 模�
 
 本地用 `a66b413` 的临时源码快照代替 PR 的 base worktree，原样执行后续构建、非空检查、复制和比较命令；双边构建通过，临时 baseline/current 与各自构建来源逐字节一致，总增量为零。另验证 12 个失败场景，覆盖缺失示例/CLI、错误状态 `0/1/2/126/127`、退出 `3` 但缺少原因，以及基线构建失败直接退出。这里只做临时过程验证，未为 YAML 新增重复的单元测试。
 
-本次未修改公开 API 或预算算法。`moon fmt --check`、`--deny-warn` 检查及 240 项 native 测试通过；五个 CLI 脚本仍覆盖 334 个场景，保留预算等号、增长、缩减和零增长回归。本次提交的 Linux CI 需要取得对应提交的运行记录后才能标记远程验证完成。
+本次未修改公开 API 或预算算法。`moon fmt --check`、`--deny-warn` 检查及 240 项 native 测试通过；五个 CLI 脚本仍覆盖 334 个场景，保留预算等号、增长、缩减和零增长回归。提交 `373c086` 的 [Linux CI 已成功](https://github.com/BigSaltyMan/moonsize/actions/runs/38735545371)，预算日志确认读取本次构建路径及上述 SHA-256，100KB 正例和精确 0B 拒绝均通过。
+
+## 11. 动态 table 的保守诊断（2026-10-15）
+
+在 `373c086` 的 240 项测试、334 个 CLI 场景基线上，先增加公开接口回归，复现「已有静态候选，调用之后还有 `table.set`，图仍被判为完整」。修复前新测试失败，修复后候选和边保留、完整性为 false，`unresolved_count` 仍为零。
+
+新增内部 `table_analysis.mbt`，按导入 table 在前、本地 table 在后的完整索引空间整理导入、导出、声明位置和未建模初始化。导入函数、global 等其他条目不占 table 索引；表解析与 `count_imported_functions` 共用 reference type/limits 读取，后者仍只统计函数导入。typed reference 的 heap type 可以占多字节。显式 `0x40 0x00` 初始化表达式完整消费后才读取下一张表，内容一律标为未知，不通过相邻 `ref.func` 猜测目标。错误编码、截断及不支持的 table64/shared limits 返回明确输入错误，新增 `InvalidTableEncoding(offset, reason)`；不提供完整类型/索引/指令语义验证。
+
+公开 `build(data, bodies, elements)` 迁移为 `build(data)`，只接收完整模块字节，从解析入口取得规范函数体、element 和表上下文，移除可省略写入函数或误传空上下文的路径。`analyze` 保留现有签名，复用相同内部建图逻辑。函数体只解码一次，保留依赖指令和写表来源；先收集所有函数的 `table.set/init/copy/grow/fill`，再处理调用。`table.init` 的目标在第二个操作数，`table.copy` 的目标在第一个；copy 来源和 get/size 不算写入。
+
+新增 `ImportedTableContents`、`ExportedTableContents`、`RuntimeTableMutation`、`UnmodeledTableInitializer`，以及目标缺失于上下文时的 `UnknownTableContents`。静态候选非空也不能抑制任何一种原因。`GraphDiagnostic.source : GraphDiagnosticSource?` 与调用位置分开：运行时来源携带完整函数索引、文件指令偏移、opcode；导入/导出来源指向描述符 kind 字节，初始化来源指向表达式起点，caller/opcode 为空。
+
+每个调用可有多条原因：导入、导出、初始化分别保留，运行时写入按文件偏移去重，不同写入位置分别记录，导出别名合并到首个导出来源。诊断条目数表示原因数量，不能再解释成调用点数量；第 6 节当时的「每处一条」规则由本节扩展。`unresolved_count` 仍只统计没有静态 element 候选的表调用。已知候选边及调用位置不变，诊断使 `graph_complete` 为 false。
+
+文本、JSON、DOT、HTML 共用新原因和来源。JSON 保留 schema version `1`，为带来源的新原因增补 `source: {caller, offset, opcode}`，原有空候选和引用诊断保持原字段形状；新稳定代码及外部枚举匹配迁移写入两份 README。排序为 caller、调用偏移、原因代码、来源偏移。非严格报告保留具体风险；strict 在任何文件写入前以 `3` 拒绝，解析错误仍为 `1`。第一版会保守拒绝实际不执行或不可达函数中的写表行为，不求解运行时 table 数据流。
+
+新增公开 API 与报告回归，实际断言候选、边、完整函数/table 索引、调用偏移与独立写入来源。覆盖五种写表指令、只读与 copy 来源、调用先于写入、间接尾调用、混合导入与 typed global、多个原因/写入来源、空候选加动态风险、可空/非空显式初始化后续表、多字节 heap type，以及截断和不支持的编码。保留 Commit 1 的 39 字节样本及此前解析、比较、预算回归；本地 native 测试为 **259 项通过、0 项失败**。
+
+扩展现有 `scripts/test-graph-diagnostics.sh`，V8 独立验证 28 个完整动态表样本，另保留原有 9 个样本；实际核对 JSON 原因、已知边、调用位置和 writer 来源。图诊断脚本为 **125 个进程场景**，包括普通/尾间接调用 strict、非严格各格式诊断、新文件/已有文件保护及坏编码的输入错误；五个脚本合计 442 个场景。预算正反例仍检查本次构建产物。取得本次提交对应的 Linux CI 成功记录后，才能标记远程验证完成。
