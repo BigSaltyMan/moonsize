@@ -453,7 +453,8 @@ pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
   "                 [--compress] [--strict] [--call-graph <path>] [--html <path>]\n" +
   "                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]\n" +
-  "                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]\n\n" +
+  "                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]\n" +
+  "       moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
   "identify candidates for investigation.\n\n" +
@@ -472,8 +473,15 @@ pub fn usage() -> String {
   "  --diff-functions     append function and package changes; requires --baseline\n" +
   "  --experiment <path>  write measured before/after results; requires --baseline\n" +
   "                       refuses to overwrite an existing path\n" +
-  "  --experiment-context <path>  attach declared build settings and validation\n\n" +
-  "Exit codes: 0 ok, 1 unreadable input, 2 bad command line, 3 over budget."
+  "  --experiment-context <path>  attach declared build settings and validation\n" +
+  "  --why-index <n>      explain a shortest model reference path to function n\n" +
+  "  --why-root <n>       search from one actual model root (requires --why-index)\n" +
+  "  --why-json <path>    write path JSON; refuses existing paths\n" +
+  "                       query mode allows only these flags and --strict\n" +
+  "                       element functions are conservative roots; paths are\n" +
+  "                       not execution traces or predictions of savings\n\n" +
+  "Exit codes: 0 completed, 1 input/query/output error, 2 bad command line,\n" +
+  "            3 over budget, incomplete strict graph, or path search limited."
 }
 
 ///|

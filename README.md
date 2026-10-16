@@ -85,6 +85,78 @@ equivalent behavior. Context commands are recorded, never executed. Existing
 output paths are refused. See the [format and reproducible workflow](docs/optimization-experiments.md)
 and [sample report](examples/optimization-experiment.html).
 
+## Explaining a function's reference path
+
+After locating a large function's index in the report, ask which modeled entry
+can introduce it:
+
+```sh
+moonsize app.wasm --why-index 47
+moonsize app.wasm --why-index 47 --why-root 0
+moonsize app.wasm --why-index 47 --why-json function-path.json --strict
+```
+
+Indices above are illustrative. The query returns one deterministic path with
+the fewest edges. Roots are ordered by function index; outgoing edges by target
+index, then direct/reference/indirect kind, then original instruction offset.
+Every step retains its actual opcode (`call`, `return_call`, `ref.func`,
+`call_indirect`, or `return_call_indirect`) and file offset. Indirect edges are
+known candidates; `ref.func` takes a reference rather than proving a call.
+Unmodeled `call_ref` targets are not guessed, and graph diagnostics remain visible
+even when a path is found.
+
+The default searches all existing model roots: function exports (including all
+aliases), the start function, and conservative element references. If the target
+is itself an element root, a zero-edge path is expected and its source is shown.
+`--why-root` selects one **actual** model root without changing global reachability
+or retained sizes. Failure from that entry does not imply global unreachability.
+Root evidence records the section start and export/element ordinal; these are
+explicitly section positions, separate from instruction offsets.
+
+Results distinguish `found`, `not-found-within-model`, and `search-limited`.
+An incomplete graph may still yield either of the first two; an absent path is
+then particularly inconclusive. Imports have `encoded_size: null` because their
+bodies are outside this module. Path JSON has its own format
+`moonsize-function-path` and `schema_version: 1`, structured root reasons,
+ordered nodes/steps, diagnostics, limits and search counters. Existing JSON paths
+are refused. Strict graph refusal occurs before creating a report.
+
+Query mode accepts only `--why-index`, `--why-root`, `--why-json` and `--strict`;
+other report, comparison, experiment and budget flags conflict before input is
+read (including an explicit `--top`). Exit codes are 0 for a completed query
+(found or absent), 1 for input/index/root/output errors, 2 for invalid arguments,
+and 3 for a limited search or strict refusal of an incomplete graph.
+
+The library entry is `explain_function(data, target_index, root?, limits?)`;
+render with `render_function_path` or `render_function_path_json`, and describe
+errors with `describe_function_path_error`. It builds the canonical graph from
+bytes without computing dominators. `PathLimits::new()` defaults to 100,000 nodes,
+1,000,000 edges and depth 256. The node limit separately bounds prepared roots
+and visited nodes; the edge limit separately bounds root-source records, indexed
+edges and examined edges. Preparation limits return `search-limited` too. These
+limits do not bound binary parsing or construction of the existing call graph;
+sorting also has its own cost. Existing parsing/analysis signatures are unchanged;
+`Options` gains the three optional query fields. Clients inspecting options or
+matching the new status/error enums should handle the added fields/variants.
+
+This is a path in the current reference model, not an execution trace or a
+prediction of recompiled or gzip savings. Measure actual changes by rebuilding
+both complete artifacts.
+
+```sh
+node scripts/test-function-path.mjs _build/native/release/build/cmd/main/main.exe
+node scripts/demo-function-path.mjs _build/native/release/build/cmd/main/main.exe
+```
+
+The source demo discovers emitted indices instead of hardcoding them, queries
+an exported entry through `path_upstream` to `path_target`, removes the upstream
+call, rebuilds, writes an optimization experiment, then restores the source and
+checks exact bytes and path evidence. Base output is preserved; optional output
+is intentionally removed, so this is not a claim of full behavioral equivalence.
+Sources, paths, hashes, outputs and before/after experiment reports stay under
+`_build/function-path-demo/`; CI uploads this evidence. Path bytes are never
+summed as a deletion benefit.
+
 ## Using the library
 
 The parsing, the analysis and every report are ordinary packages in this module,

@@ -287,8 +287,14 @@ pub fn render_json(
 ///|
 /// The same structured diagnostics embedded in JSON exports and HTML data.
 fn diagnostics_json(graph : CallGraph) -> Json {
+  diagnostic_records_json(sorted_diagnostics(graph))
+}
+
+///|
+/// Shared record encoding; callers supply deterministic diagnostic order.
+fn diagnostic_records_json(diagnostics : Array[GraphDiagnostic]) -> Json {
   let rows : Array[Json] = []
-  for diagnostic in sorted_diagnostics(graph) {
+  for diagnostic in diagnostics {
     let row : Map[String, Json] = Map([])
     row.set("code", Json::string(diagnostic_code(diagnostic.kind)))
     row.set("caller", int_json(diagnostic.caller))

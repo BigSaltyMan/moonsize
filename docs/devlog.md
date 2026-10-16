@@ -199,3 +199,21 @@ MoonBit `0.10.13+cbb11c36f` 的实际演示：文件 4,977→10,785 B（+5,808�
 边界案例脚本为四组真实 MoonBit 源码重编译和一组人工 Wasm 对照生成实验说明、HTML、JSON，核对新报告与原始测量的哈希和差值一致。`unique-debug` 示例为文件 10824→10168 B、整文件 gzip 5236→4999 B；通过源码回退、原始输出与基础行为检查，明确有意移除可选输出。示例保存到 `examples/optimization-experiment.html/json`，用法和库接口见 `docs/optimization-experiments.md`，两份 README 和复审材料已同步。
 
 本次完成本地格式、deny-warn、native 测试/release 构建及原有回归检查。CI 配置已加入新回归并上传实验报告；按用户要求不提交、不推送，因此本次没有远端 Linux CI 结果。浏览器工具拒绝 file 协议，未进行浏览器视觉验收；已检查 HTML 结构、转义、测量与离线资源约束。原有图片和优化计划保留。
+
+## 16. 函数引入路径与根来源（2026-10-16，本地实现）
+
+新增公开 `explain_function(data, target_index, root?, limits?)`，从完整字节检查模块、收集含导入的函数身份并构建规范调用图，不为查询计算支配树。结果区分 PathFound、PathNotFound、PathSearchLimited，携带目标、选中根、完整或受限前缀的根来源、有序节点/边、全图诊断及计数。导入函数 encoded_size 为 None/JSON null；非法目标、非模型根、幽灵根/边、坏输入和无效限额返回具体错误。
+
+根来源独立整理为每个 export 名称及序号、start、每段 element 引用，保留同一函数的多个来源。位置明确为段起点及条目/段序号，不伪装为指令偏移。与真实 analyze.roots 对照，默认仍将所有 element 函数保守作为根；目标自身是根时如实给出零步路径。指定真实模型根后可以查看上游间接候选或引用边，不改变全局根、可达性和 retained。
+
+确定性 BFS 使用带位置的 graph.edges，根按 index，邻接按目标 index、Direct/Reference/Indirect、指令偏移排序。按 offset 缓存操作码解码，保留 call/return_call/ref.func/call_indirect/return_call_indirect 和 table/type；不猜测引用调用目标。默认限额为 100,000 节点、1,000,000 边、256 层；分别限制根/访问节点、根来源/索引边/检查边。准备阶段也可返回受限，截断不冒充未找到，循环不造成无穷搜索。查询限额不限制已有模块解析、建图和排序成本。
+
+新增 `--why-index`、`--why-root`、`--why-json`，索引解析覆盖非负 Int 范围，不沿用 top 的一百万上限。查询仅可组合 strict，其他模式和显式 top 在读文件前报错。完成查询返回 0，输入/索引/根/写入错误为 1，参数错误为 2，受限或 strict 拒绝为 3。JSON 拒绝已有输出路径，strict 在输出前检查全图，即使已找到路径也不绕过缺口。文本解释查询范围、根、边证据和限制；独立 JSON 格式版本 1 保留结构化数据。所有结果明确属于引用模型，不是执行轨迹或删除、重编译、gzip 收益预测。
+
+新增 17 项公开接口回归，当前 native 合计 **310/310**。覆盖直接/尾调用、菱形、多根、循环和平局、根别名/start/保守 element、指定根的间接/引用路径、导入/null、无名/重名/转义、错误索引、限额的恰好完成及截断、引用调用缺口和动态表写入来源。`scripts/test-function-path.mjs` 独立用 V8 验证 17 个完整模块，运行 **67 个真实进程场景**，逐条核对 JSON、指令字节/偏移、来源、状态、计数、全部模式冲突、严格拒绝和已有文件/硬链接别名保护。八个原有回归的 539 场景继续通过，合计 **606 个 CLI 场景**。
+
+`scripts/demo-function-path.mjs` 在 `_build/function-path-demo/` 的同路径独立项目中执行 before→after→rollback，统一 wasm/debug/no-strip，保存源码、toolchain、构建/查询日志、运行输出、Wasm/CLI 哈希、路径及实验 HTML/JSON。从真实符号定位 path_target，动态发现可达的导出根，经过 path_upstream 得到两边路径，不写死编译器 index。删除上游可选输出后重建，基础输出保持；不声称完整行为等价。当前工具链实际测得文件 10497→10235 B（−262 B）、整文件 gzip 减少 101 B，测试只对账真实测量，不固定跨平台数值。回退后完整 Wasm 字节、行为和路径 JSON 恢复。
+
+两份 README、帮助和 CI 已加入查询、接口迁移、限额和演示说明，CI 保留既有回归并上传 function-path-evidence。moon info 的接口差异仅为查询类型、四个查询/描述/渲染入口及 Options 三个字段；旧 parse/analyze/build 等签名不变。格式、deny-warn、测试、release 构建和 diff 检查通过，三个源码演示继续成功；预算读取新构建的 10675 B 示例，100KB 返回 0，0B 精确返回 3。
+
+本地 HEAD 仍为 e5833fe，收益边界、优化实验及 HTML 前置工作尚有未提交改动。本功能保留为独立可审阅改动，未将前置功能、图片或规划混入提交；按既定约束不推送，Linux CI 尚未运行，不能将本地成功标为远程验证完成。

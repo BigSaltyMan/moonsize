@@ -29,6 +29,10 @@ pub struct Options {
   experiment : String?
   /// Optional self-reported build settings and business validation record.
   experiment_context : String?
+  /// Independent function-reference path query (full function index space).
+  why_index : Int?
+  why_root : Int?
+  why_json : String?
   /// Print whole-file gzip and independent section gzip measurements.
   compress : Bool
   /// Refuse to report at all when the call graph is incomplete, rather than
@@ -57,6 +61,9 @@ pub fn Options::default(path : String) -> Options {
     diff_functions: false,
     experiment: None,
     experiment_context: None,
+    why_index: None,
+    why_root: None,
+    why_json: None,
     compress: false,
     strict: false,
   }
@@ -66,6 +73,28 @@ pub fn Options::default(path : String) -> Options {
 /// A guard that keeps the decimal scan from overflowing on long input; no real
 /// module has a million functions, let alone this many.
 const MAX_TOP : Int = 1000000
+
+///|
+/// Function indices are not --top counts: accept the entire nonnegative Int
+/// range and defer real function-space membership to the query's safe entry.
+fn parse_path_index(text : String) -> Int? {
+  let bytes = @utf8.encode(text)
+  if bytes.is_empty() {
+    return None
+  }
+  let mut value = 0
+  for byte in bytes {
+    if !is_ascii_digit(byte) {
+      return None
+    }
+    let digit = (byte - b'0').to_int()
+    if value > 214748364 || (value == 214748364 && digit > 7) {
+      return None
+    }
+    value = value * 10 + digit
+  }
+  Some(value)
+}
 
 ///|
 /// Parse a non-negative decimal integer, or `None` for anything else.
@@ -228,6 +257,7 @@ pub fn parse_size(text : String) -> Int? {
 pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut path : String? = None
   let mut top = DEFAULT_TOP
+  let mut top_seen = false
   let mut retained = false
   let mut dead_code = false
   let mut call_graph : String? = None
@@ -237,12 +267,16 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut diff_functions = false
   let mut experiment : String? = None
   let mut experiment_context : String? = None
+  let mut why_index : Int? = None
+  let mut why_root : Int? = None
+  let mut why_json : String? = None
   let mut compress = false
   let mut strict = false
   let mut i = 1
   while i < args.length() {
     let arg = args[i]
     if arg == "--top" {
+      top_seen = true
       if i + 1 >= args.length() {
         return Err("moonsize: --top needs a number\n\n" + usage())
       }
@@ -257,6 +291,32 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
           )
       }
       i = i + 2
+    } else if arg == "--why-index" || arg == "--why-root" {
+      if i + 1 >= args.length() {
+        return Err("moonsize: " + arg + " needs an index\n\n" + usage())
+      }
+      let index = match parse_path_index(args[i + 1]) {
+        Some(index) => index
+        None =>
+          return Err(
+            "moonsize: " +
+            arg +
+            " wants a nonnegative function index\n\n" +
+            usage(),
+          )
+      }
+      if arg == "--why-index" {
+        why_index = Some(index)
+      } else {
+        why_root = Some(index)
+      }
+      i += 2
+    } else if arg == "--why-json" {
+      if i + 1 >= args.length() {
+        return Err("moonsize: --why-json needs a .json path\n\n" + usage())
+      }
+      why_json = Some(args[i + 1])
+      i += 2
     } else if arg == "--retained" {
       retained = true
       i = i + 1
@@ -325,6 +385,32 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if why_index is None && (why_root is Some(_) || why_json is Some(_)) {
+    return Err(
+      "moonsize: --why-root and --why-json require --why-index\n\n" + usage(),
+    )
+  }
+  if why_index is Some(_) {
+    if top_seen ||
+      html is Some(_) ||
+      call_graph is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      retained ||
+      dead_code ||
+      compress ||
+      diff_functions ||
+      baseline is Some(_) ||
+      max_size is Some(_) {
+      return Err(
+        "moonsize: --why-index is an independent query mode; only --why-root, --why-json and --strict may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if why_json is Some(target) && !target.has_suffix(".json") {
+      return Err("moonsize: --why-json wants a .json path\n\n" + usage())
+    }
   }
   if experiment_context is Some(_) && experiment is None {
     return Err(
@@ -397,6 +483,9 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     diff_functions,
     experiment,
     experiment_context,
+    why_index,
+    why_root,
+    why_json,
     compress,
     strict,
   })

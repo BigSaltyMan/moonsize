@@ -62,6 +62,62 @@ moonsize after.wasm --baseline before.wasm --experiment experiment.html \
 
 离线 HTML 或 CI 使用的 JSON 报告汇总产物 SHA-256、实测文件与整文件 gzip 差值、段/函数/包差异、图诊断，以及声明的构建条件和业务验证记录。配置不同、验证失败和缺少记录均会显示；不会把文件变小直接判为成功优化。说明中的命令只记录，不执行；已存在的输出路径不会被覆盖。见[完整格式与复现流程](docs/optimization-experiments.md)和[报告示例](examples/optimization-experiment.html)。
 
+## 查询函数引入路径
+
+从报告中找到大函数的 index 后，可以查询哪个模型入口引用了它：
+
+```sh
+moonsize app.wasm --why-index 47
+moonsize app.wasm --why-index 47 --why-root 0
+moonsize app.wasm --why-index 47 --why-json function-path.json --strict
+```
+
+这里的 index 仅作说明。查询返回一条边数最少、结果稳定的模型路径。根按函数
+index 排序，邻接边依次按目标 index、direct/reference/indirect、指令偏移排序。
+每条边保留真实 opcode（普通调用、尾调用、`ref.func` 或间接候选）和原文件指令
+偏移。间接边仅表示已知候选，`ref.func` 表示取得引用，不代表执行调用；不会猜测
+尚未建模的 `call_ref` 目标。找到路径时也保留全图诊断。
+
+默认从全部现有模型根出发，保留每个 export 名称、start 和保守 element 引用的
+来源。同一函数可以有多条根来源。目标自身在 element 中时，默认零步路径是如实
+结果；`--why-root` 可选择一个真实模型根查看上游路径，不改变全局可达性或
+retained 算法。从指定入口未找到，不代表整个模块不可达。根位置明确使用段起点
+及 export/element 序号，与调用指令的精确偏移区分。
+
+结果区分 `found`、`not-found-within-model`、`search-limited`。图不完整时，已知
+路径和未找到路径都保留限制说明；未找到尤其不能作为不可达证明。导入函数的
+`encoded_size` 为 `null`，因为本文件没有它的函数体。独立 JSON 格式为
+`moonsize-function-path`，`schema_version` 为 `1`，包含结构化根来源、有序节点、
+边、诊断、限额及计数。JSON 拒绝覆盖已有路径，strict 拒绝发生在创建报告之前。
+
+查询模式只允许这三个查询参数及 `--strict`；其他报告、比较、实验、预算选项，
+包括显式 `--top`，均在读取文件前报冲突。完成查询（找到或未找到）返回 `0`，
+输入、索引、根或输出错误返回 `1`，参数错误返回 `2`，搜索受限或 strict 拒绝
+不完整图返回 `3`。
+
+库入口是 `explain_function(data, target_index, root?, limits?)`，直接从完整模块
+建图，不计算支配树；配套 `render_function_path`、`render_function_path_json`
+及 `describe_function_path_error`。`PathLimits::new()` 默认 100,000 节点、
+1,000,000 边和 256 层。节点限额分别约束根数量和访问节点；边限额分别约束根
+来源记录、索引边和检查边。准备阶段触发限额也返回搜索受限。这些查询限额不约束
+二进制解析和既有建图本身的成本，排序另有成本。原有解析、分析函数签名不变；
+`Options` 增加三个可选查询字段，检查 options 或穷举新增状态、错误枚举的调用方
+应相应处理。
+
+这是当前引用模型中的路径，不是实际执行轨迹，也不预测重编译或 gzip 收益。
+实际优化收益应比较修改前后完整构建产物。
+
+```sh
+node scripts/test-function-path.mjs _build/native/release/build/cmd/main/main.exe
+node scripts/demo-function-path.mjs _build/native/release/build/cmd/main/main.exe
+```
+
+源码演示从真实产物查找函数 index，查询导出入口经过 `path_upstream` 到
+`path_target` 的路径，删除上游调用后重建并生成优化实验报告，再回退核对原始
+字节和完整路径证据。保留基础输出、明确删除可选输出，不声称行为完全等价。
+源码、哈希、路径、运行输出和实验报告均保存在 `_build/function-path-demo/`，
+CI 上传证据；不将路径字节求和作为删除收益。
+
 ## 作为库使用
 
 解析、分析和每一份报告都是这个模块里的普通包，所以程序可以直接取数字而不是取文本。`moon add BigSaltyMan/moonsize` 之后导入即可；入口是 `Options::default`，因为 `Options` 是只读类型，别的包无法用字面量构造它。

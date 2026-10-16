@@ -233,9 +233,45 @@ fn run_experiment(options : @lib.Options, target : String) -> Unit {
 }
 
 ///|
-/// Everything the tool does lives in the library, so it can be tested without a
-/// process around it. This entry point only supplies the real environment: the
-/// command line and the filesystem.
+/// Query the canonical graph without running whole-module retained analysis.
+fn run_function_path(options : @lib.Options, target_index : Int) -> Unit {
+  let data = read_input(options.path)
+  let report = match
+    @lib.explain_function(data, target_index, root?=options.why_root) {
+    Ok(report) => report
+    Err(error) => {
+      println("moonsize: " + @lib.describe_function_path_error(error))
+      @sys.exit(@lib.EXIT_INPUT)
+      return
+    }
+  }
+  if options.strict && !report.graph_complete {
+    println(report.graph_warning)
+    println(
+      "moonsize: --strict: refusing to report a function path with an incomplete call graph",
+    )
+    @sys.exit(@lib.EXIT_OVER_SIZE)
+    return
+  }
+  match options.why_json {
+    Some(target) => {
+      if @fs.path_exists(target) {
+        println("moonsize: path query output already exists: " + target)
+        @sys.exit(@lib.EXIT_INPUT)
+        return
+      }
+      write_output(target, @lib.render_function_path_json(report))
+      println("Function path written to " + target)
+    }
+    None => println(@lib.render_function_path(report))
+  }
+  if report.status is PathSearchLimited {
+    @sys.exit(@lib.EXIT_OVER_SIZE)
+  }
+}
+
+///|
+/// Supply command-line arguments and filesystem access to the library.
 fn main {
   let options = match @lib.parse_options(@env.args()) {
     Ok(options) => options
@@ -244,6 +280,10 @@ fn main {
       @sys.exit(@lib.EXIT_USAGE)
       return
     }
+  }
+  if options.why_index is Some(target) {
+    run_function_path(options, target)
+    return
   }
   if options.experiment is Some(target) {
     run_experiment(options, target)

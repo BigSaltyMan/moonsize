@@ -48,6 +48,21 @@ jobs:
         run: bash scripts/test-function-diff.sh _build/native/release/build/cmd/main/main.exe
       - name: Optimization-experiment CLI regressions
         run: node scripts/test-optimization-experiment.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Function-path CLI regressions
+        run: node scripts/test-function-path.mjs _build/native/release/build/cmd/main/main.exe
+      - name: MoonBit function-path source demo and rollback
+        run: node scripts/demo-function-path.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Function-path evidence artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: function-path-evidence
+          path: |
+            _build/function-path-demo/*.json
+            _build/function-path-demo/*.html
+            _build/function-path-demo/*.txt
+            _build/function-path-demo/run.log
+            _build/function-path-demo/*.wasm
+          if-no-files-found: error
       - name: MoonBit function-diff source demo and rollback
         run: bash scripts/demo-function-diff.sh _build/native/release/build/cmd/main/main.exe
       - name: Retained model versus rebuilt size evidence
