@@ -18,7 +18,7 @@ See [vendored source, licenses and deterministic regeneration](../assets/README.
 | --- | --- |
 | Arbitrary cwd generates a self-contained page | Three real CLI runs: empty independent cwd, local/parent poisoned assets, and a complete V8-valid long-name/diagnostic module. Reconstructed chart source hash equals the vendored pin. |
 | A moved report renders with no network | Original context closed. Copy is byte-identical in a new directory containing only report.html, with spaces and Chinese in its path. New context is offline before navigation, service workers blocked. All four charts paint, tooltip/table/metrics work; there are no external requests or rendering errors. A separate fetch control fails as expected. |
-| Printed PDF is readable | Actual browser A4 PDFs, independently rendered with Poppler. PDF.js checks exact measurements, complete function/module identities, text bounds and retained graphics. Every local page is also visually reviewed. Printing restores original chart widths, pie labels and disclosures. |
+| Printed PDF is readable | Actual browser A4 PDFs, independently rendered with Poppler. PDF.js checks exact measurements, complete function/module identities, text bounds and retained graphics. Extracted text comparisons ignore whitespace introduced by font/ligature item splitting; spelling, punctuation, numbers and units remain checked. Every local page is also visually reviewed. Printing restores original chart widths, pie labels and disclosures. |
 
 The HTTP development surface is intentional. AGENTS.md prohibits `file://`:
 the offline test fulfills **only the main document** at a distinct loopback HTTP

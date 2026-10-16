@@ -15,6 +15,13 @@ const work = fs.mkdtempSync(path.join(out, 'run-'));
 const cwd = path.join(work, 'source cwd 中文');
 fs.mkdirSync(cwd);
 const hash = b => crypto.createHash('sha256').update(b).digest('hex');
+// PDF fonts can split a single word into items (Linux: "Whole-", "fi", "le
+// gzip"). Joining items inserts spaces that were never painted. Compare all
+// non-whitespace characters, retaining spelling, punctuation, numbers and units.
+const pdfTextKey = text => text.replace(/\s/g,'');
+assert.equal(pdfTextKey(['Whole-','fi','le gzip'].join(' ')),pdfTextKey('Whole-file gzip'));
+assert.notEqual(pdfTextKey('Whole-file zip'),pdfTextKey('Whole-file gzip'));
+assert.notEqual(pdfTextKey('5,270 B'),pdfTextKey('5,207 B'));
 const input = path.join(root, 'examples/fib.wasm');
 const expectedInput = '0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c';
 assert.equal(hash(fs.readFileSync(input)), expectedInput);
@@ -169,14 +176,14 @@ if (process.argv.includes('--browser')) {
         }
         pages.push({page:i,png,text:pageText});
       }
-      for(const needle of ['File size','Whole-file gzip','Methods, measurement ranges','not guaranteed deletion savings','independent'])assert(text.includes(needle),needle+' missing in PDF');
-      for(const value of metrics)assert(text.includes(value),value+' missing in PDF');
+      const flattened=pdfTextKey(text);
+      for(const needle of ['File size','Whole-file gzip','Methods, measurement ranges','not guaranteed deletion savings','independent'])assert(flattened.includes(pdfTextKey(needle)),needle+' missing in PDF');
+      for(const value of metrics)assert(flattened.includes(pdfTextKey(value)),value+' missing in PDF');
       // Chromium may preserve Canvas 2D as PDF vectors rather than images.
       assert(pdfImages>=4||pdfPaths>=100,'PDF did not retain chart graphics');
-      const flattened=text.replace(/\s/g,'');
-      for(const slice of artifact.data.pie)assert(flattened.includes(slice.name.replace(/\s/g,'')),'Module missing in printed legend');
-      for(const f of artifact.data.functions.slice(0,20))assert(flattened.includes(f.name.replace(/\s/g,'')),'Function name missing in PDF: '+f.index);
-      if(name==='long-name-warning')assert(text.includes('no static table targets'));
+      for(const slice of artifact.data.pie)assert(flattened.includes(pdfTextKey(slice.name)),'Module missing in printed legend');
+      for(const f of artifact.data.functions.slice(0,20))assert(flattened.includes(pdfTextKey(f.name)),'Function name missing in PDF: '+f.index);
+      if(name==='long-name-warning')assert(flattened.includes(pdfTextKey('no static table targets')));
       const responsive=[];
       for(const width of [1440,1024,768,390]) {
         await page.setViewportSize({width,height:900});

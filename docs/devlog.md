@@ -267,3 +267,5 @@ README 截图后续更新：两份 README 均直接展示 report-desktop.jpg 与
 测试环境固定 Playwright 1.58.2、PDF.js 5.4.624；本机 Edge 156.0.4314.23、Windows 10.0.26300、Poppler 26.07.0。真实 A4 浏览器 PDF 分别 5 页与 4 页，Poppler 独立渲染，每页检查数据/完整名称、图表、表格列和模型说明；已逐页人工检查全部 9 张 PNG，无裁切、覆盖、空黑图或意外空白页。PDF.js 同时检查文本与图形，真实打印事件校验纸宽及状态恢复，再在 1440/1024/768/390 下检查布局。原 336 项测试、727 CLI 场景、四个源码演示及预算 0/3 继续通过，加上迁移 3 场景共 730。资源与打印最终修正后重新运行对应检查和浏览器验收。
 
 详细复现见 docs/html-delivery.md，本地哈希/环境快照见 docs/html-delivery-results.json；PDF、页面 PNG 和逐页 manual-review.md 保存在 _build/html-delivery-verification/latest.json 指向的 run-JM2Zrx 目录。CI 新增锁定开发依赖、Chromium 实际离线/PDF 测试和 html-delivery-evidence；不会将适配器检查或 CI 自动检查冒充人工视觉验收。非 Chromium 浏览器、物理打印机和 file:// 双击路径未实测，A4/12mm 设置范围单独说明。目标远程状态以最终提交 SHA 的 CI 为准。
+
+Linux CI 首次执行已通过资源校验、336 项测试、全部旧回归和预算；新增 PDF 检查因提取文本的字形分段差异失败。下载实际 Linux PDF 并检查页面，Whole-file gzip 标签和 5207 B 卡片均正确；PDF.js 返回 Whole-、fi、le gzip 三段，测试自行 join 空格造成误判。后续修正仅在 PDF 文本比较时去除提取空白，保留全部文字、标点、数字及单位，增加连字分段正例和错字/错数反例；不跳过 PDF 内容断言，也不修改生产页面或测量。修正后重新运行实际浏览器/PDF 回归并正常推送，由新目标 SHA 的 CI 确认。
