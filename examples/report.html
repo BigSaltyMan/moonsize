@@ -5,83 +5,99 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>moonsize — examples/fib.wasm</title>
 <style>
-      :root {
-      --bg: #f6f8fb; --panel: #ffffff; --ink: #0f172a;
-      --muted: #64748b; --line: #e2e8f0; --accent: #2563eb;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--ink);
-      font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    }
-    header { padding: 26px 28px 6px; }
-    h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
-    h1 span { color: var(--muted); font-weight: 400; }
-    .file {
-      margin: 5px 0 0; color: var(--muted); font-size: 12px; word-break: break-all;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    }
-    .cards {
-      display: grid; gap: 12px; padding: 16px 28px 4px;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    }
-    .card {
-      background: var(--panel); border: 1px solid var(--line);
-      border-radius: 10px; padding: 14px 16px;
-    }
-    .card .label {
-      display: block; color: var(--muted); font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.07em;
-    }
-    .card .value {
-      display: block; margin-top: 7px; font-size: 23px; font-weight: 600;
-      font-variant-numeric: tabular-nums;
-    }
-    .card .sub { display: block; margin-top: 1px; color: var(--muted); font-size: 12px; }
-    .charts {
-      display: grid; gap: 12px; padding: 12px 28px 28px;
-      grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
-    }
-    .panel {
-      background: var(--panel); border: 1px solid var(--line);
-      border-radius: 10px; padding: 14px 16px 6px; overflow: hidden;
-    }
-    .panel.wide { grid-column: 1 / -1; }
-    .panel h2 {
-      margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.07em;
-    }
-    .chart { width: 100%; height: 320px; }
-    .chart.tall { height: 440px; }
-    .empty {
-      height: 320px; display: flex; align-items: center; justify-content: center;
-      color: var(--muted); font-size: 13px;
-    }
-    .card.alert .value { color: #dc2626; }
-    .warn {
-      margin: 10px 28px 0; padding: 10px 14px; border-radius: 8px;
-      background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
-      font-size: 12px; line-height: 1.5; white-space: pre-line;
-    }
-    footer { padding: 0 28px 30px; color: var(--muted); font-size: 12px; }
+:root {
+  --bg:#f5f4ef; --panel:#fff; --ink:#243644; --muted:#526572;
+  --line:#dce3e2; --accent:#087f8c; --soft:#edf6f5; --warn:#94521b;
+}
+* { box-sizing:border-box; }
+html { scroll-padding-top:24px; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+a { color:var(--accent); text-underline-offset:4px; }
+a:focus-visible,summary:focus-visible,button:focus-visible,[tabindex]:focus-visible { outline:3px solid #086e85; outline-offset:4px; border-radius:4px; }
+.skip-link { position:absolute; top:8px; left:16px; padding:8px 14px; background:white; transform:translateY(-150%); z-index:10; }
+.skip-link:focus { transform:none; }
+.shell { max-width:1416px; margin:auto; padding:28px; min-width:0; }
+.report-header { padding:8px 0 22px; }
+.brand { display:flex; align-items:center; gap:10px; font-size:17px; font-weight:750; letter-spacing:-.02em; }
+.brand-mark { display:grid; place-items:center; width:30px; height:30px; border-radius:9px; background:var(--accent); color:white; font-family:ui-monospace,monospace; }
+.eyebrow { margin:20px 0 4px; color:var(--muted); font-size:12px; font-weight:650; letter-spacing:.08em; text-transform:uppercase; }
+h1 { margin:0 0 8px; font-size:30px; line-height:1.2; letter-spacing:-.035em; font-weight:700; }
+.file { margin:0; color:var(--muted); font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+.report-meta { margin:9px 0 0; color:var(--muted); font-size:13px; }
+.report-nav { display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:20px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; font-weight:600; }
+.report-nav a { text-decoration:none; padding:3px 0; }
+.report-nav a:hover { text-decoration:underline; }
+.cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+.card { min-width:0; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--panel); box-shadow:0 2px 5px #24364404; }
+.label { display:block; font-size:13px; font-weight:600; color:var(--muted); }
+.value { display:block; margin:8px 0 5px; font-size:30px; line-height:1.25; font-weight:700; letter-spacing:-.035em; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.sub { display:block; color:var(--muted); font-size:12px; line-height:1.65; }
+.card.alert .value { color:var(--warn); }
+.measurement-error { margin:10px 0 0; font-size:12px; color:var(--warn); overflow-wrap:anywhere; white-space:pre-wrap; }
+.analysis-status { padding:18px 20px; background:var(--soft); border:1px solid #c8dedb; border-left:4px solid var(--accent); border-radius:10px; margin-bottom:30px; }
+.analysis-status h2 { font-size:14px; margin:0 0 6px; }
+.analysis-status p { margin:5px 0; font-size:13px; }
+.analysis-status.warning { background:#fff5e9; border-color:#edcda4; border-left-color:var(--warn); }
+.warn { white-space:pre-line; overflow-wrap:anywhere; }
+.scope-note { font-weight:600; }
+.chart-status { margin:12px 0; padding:12px 16px; border:1px solid #edcda4; border-radius:8px; background:#fff5e9; font-size:13px; }
+.chart-status[hidden] { display:none; }
+.section-heading { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:6px 20px; margin:26px 0 12px; }
+.section-heading h2 { margin:0; font-size:19px; letter-spacing:-.02em; }
+.section-heading p { margin:0; color:var(--muted); font-size:13px; }
+.composition-grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:18px; align-items:start; }
+.panel { min-width:0; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+.panel h3 { font-size:15px; margin:0 0 6px; }
+.panel-note { font-size:12px; color:var(--muted); line-height:1.7; margin:0 0 12px; overflow-wrap:anywhere; }
+.panel-tools { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+button { font:inherit; font-size:12px; cursor:pointer; padding:6px 10px; border:1px solid #b8cfcd; border-radius:6px; background:var(--soft); color:#15505a; }
+button[aria-pressed="true"] { background:#d2eae6; }
+button:disabled { cursor:default; opacity:.7; }
+.chart { width:100%; min-width:0; height:240px; }
+.chart.ring { height:390px; }
+.chart.map { height:450px; }
+.empty { min-height:120px; display:flex; align-items:center; justify-content:center; padding:20px; text-align:center; color:var(--muted); font-size:13px; }
+.function-details { margin-top:18px; border-top:1px solid var(--line); padding-top:14px; }
+summary { cursor:pointer; font-weight:600; font-size:14px; padding:6px 0; }
+.table-scroll { max-width:100%; overflow-x:auto; margin-top:10px; }
+table { width:100%; min-width:900px; border-collapse:collapse; table-layout:fixed; font-size:12px; }
+caption { text-align:left; color:var(--muted); padding:0 0 12px; font-size:12px; }
+th,td { padding:12px 10px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+thead th { font-weight:600; color:var(--muted); background:#f5f8f7; }
+tbody tr:last-child td,tbody tr:last-child th { border-bottom:0; }
+.number { text-align:right; font-variant-numeric:tabular-nums; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+.function-name,.module-name { display:block; overflow-wrap:anywhere; white-space:pre-wrap; user-select:text; }
+.function-name { font-weight:600; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+.module-name { margin-top:5px; font-size:11px; color:var(--muted); }
+.reachability { display:inline-block; padding:3px 6px; border-radius:5px; background:var(--soft); color:#20545b; font-size:11px; line-height:1.4; }
+.reachability.unreachable { background:#fff0dc; color:#854814; }
+.methods { margin-top:26px; padding:16px 20px; background:#eeefea; border:1px solid var(--line); border-radius:10px; }
+.methods p { font-size:13px; color:var(--muted); overflow-wrap:anywhere; }
+.methods h3 { font-size:13px; margin:18px 0 4px; }
+footer { padding:24px 0 0; color:var(--muted); font-size:12px; }
+@media (max-width:1100px) { .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .value { font-size:29px; } }
+@media (max-width:850px) { .composition-grid { grid-template-columns:minmax(0,1fr); } .chart.ring { height:360px; } }
+@media (max-width:480px) { .shell { padding:16px; } h1 { font-size:26px; } .cards { grid-template-columns:minmax(0,1fr); gap:10px; } .card { padding:16px 18px; } .panel { padding:16px 12px; } .analysis-status { padding:15px; } .report-nav { gap:8px 16px; } .chart.map { height:420px; } .section-heading { margin-top:24px; } }
+@media print { body { background:white; font-size:12px; } .shell { max-width:none; padding:0; } .report-nav,.skip-link,button { display:none; position:static; } .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .card,.analysis-status { break-inside:avoid; box-shadow:none; } .composition-grid { grid-template-columns:1fr; } .panel { border-color:#c9d1d1; margin-bottom:14px; break-inside:avoid; } .table-scroll { overflow:visible; } table { min-width:0; font-size:9px; } th,td { padding:6px 4px; } thead { display:table-header-group; } tr { break-inside:avoid; } .methods { break-inside:auto; } .function-details { break-inside:auto; } a { color:inherit; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>moonsize <span>· size report</span></h1>
-  <p class="file">examples/fib.wasm</p>
-</header>
-<p class="model-scope">RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes. Unreachable functions are candidates for investigation, not a safe-deletion list.</p>
-<section class="cards">
+<a class="skip-link" href="#overview">Skip to report</a><main class="shell" id="report">
+<header class="report-header"><div class="brand"><span class="brand-mark" aria-hidden="true">m</span>moonsize</div>
+<p class="eyebrow">WebAssembly / size analysis</p><h1>WebAssembly size report</h1>
+<p class="file">examples/fib.wasm</p>
+<p class="report-meta">47 local functions · 10 module labels · 81 modeled references</p>
+<nav class="report-nav" aria-label="Report sections"><a href="#overview">Overview</a><a href="#composition">Composition</a><a href="#function-ranking">Functions</a><a href="#module-map">Module map</a><a href="#methodology">Methods &amp; limits</a></nav></header>
+<section id="overview" class="cards" aria-label="Key measurements" tabindex="-1">
       <div class="card">
         <span class="label">File size</span>
         <span class="value">10,675 B</span>
-        <span class="sub">10.4 KB</span>
+        <span class="sub">10.4 KB · complete artifact</span>
       </div>
       <div class="card">
         <span class="label">Code section</span>
         <span class="value">5,166 B</span>
-        <span class="sub">48.3% of file</span>
+        <span class="sub">48.3% of file · complete encoding</span>
       </div>
       <div class="card">
         <span class="label">Whole-file gzip</span>
@@ -89,21 +105,51 @@
         <span class="sub">48.7% of raw · 2.05x</span>
       </div>
       <div class="card">
-        <span class="label">Dead code</span>
+        <span class="label">Unreachable in model</span>
         <span class="value">0 B</span>
-        <span class="sub">nothing unreachable</span>
+        <span class="sub">no unreachable local function bytes</span>
       </div>
 </section>
-<section class="charts">
-  <div class="panel"><h2>Sections</h2><p>Each section is compressed separately. These sizes are not additive and do not represent whole-file transfer shares.</p><div id="sections" class="chart"></div></div>
-  <div class="panel"><h2>Top 20 functions by body size</h2><p>Function gzip uses independent streams including size prefixes, with ratios based on encoded size. It does not measure transfer savings from removal.</p><div id="functions" class="chart"></div></div>
-  <div class="panel"><h2>Modules — share of the code section</h2><div id="modules" class="chart"></div></div>
-  <div class="panel wide"><h2>Treemap — module → function, area is bytes</h2><p>Area is raw encoded bytes. Tooltip gzip values are independent function streams, not additive transfer shares.</p><div id="treemap" class="chart tall"></div></div>
-</section>
-<footer>
-  47 functions analysed, 10 modules, 81 references in the call graph. Red cells are unreachable within the model.
-Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. Reference-call targets and dynamic table contents are not solved. Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. Element references are conservative roots, including private, passive and declarative segments. graph_complete means no gaps detected within this scope, not full Wasm certification. RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.
-</footer>
+<section id="analysis-status" class="analysis-status" aria-label="Analysis status">
+<h2>No detected graph gaps</h2><p>No gaps detected within the current reference model. This is not full Wasm verification.</p>
+<p class="scope-note">Model results identify investigation candidates, not guaranteed deletion savings.</p><p>Unreachable functions are not a safe-deletion list. <a href="#methodology">Read the model and measurement limits</a>.</p></section>
+<p id="chart-status" class="chart-status" role="status" hidden></p><noscript><p class="chart-status">JavaScript is disabled. Measured cards, full function details and methods below remain readable; charts require JavaScript.</p></noscript>
+<p id="chart-resource-mode" class="panel-note">Chart library and report data are embedded in this file; no network or sibling assets are required.</p>
+<section id="composition" aria-labelledby="composition-title"><div class="section-heading"><h2 id="composition-title">Where the bytes go</h2><p>Complete sections, then attributed function encodings</p></div><div class="composition-grid">
+<article class="panel"><div class="panel-tools"><h3>Sections</h3><button id="section-compare" type="button" aria-pressed="false" aria-controls="sections">Compare independent gzip</button></div><p class="panel-note">Raw sizes include section headers and payloads. Both views use the same byte axis.</p><p class="panel-note">Each section is compressed separately. These sizes are not additive and do not represent whole-file transfer shares.</p><div id="sections" class="chart" role="img" aria-label="Section sizes in encoded bytes"></div>
+</article><article class="panel"><h3>Modules · attributed function bytes</h3><p class="panel-note">Shares are based on attributed function bytes; code-section overhead is excluded. Small modules may be grouped as other.</p><div id="modules" class="chart ring" role="img" aria-label="Module shares of attributed function encodings"></div></article></div></section>
+<section id="function-ranking" aria-labelledby="functions-title"><div class="section-heading"><h2 id="functions-title">Functions to investigate</h2><p>Top 20 local functions, ranked by body bytes</p></div><article class="panel"><p class="panel-note">Function gzip uses independent streams including size prefixes, with ratios based on encoded size. It does not measure transfer savings from removal.</p><div id="functions" class="chart" role="img" aria-label="Top 20 functions by body bytes; complete names in the table below"></div>
+<details id="function-details" class="function-details" open><summary>Function details · full names and measured bytes</summary>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Function details, scroll horizontally on narrow screens"><table>
+<caption>Same Top 20 local functions as the body-size chart. Encoded B includes the size prefix. Indices use the full function index space, including imports. Reachability is within the current model.</caption>
+<colgroup><col style="width:5%"><col style="width:6%"><col style="width:38%"><col style="width:8%"><col style="width:8%"><col style="width:16%"><col style="width:19%"></colgroup>
+<thead><tr><th scope="col" class="number">Rank</th><th scope="col" class="number">Index</th><th scope="col">Function / module</th><th scope="col" class="number">Body B</th><th scope="col" class="number">Encoded B</th><th scope="col" class="number">Independent gzip B</th><th scope="col">Model reachability</th></tr></thead><tbody>
+<tr data-function-index="43"><th scope="row" class="number">1</th><td class="number">43</td><td><span class="function-name">int__to__string__dec</span><span class="module-name">(top-level)</span></td><td class="number">631</td><td class="number">633</td><td class="number">385</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="21"><th scope="row" class="number">2</th><td class="number">21</td><td><span class="function-name">moonbit.utf8.encode_from_utf16</span><span class="module-name">moonbit.utf8</span></td><td class="number">480</td><td class="number">482</td><td class="number">268</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="29"><th scope="row" class="number">3</th><td class="number">29</td><td><span class="function-name">moonbit.gc.free</span><span class="module-name">moonbit.gc</span></td><td class="number">407</td><td class="number">409</td><td class="number">254</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="3"><th scope="row" class="number">4</th><td class="number">3</td><td><span class="function-name">tlsf/insertBlock</span><span class="module-name">tlsf</span></td><td class="number">322</td><td class="number">324</td><td class="number">220</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="39"><th scope="row" class="number">5</th><td class="number">39</td><td><span class="function-name">int::Int::to__string_2einner</span><span class="module-name">int::Int</span></td><td class="number">299</td><td class="number">301</td><td class="number">218</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="44"><th scope="row" class="number">6</th><td class="number">44</td><td><span class="function-name">int__to__string__generic</span><span class="module-name">(top-level)</span></td><td class="number">264</td><td class="number">266</td><td class="number">211</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="45"><th scope="row" class="number">7</th><td class="number">45</td><td><span class="function-name">int__to__string__hex</span><span class="module-name">(top-level)</span></td><td class="number">225</td><td class="number">227</td><td class="number">180</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="33"><th scope="row" class="number">8</th><td class="number">33</td><td><span class="function-name">moonbit.fprintln</span><span class="module-name">moonbit</span></td><td class="number">204</td><td class="number">206</td><td class="number">183</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="2"><th scope="row" class="number">9</th><td class="number">2</td><td><span class="function-name">tlsf/removeBlock</span><span class="module-name">tlsf</span></td><td class="number">199</td><td class="number">201</td><td class="number">174</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="5"><th scope="row" class="number">10</th><td class="number">5</td><td><span class="function-name">tlsf/initialize</span><span class="module-name">tlsf</span></td><td class="number">173</td><td class="number">175</td><td class="number">160</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="1"><th scope="row" class="number">11</th><td class="number">1</td><td><span class="function-name">tlsf/searchBlock</span><span class="module-name">tlsf</span></td><td class="number">171</td><td class="number">173</td><td class="number">144</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="47"><th scope="row" class="number">12</th><td class="number">47</td><td><span class="function-name">____moonbit__main</span><span class="module-name">(top-level)</span></td><td class="number">156</td><td class="number">158</td><td class="number">147</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="8"><th scope="row" class="number">13</th><td class="number">8</td><td><span class="function-name">moonbit.malloc_no_grow</span><span class="module-name">moonbit</span></td><td class="number">154</td><td class="number">156</td><td class="number">136</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="4"><th scope="row" class="number">14</th><td class="number">4</td><td><span class="function-name">tlsf/addMemory</span><span class="module-name">tlsf</span></td><td class="number">132</td><td class="number">134</td><td class="number">136</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="7"><th scope="row" class="number">15</th><td class="number">7</td><td><span class="function-name">tlsf/growMemory</span><span class="module-name">tlsf</span></td><td class="number">128</td><td class="number">130</td><td class="number">139</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="30"><th scope="row" class="number">16</th><td class="number">30</td><td><span class="function-name">moonbit.scan_regular_object</span><span class="module-name">moonbit</span></td><td class="number">126</td><td class="number">127</td><td class="number">124</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="42"><th scope="row" class="number">17</th><td class="number">42</td><td><span class="function-name">dec__count32</span><span class="module-name">(top-level)</span></td><td class="number">121</td><td class="number">122</td><td class="number">110</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="32"><th scope="row" class="number">18</th><td class="number">32</td><td><span class="function-name">moonbit.wasi.write_all</span><span class="module-name">moonbit.wasi</span></td><td class="number">92</td><td class="number">93</td><td class="number">101</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="10"><th scope="row" class="number">19</th><td class="number">10</td><td><span class="function-name">moonbit.free</span><span class="module-name">moonbit</span></td><td class="number">81</td><td class="number">82</td><td class="number">97</td><td><span class="reachability">Reachable in model</span></td></tr>
+<tr data-function-index="26"><th scope="row" class="number">20</th><td class="number">26</td><td><span class="function-name">moonbit.add_string</span><span class="module-name">moonbit</span></td><td class="number">79</td><td class="number">80</td><td class="number">94</td><td><span class="reachability">Reachable in model</span></td></tr>
+</tbody></table></div></details>
+</article></section>
+<section id="module-map" aria-labelledby="map-title"><div class="section-heading"><h2 id="map-title">Module map</h2><p>Module → function · raw encoded bytes</p></div><article class="panel"><p class="panel-note">Area is raw encoded bytes. Tooltip gzip values are independent function streams, not additive transfer shares. Modules keep their ring colors; outlined cells and text identify functions unreachable in the model.</p><div id="treemap" class="chart map" role="img" aria-label="Module and function encodings; areas are raw bytes"></div></article></section>
+<section id="methodology" class="methods"><details id="method-details"><summary>Methods, measurement ranges &amp; model limits</summary><h3>Reference model</h3><p>Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. Reference-call targets and dynamic table contents are not solved. Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. Element references are conservative roots, including private, passive and declarative segments. graph_complete means no gaps detected within this scope, not full Wasm certification. RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.</p><p>RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.</p><h3>Compression</h3><p>Whole-file gzip is one complete-file stream. Sections include their headers and payloads; functions include their size prefixes (size, not bodySize). Each local range is an independent gzip stream. These sizes are not additive and do not represent whole-file transfer shares or removal savings.</p><h3>Chart availability</h3><p>ECharts, styles, scripts and measured data are embedded in this file. No remote fonts, chart assets or sibling files are required; the report can be moved to another directory.</p></details></section>
+<footer>Generated by moonsize · 47 local functions. Model findings guide investigation; verify optimization outcomes by rebuilding and comparing complete artifacts.</footer>
+</main>
 <script>
 
 /*
@@ -153,273 +199,158 @@ var Fr={},Gr={};var Wr,Hr=function(){function t(t,e,n){var i=this;this._sleepAft
 
 </script>
 <script>
-    const DATA = {"file":"examples/fib.wasm","fileSize":10675,"schema_version":1,"graph_complete":true,"diagnostics":[],"modeling_scope":"Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. Reference-call targets and dynamic table contents are not solved. Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. Element references are conservative roots, including private, passive and declarative segments. graph_complete means no gaps detected within this scope, not full Wasm certification. RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.","gzipSize":5207,"gzipError":null,"compression_scope":"Whole-file gzip is one complete-file stream. Sections include their headers and payloads; functions include their size prefixes (size, not bodySize). Each local range is an independent gzip stream. These sizes are not additive and do not represent whole-file transfer shares or removal savings.","codeSize":5166,"deadSize":0,"sections":[{"name":"code","total":5166,"payload":5163,"gzip":2712,"gzipError":null},{"name":"custom (name)","total":4975,"payload":4972,"gzip":1983,"gzipError":null},{"name":"data","total":252,"payload":249,"gzip":174,"gzipError":null},{"name":"custom (producers)","total":71,"payload":69,"gzip":95,"gzipError":null},{"name":"type","total":59,"payload":57,"gzip":66,"gzipError":null},{"name":"function","total":50,"payload":48,"gzip":63,"gzipError":null},{"name":"import","total":37,"payload":35,"gzip":61,"gzipError":null},{"name":"export","total":21,"payload":19,"gzip":45,"gzipError":null},{"name":"global","total":13,"payload":11,"gzip":34,"gzipError":null},{"name":"element","total":8,"payload":6,"gzip":32,"gzipError":null},{"name":"table","total":7,"payload":5,"gzip":31,"gzipError":null},{"name":"memory","total":5,"payload":3,"gzip":29,"gzipError":null},{"name":"datacount","total":3,"payload":1,"gzip":27,"gzipError":null}],"functions":[{"index":43,"name":"int__to__string__dec","module":"(top-level)","bodySize":631,"size":633,"gzip":385,"gzipError":null,"dead":false},{"index":21,"name":"moonbit.utf8.encode_from_utf16","module":"moonbit.utf8","bodySize":480,"size":482,"gzip":268,"gzipError":null,"dead":false},{"index":29,"name":"moonbit.gc.free","module":"moonbit.gc","bodySize":407,"size":409,"gzip":254,"gzipError":null,"dead":false},{"index":3,"name":"tlsf/insertBlock","module":"tlsf","bodySize":322,"size":324,"gzip":220,"gzipError":null,"dead":false},{"index":39,"name":"int::Int::to__string_2einner","module":"int::Int","bodySize":299,"size":301,"gzip":218,"gzipError":null,"dead":false},{"index":44,"name":"int__to__string__generic","module":"(top-level)","bodySize":264,"size":266,"gzip":211,"gzipError":null,"dead":false},{"index":45,"name":"int__to__string__hex","module":"(top-level)","bodySize":225,"size":227,"gzip":180,"gzipError":null,"dead":false},{"index":33,"name":"moonbit.fprintln","module":"moonbit","bodySize":204,"size":206,"gzip":183,"gzipError":null,"dead":false},{"index":2,"name":"tlsf/removeBlock","module":"tlsf","bodySize":199,"size":201,"gzip":174,"gzipError":null,"dead":false},{"index":5,"name":"tlsf/initialize","module":"tlsf","bodySize":173,"size":175,"gzip":160,"gzipError":null,"dead":false},{"index":1,"name":"tlsf/searchBlock","module":"tlsf","bodySize":171,"size":173,"gzip":144,"gzipError":null,"dead":false},{"index":47,"name":"____moonbit__main","module":"(top-level)","bodySize":156,"size":158,"gzip":147,"gzipError":null,"dead":false},{"index":8,"name":"moonbit.malloc_no_grow","module":"moonbit","bodySize":154,"size":156,"gzip":136,"gzipError":null,"dead":false},{"index":4,"name":"tlsf/addMemory","module":"tlsf","bodySize":132,"size":134,"gzip":136,"gzipError":null,"dead":false},{"index":7,"name":"tlsf/growMemory","module":"tlsf","bodySize":128,"size":130,"gzip":139,"gzipError":null,"dead":false},{"index":30,"name":"moonbit.scan_regular_object","module":"moonbit","bodySize":126,"size":127,"gzip":124,"gzipError":null,"dead":false},{"index":42,"name":"dec__count32","module":"(top-level)","bodySize":121,"size":122,"gzip":110,"gzipError":null,"dead":false},{"index":32,"name":"moonbit.wasi.write_all","module":"moonbit.wasi","bodySize":92,"size":93,"gzip":101,"gzipError":null,"dead":false},{"index":10,"name":"moonbit.free","module":"moonbit","bodySize":81,"size":82,"gzip":97,"gzipError":null,"dead":false},{"index":26,"name":"moonbit.add_string","module":"moonbit","bodySize":79,"size":80,"gzip":94,"gzipError":null,"dead":false},{"index":24,"name":"moonbit.unsafe_make_string","module":"moonbit","bodySize":68,"size":69,"gzip":88,"gzipError":null,"dead":false},{"index":40,"name":"radix__count32","module":"(top-level)","bodySize":64,"size":65,"gzip":84,"gzipError":null,"dead":false},{"index":28,"name":"moonbit.decref","module":"moonbit","bodySize":48,"size":49,"gzip":69,"gzipError":null,"dead":false},{"index":36,"name":"BigSaltyMan::moonsize::examples::fib","module":"BigSaltyMan::moonsize::examples","bodySize":46,"size":47,"gzip":67,"gzipError":null,"dead":false},{"index":41,"name":"hex__count32","module":"(top-level)","bodySize":39,"size":40,"gzip":64,"gzipError":null,"dead":false},{"index":6,"name":"tlsf/prepareSize","module":"tlsf","bodySize":37,"size":38,"gzip":63,"gzipError":null,"dead":false},{"index":23,"name":"moonbit.unsafe_make_string_raw","module":"moonbit","bodySize":36,"size":37,"gzip":61,"gzipError":null,"dead":false},{"index":27,"name":"moonbit.incref","module":"moonbit","bodySize":34,"size":35,"gzip":59,"gzipError":null,"dead":false},{"index":9,"name":"moonbit.malloc","module":"moonbit","bodySize":32,"size":33,"gzip":53,"gzipError":null,"dead":false},{"index":11,"name":"moonbit.gc.malloc","module":"moonbit.gc","bodySize":29,"size":30,"gzip":54,"gzipError":null,"dead":false},{"index":16,"name":"moonbit.set_object_kind","module":"moonbit","bodySize":29,"size":30,"gzip":54,"gzipError":null,"dead":false},{"index":35,"name":"BigSaltyMan::moonsize::examples::classify","module":"BigSaltyMan::moonsize::examples","bodySize":28,"size":29,"gzip":54,"gzipError":null,"dead":false},{"index":37,"name":"println","module":"(top-level)","bodySize":23,"size":24,"gzip":48,"gzipError":null,"dead":false},{"index":20,"name":"moonbit.layout_entry","module":"moonbit","bodySize":21,"size":22,"gzip":47,"gzipError":null,"dead":false},{"index":31,"name":"moonbit.wasi.ensure_print_buffer_payload","module":"moonbit.wasi","bodySize":17,"size":18,"gzip":42,"gzipError":null,"dead":false},{"index":22,"name":"moonbit.store_array_header","module":"moonbit","bodySize":14,"size":15,"gzip":39,"gzipError":null,"dead":false},{"index":12,"name":"moonbit.store_object_meta","module":"moonbit","bodySize":12,"size":13,"gzip":37,"gzipError":null,"dead":false},{"index":17,"name":"moonbit.array_length","module":"moonbit","bodySize":10,"size":11,"gzip":35,"gzipError":null,"dead":false},{"index":18,"name":"moonbit.string_length","module":"moonbit","bodySize":10,"size":11,"gzip":35,"gzipError":null,"dead":false},{"index":14,"name":"moonbit.raw_rc","module":"moonbit","bodySize":9,"size":10,"gzip":34,"gzipError":null,"dead":false},{"index":15,"name":"moonbit.object_kind","module":"moonbit","bodySize":9,"size":10,"gzip":34,"gzipError":null,"dead":false},{"index":25,"name":"moonbit.int16_array_make","module":"moonbit","bodySize":8,"size":9,"gzip":33,"gzipError":null,"dead":false},{"index":34,"name":"moonbit.println","module":"moonbit","bodySize":8,"size":9,"gzip":33,"gzipError":null,"dead":false},{"index":38,"name":"string::String::Show::to__string","module":"string::String::Show","bodySize":8,"size":9,"gzip":33,"gzipError":null,"dead":false},{"index":13,"name":"moonbit.rc_ptr","module":"moonbit","bodySize":7,"size":8,"gzip":32,"gzipError":null,"dead":false},{"index":19,"name":"moonbit.layout_class","module":"moonbit","bodySize":7,"size":8,"gzip":32,"gzipError":null,"dead":false},{"index":46,"name":"abort::abort","module":"abort","bodySize":3,"size":4,"gzip":28,"gzipError":null,"dead":false}],"modules":[{"name":"(top-level)","size":1535,"functions":8,"children":[{"name":"int__to__string__dec","value":633,"gzip":385,"gzipError":null,"dead":false},{"name":"int__to__string__generic","value":266,"gzip":211,"gzipError":null,"dead":false},{"name":"int__to__string__hex","value":227,"gzip":180,"gzipError":null,"dead":false},{"name":"____moonbit__main","value":158,"gzip":147,"gzipError":null,"dead":false},{"name":"dec__count32","value":122,"gzip":110,"gzipError":null,"dead":false},{"name":"radix__count32","value":65,"gzip":84,"gzipError":null,"dead":false},{"name":"hex__count32","value":40,"gzip":64,"gzipError":null,"dead":false},{"name":"println","value":24,"gzip":48,"gzipError":null,"dead":false}]},{"name":"tlsf","size":1175,"functions":7,"children":[{"name":"tlsf/insertBlock","value":324,"gzip":220,"gzipError":null,"dead":false},{"name":"tlsf/removeBlock","value":201,"gzip":174,"gzipError":null,"dead":false},{"name":"tlsf/initialize","value":175,"gzip":160,"gzipError":null,"dead":false},{"name":"tlsf/searchBlock","value":173,"gzip":144,"gzipError":null,"dead":false},{"name":"tlsf/addMemory","value":134,"gzip":136,"gzipError":null,"dead":false},{"name":"tlsf/growMemory","value":130,"gzip":139,"gzipError":null,"dead":false},{"name":"tlsf/prepareSize","value":38,"gzip":63,"gzipError":null,"dead":false}]},{"name":"moonbit","size":1030,"functions":22,"children":[{"name":"moonbit.fprintln","value":206,"gzip":183,"gzipError":null,"dead":false},{"name":"moonbit.malloc_no_grow","value":156,"gzip":136,"gzipError":null,"dead":false},{"name":"moonbit.scan_regular_object","value":127,"gzip":124,"gzipError":null,"dead":false},{"name":"moonbit.free","value":82,"gzip":97,"gzipError":null,"dead":false},{"name":"moonbit.add_string","value":80,"gzip":94,"gzipError":null,"dead":false},{"name":"moonbit.unsafe_make_string","value":69,"gzip":88,"gzipError":null,"dead":false},{"name":"moonbit.decref","value":49,"gzip":69,"gzipError":null,"dead":false},{"name":"moonbit.unsafe_make_string_raw","value":37,"gzip":61,"gzipError":null,"dead":false},{"name":"moonbit.incref","value":35,"gzip":59,"gzipError":null,"dead":false},{"name":"moonbit.malloc","value":33,"gzip":53,"gzipError":null,"dead":false},{"name":"moonbit.set_object_kind","value":30,"gzip":54,"gzipError":null,"dead":false},{"name":"moonbit.layout_entry","value":22,"gzip":47,"gzipError":null,"dead":false},{"name":"moonbit.store_array_header","value":15,"gzip":39,"gzipError":null,"dead":false},{"name":"moonbit.store_object_meta","value":13,"gzip":37,"gzipError":null,"dead":false},{"name":"moonbit.array_length","value":11,"gzip":35,"gzipError":null,"dead":false},{"name":"moonbit.string_length","value":11,"gzip":35,"gzipError":null,"dead":false},{"name":"moonbit.raw_rc","value":10,"gzip":34,"gzipError":null,"dead":false},{"name":"moonbit.object_kind","value":10,"gzip":34,"gzipError":null,"dead":false},{"name":"moonbit.int16_array_make","value":9,"gzip":33,"gzipError":null,"dead":false},{"name":"moonbit.println","value":9,"gzip":33,"gzipError":null,"dead":false},{"name":"moonbit.rc_ptr","value":8,"gzip":32,"gzipError":null,"dead":false},{"name":"moonbit.layout_class","value":8,"gzip":32,"gzipError":null,"dead":false}]},{"name":"moonbit.utf8","size":482,"functions":1,"children":[{"name":"moonbit.utf8.encode_from_utf16","value":482,"gzip":268,"gzipError":null,"dead":false}]},{"name":"moonbit.gc","size":439,"functions":2,"children":[{"name":"moonbit.gc.free","value":409,"gzip":254,"gzipError":null,"dead":false},{"name":"moonbit.gc.malloc","value":30,"gzip":54,"gzipError":null,"dead":false}]},{"name":"int::Int","size":301,"functions":1,"children":[{"name":"int::Int::to__string_2einner","value":301,"gzip":218,"gzipError":null,"dead":false}]},{"name":"moonbit.wasi","size":111,"functions":2,"children":[{"name":"moonbit.wasi.write_all","value":93,"gzip":101,"gzipError":null,"dead":false},{"name":"moonbit.wasi.ensure_print_buffer_payload","value":18,"gzip":42,"gzipError":null,"dead":false}]},{"name":"BigSaltyMan::moonsize::examples","size":76,"functions":2,"children":[{"name":"BigSaltyMan::moonsize::examples::fib","value":47,"gzip":67,"gzipError":null,"dead":false},{"name":"BigSaltyMan::moonsize::examples::classify","value":29,"gzip":54,"gzipError":null,"dead":false}]},{"name":"string::String::Show","size":9,"functions":1,"children":[{"name":"string::String::Show::to__string","value":9,"gzip":33,"gzipError":null,"dead":false}]},{"name":"abort","size":4,"functions":1,"children":[{"name":"abort::abort","value":4,"gzip":28,"gzipError":null,"dead":false}]}],"pie":[{"name":"(top-level)","size":1535,"members":[]},{"name":"tlsf","size":1175,"members":[]},{"name":"moonbit","size":1030,"members":[]},{"name":"moonbit.utf8","size":482,"members":[]},{"name":"moonbit.gc","size":439,"members":[]},{"name":"int::Int","size":301,"members":[]},{"name":"moonbit.wasi","size":111,"members":[]},{"name":"BigSaltyMan::moonsize::examples","size":76,"members":[]},{"name":"other (2)","size":13,"members":["string::String::Show","abort"]}]};
+const DATA = {"file":"examples/fib.wasm","fileSize":10675,"schema_version":1,"graph_complete":true,"diagnostics":[],"modeling_scope":"Direct calls, including direct tail calls, use exact targets; table calls use static element candidates. Reference-call targets and dynamic table contents are not solved. Imported/exported tables, runtime writes and explicit initializers are conservatively diagnosed, even with static candidates. Element references are conservative roots, including private, passive and declarative segments. graph_complete means no gaps detected within this scope, not full Wasm certification. RETAINED sums dominated encoded function bytes within the current graph/root model. It does not predict recompiled file reduction or whole-file gzip savings, even when --strict passes.","gzipSize":5207,"gzipError":null,"compression_scope":"Whole-file gzip is one complete-file stream. Sections include their headers and payloads; functions include their size prefixes (size, not bodySize). Each local range is an independent gzip stream. These sizes are not additive and do not represent whole-file transfer shares or removal savings.","codeSize":5166,"deadSize":0,"sections":[{"name":"code","total":5166,"payload":5163,"gzip":2712,"gzipError":null},{"name":"custom (name)","total":4975,"payload":4972,"gzip":1983,"gzipError":null},{"name":"data","total":252,"payload":249,"gzip":174,"gzipError":null},{"name":"custom (producers)","total":71,"payload":69,"gzip":95,"gzipError":null},{"name":"type","total":59,"payload":57,"gzip":66,"gzipError":null},{"name":"function","total":50,"payload":48,"gzip":63,"gzipError":null},{"name":"import","total":37,"payload":35,"gzip":61,"gzipError":null},{"name":"export","total":21,"payload":19,"gzip":45,"gzipError":null},{"name":"global","total":13,"payload":11,"gzip":34,"gzipError":null},{"name":"element","total":8,"payload":6,"gzip":32,"gzipError":null},{"name":"table","total":7,"payload":5,"gzip":31,"gzipError":null},{"name":"memory","total":5,"payload":3,"gzip":29,"gzipError":null},{"name":"datacount","total":3,"payload":1,"gzip":27,"gzipError":null}],"functions":[{"index":43,"name":"int__to__string__dec","module":"(top-level)","bodySize":631,"size":633,"gzip":385,"gzipError":null,"dead":false},{"index":21,"name":"moonbit.utf8.encode_from_utf16","module":"moonbit.utf8","bodySize":480,"size":482,"gzip":268,"gzipError":null,"dead":false},{"index":29,"name":"moonbit.gc.free","module":"moonbit.gc","bodySize":407,"size":409,"gzip":254,"gzipError":null,"dead":false},{"index":3,"name":"tlsf/insertBlock","module":"tlsf","bodySize":322,"size":324,"gzip":220,"gzipError":null,"dead":false},{"index":39,"name":"int::Int::to__string_2einner","module":"int::Int","bodySize":299,"size":301,"gzip":218,"gzipError":null,"dead":false},{"index":44,"name":"int__to__string__generic","module":"(top-level)","bodySize":264,"size":266,"gzip":211,"gzipError":null,"dead":false},{"index":45,"name":"int__to__string__hex","module":"(top-level)","bodySize":225,"size":227,"gzip":180,"gzipError":null,"dead":false},{"index":33,"name":"moonbit.fprintln","module":"moonbit","bodySize":204,"size":206,"gzip":183,"gzipError":null,"dead":false},{"index":2,"name":"tlsf/removeBlock","module":"tlsf","bodySize":199,"size":201,"gzip":174,"gzipError":null,"dead":false},{"index":5,"name":"tlsf/initialize","module":"tlsf","bodySize":173,"size":175,"gzip":160,"gzipError":null,"dead":false},{"index":1,"name":"tlsf/searchBlock","module":"tlsf","bodySize":171,"size":173,"gzip":144,"gzipError":null,"dead":false},{"index":47,"name":"____moonbit__main","module":"(top-level)","bodySize":156,"size":158,"gzip":147,"gzipError":null,"dead":false},{"index":8,"name":"moonbit.malloc_no_grow","module":"moonbit","bodySize":154,"size":156,"gzip":136,"gzipError":null,"dead":false},{"index":4,"name":"tlsf/addMemory","module":"tlsf","bodySize":132,"size":134,"gzip":136,"gzipError":null,"dead":false},{"index":7,"name":"tlsf/growMemory","module":"tlsf","bodySize":128,"size":130,"gzip":139,"gzipError":null,"dead":false},{"index":30,"name":"moonbit.scan_regular_object","module":"moonbit","bodySize":126,"size":127,"gzip":124,"gzipError":null,"dead":false},{"index":42,"name":"dec__count32","module":"(top-level)","bodySize":121,"size":122,"gzip":110,"gzipError":null,"dead":false},{"index":32,"name":"moonbit.wasi.write_all","module":"moonbit.wasi","bodySize":92,"size":93,"gzip":101,"gzipError":null,"dead":false},{"index":10,"name":"moonbit.free","module":"moonbit","bodySize":81,"size":82,"gzip":97,"gzipError":null,"dead":false},{"index":26,"name":"moonbit.add_string","module":"moonbit","bodySize":79,"size":80,"gzip":94,"gzipError":null,"dead":false},{"index":24,"name":"moonbit.unsafe_make_string","module":"moonbit","bodySize":68,"size":69,"gzip":88,"gzipError":null,"dead":false},{"index":40,"name":"radix__count32","module":"(top-level)","bodySize":64,"size":65,"gzip":84,"gzipError":null,"dead":false},{"index":28,"name":"moonbit.decref","module":"moonbit","bodySize":48,"size":49,"gzip":69,"gzipError":null,"dead":false},{"index":36,"name":"BigSaltyMan::moonsize::examples::fib","module":"BigSaltyMan::moonsize::examples","bodySize":46,"size":47,"gzip":67,"gzipError":null,"dead":false},{"index":41,"name":"hex__count32","module":"(top-level)","bodySize":39,"size":40,"gzip":64,"gzipError":null,"dead":false},{"index":6,"name":"tlsf/prepareSize","module":"tlsf","bodySize":37,"size":38,"gzip":63,"gzipError":null,"dead":false},{"index":23,"name":"moonbit.unsafe_make_string_raw","module":"moonbit","bodySize":36,"size":37,"gzip":61,"gzipError":null,"dead":false},{"index":27,"name":"moonbit.incref","module":"moonbit","bodySize":34,"size":35,"gzip":59,"gzipError":null,"dead":false},{"index":9,"name":"moonbit.malloc","module":"moonbit","bodySize":32,"size":33,"gzip":53,"gzipError":null,"dead":false},{"index":11,"name":"moonbit.gc.malloc","module":"moonbit.gc","bodySize":29,"size":30,"gzip":54,"gzipError":null,"dead":false},{"index":16,"name":"moonbit.set_object_kind","module":"moonbit","bodySize":29,"size":30,"gzip":54,"gzipError":null,"dead":false},{"index":35,"name":"BigSaltyMan::moonsize::examples::classify","module":"BigSaltyMan::moonsize::examples","bodySize":28,"size":29,"gzip":54,"gzipError":null,"dead":false},{"index":37,"name":"println","module":"(top-level)","bodySize":23,"size":24,"gzip":48,"gzipError":null,"dead":false},{"index":20,"name":"moonbit.layout_entry","module":"moonbit","bodySize":21,"size":22,"gzip":47,"gzipError":null,"dead":false},{"index":31,"name":"moonbit.wasi.ensure_print_buffer_payload","module":"moonbit.wasi","bodySize":17,"size":18,"gzip":42,"gzipError":null,"dead":false},{"index":22,"name":"moonbit.store_array_header","module":"moonbit","bodySize":14,"size":15,"gzip":39,"gzipError":null,"dead":false},{"index":12,"name":"moonbit.store_object_meta","module":"moonbit","bodySize":12,"size":13,"gzip":37,"gzipError":null,"dead":false},{"index":17,"name":"moonbit.array_length","module":"moonbit","bodySize":10,"size":11,"gzip":35,"gzipError":null,"dead":false},{"index":18,"name":"moonbit.string_length","module":"moonbit","bodySize":10,"size":11,"gzip":35,"gzipError":null,"dead":false},{"index":14,"name":"moonbit.raw_rc","module":"moonbit","bodySize":9,"size":10,"gzip":34,"gzipError":null,"dead":false},{"index":15,"name":"moonbit.object_kind","module":"moonbit","bodySize":9,"size":10,"gzip":34,"gzipError":null,"dead":false},{"index":25,"name":"moonbit.int16_array_make","module":"moonbit","bodySize":8,"size":9,"gzip":33,"gzipError":null,"dead":false},{"index":34,"name":"moonbit.println","module":"moonbit","bodySize":8,"size":9,"gzip":33,"gzipError":null,"dead":false},{"index":38,"name":"string::String::Show::to__string","module":"string::String::Show","bodySize":8,"size":9,"gzip":33,"gzipError":null,"dead":false},{"index":13,"name":"moonbit.rc_ptr","module":"moonbit","bodySize":7,"size":8,"gzip":32,"gzipError":null,"dead":false},{"index":19,"name":"moonbit.layout_class","module":"moonbit","bodySize":7,"size":8,"gzip":32,"gzipError":null,"dead":false},{"index":46,"name":"abort::abort","module":"abort","bodySize":3,"size":4,"gzip":28,"gzipError":null,"dead":false}],"modules":[{"name":"(top-level)","size":1535,"functions":8,"children":[{"name":"int__to__string__dec","value":633,"gzip":385,"gzipError":null,"dead":false,"index":43},{"name":"int__to__string__generic","value":266,"gzip":211,"gzipError":null,"dead":false,"index":44},{"name":"int__to__string__hex","value":227,"gzip":180,"gzipError":null,"dead":false,"index":45},{"name":"____moonbit__main","value":158,"gzip":147,"gzipError":null,"dead":false,"index":47},{"name":"dec__count32","value":122,"gzip":110,"gzipError":null,"dead":false,"index":42},{"name":"radix__count32","value":65,"gzip":84,"gzipError":null,"dead":false,"index":40},{"name":"hex__count32","value":40,"gzip":64,"gzipError":null,"dead":false,"index":41},{"name":"println","value":24,"gzip":48,"gzipError":null,"dead":false,"index":37}]},{"name":"tlsf","size":1175,"functions":7,"children":[{"name":"tlsf/insertBlock","value":324,"gzip":220,"gzipError":null,"dead":false,"index":3},{"name":"tlsf/removeBlock","value":201,"gzip":174,"gzipError":null,"dead":false,"index":2},{"name":"tlsf/initialize","value":175,"gzip":160,"gzipError":null,"dead":false,"index":5},{"name":"tlsf/searchBlock","value":173,"gzip":144,"gzipError":null,"dead":false,"index":1},{"name":"tlsf/addMemory","value":134,"gzip":136,"gzipError":null,"dead":false,"index":4},{"name":"tlsf/growMemory","value":130,"gzip":139,"gzipError":null,"dead":false,"index":7},{"name":"tlsf/prepareSize","value":38,"gzip":63,"gzipError":null,"dead":false,"index":6}]},{"name":"moonbit","size":1030,"functions":22,"children":[{"name":"moonbit.fprintln","value":206,"gzip":183,"gzipError":null,"dead":false,"index":33},{"name":"moonbit.malloc_no_grow","value":156,"gzip":136,"gzipError":null,"dead":false,"index":8},{"name":"moonbit.scan_regular_object","value":127,"gzip":124,"gzipError":null,"dead":false,"index":30},{"name":"moonbit.free","value":82,"gzip":97,"gzipError":null,"dead":false,"index":10},{"name":"moonbit.add_string","value":80,"gzip":94,"gzipError":null,"dead":false,"index":26},{"name":"moonbit.unsafe_make_string","value":69,"gzip":88,"gzipError":null,"dead":false,"index":24},{"name":"moonbit.decref","value":49,"gzip":69,"gzipError":null,"dead":false,"index":28},{"name":"moonbit.unsafe_make_string_raw","value":37,"gzip":61,"gzipError":null,"dead":false,"index":23},{"name":"moonbit.incref","value":35,"gzip":59,"gzipError":null,"dead":false,"index":27},{"name":"moonbit.malloc","value":33,"gzip":53,"gzipError":null,"dead":false,"index":9},{"name":"moonbit.set_object_kind","value":30,"gzip":54,"gzipError":null,"dead":false,"index":16},{"name":"moonbit.layout_entry","value":22,"gzip":47,"gzipError":null,"dead":false,"index":20},{"name":"moonbit.store_array_header","value":15,"gzip":39,"gzipError":null,"dead":false,"index":22},{"name":"moonbit.store_object_meta","value":13,"gzip":37,"gzipError":null,"dead":false,"index":12},{"name":"moonbit.array_length","value":11,"gzip":35,"gzipError":null,"dead":false,"index":17},{"name":"moonbit.string_length","value":11,"gzip":35,"gzipError":null,"dead":false,"index":18},{"name":"moonbit.raw_rc","value":10,"gzip":34,"gzipError":null,"dead":false,"index":14},{"name":"moonbit.object_kind","value":10,"gzip":34,"gzipError":null,"dead":false,"index":15},{"name":"moonbit.int16_array_make","value":9,"gzip":33,"gzipError":null,"dead":false,"index":25},{"name":"moonbit.println","value":9,"gzip":33,"gzipError":null,"dead":false,"index":34},{"name":"moonbit.rc_ptr","value":8,"gzip":32,"gzipError":null,"dead":false,"index":13},{"name":"moonbit.layout_class","value":8,"gzip":32,"gzipError":null,"dead":false,"index":19}]},{"name":"moonbit.utf8","size":482,"functions":1,"children":[{"name":"moonbit.utf8.encode_from_utf16","value":482,"gzip":268,"gzipError":null,"dead":false,"index":21}]},{"name":"moonbit.gc","size":439,"functions":2,"children":[{"name":"moonbit.gc.free","value":409,"gzip":254,"gzipError":null,"dead":false,"index":29},{"name":"moonbit.gc.malloc","value":30,"gzip":54,"gzipError":null,"dead":false,"index":11}]},{"name":"int::Int","size":301,"functions":1,"children":[{"name":"int::Int::to__string_2einner","value":301,"gzip":218,"gzipError":null,"dead":false,"index":39}]},{"name":"moonbit.wasi","size":111,"functions":2,"children":[{"name":"moonbit.wasi.write_all","value":93,"gzip":101,"gzipError":null,"dead":false,"index":32},{"name":"moonbit.wasi.ensure_print_buffer_payload","value":18,"gzip":42,"gzipError":null,"dead":false,"index":31}]},{"name":"BigSaltyMan::moonsize::examples","size":76,"functions":2,"children":[{"name":"BigSaltyMan::moonsize::examples::fib","value":47,"gzip":67,"gzipError":null,"dead":false,"index":36},{"name":"BigSaltyMan::moonsize::examples::classify","value":29,"gzip":54,"gzipError":null,"dead":false,"index":35}]},{"name":"string::String::Show","size":9,"functions":1,"children":[{"name":"string::String::Show::to__string","value":9,"gzip":33,"gzipError":null,"dead":false,"index":38}]},{"name":"abort","size":4,"functions":1,"children":[{"name":"abort::abort","value":4,"gzip":28,"gzipError":null,"dead":false,"index":46}]}],"pie":[{"name":"(top-level)","size":1535,"members":[]},{"name":"tlsf","size":1175,"members":[]},{"name":"moonbit","size":1030,"members":[]},{"name":"moonbit.utf8","size":482,"members":[]},{"name":"moonbit.gc","size":439,"members":[]},{"name":"int::Int","size":301,"members":[]},{"name":"moonbit.wasi","size":111,"members":[]},{"name":"BigSaltyMan::moonsize::examples","size":76,"members":[]},{"name":"other (2)","size":13,"members":["string::String::Show","abort"]}]};
 
-    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    }[c]));
-
-    const BYTES = (v) => {
-      if (v === null || v === undefined) return 'failed';
-      if (v >= 1048576) return (v / 1048576).toFixed(2) + ' MB';
-      if (v >= 1024) return (v / 1024).toFixed(1) + ' KB';
-      return v + ' B';
-    };
-
-    const NUM = (v) => v.toLocaleString('en-US');
-    const PCT = (part, whole) => whole > 0 ? (part / whole * 100).toFixed(1) + '%' : 'n/a';
-    const RATIO = (raw, gzip) => gzip > 0 ? (raw / gzip).toFixed(2) + 'x' : 'n/a';
-
-    const INK = '#334155';
-    const LINE = '#e2e8f0';
-    const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-
-    const axis = (extra) => Object.assign({
-      axisLine: { lineStyle: { color: '#cbd5e1' } },
-      axisTick: { show: false },
-      axisLabel: { color: INK, fontSize: 11 },
-      splitLine: { lineStyle: { color: LINE } },
-    }, extra || {});
-
-    // A static report: the grow-in animation would leave a chart empty in a
-    // screenshot, a print, or any capture that does not run animation frames.
-    const base = {
-      animation: false,
-      textStyle: { fontFamily: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
-    };
-
-    function barOption(rows, color, maxValue, gzipColor) {
-      maxValue = Math.max(maxValue, ...rows.map((r) => r.gzip ?? 0));
-      // One unit across the axis: mixing "1000 B" with "2.9 KB" makes the ticks
-      // read as unrelated numbers and, being long, collide with each other.
-      const unit = maxValue >= 1048576 ? 1048576 : maxValue >= 1024 ? 1024 : 1;
-      const suffix = unit === 1048576 ? ' MB' : unit === 1024 ? ' KB' : ' B';
-      // A step that is a whole number of units keeps every tick round: stepping
-      // by whole kilobytes reads "0, 2, 4 KB" instead of "0.9, 2.9, 4.9 KB".
-      const step = unit * Math.max(1, Math.ceil(maxValue / unit / 4));
-      // Pinning the top of the axis to a whole step keeps ECharts from adding a
-      // final tick at its own niced extent, which is the one label that would
-      // not be round.
-      const top = unit === 1 ? undefined : step * Math.ceil(maxValue / step);
-      const tick = (v) => unit === 1 ? String(Math.round(v)) : (v / unit).toFixed(1).replace(/\.0$/, '') + suffix;
-      // Raw and independent gzip share an axis, including streams that grow.
-      const series = [{
-        name: 'raw',
-        type: 'bar',
-        data: rows.map((r) => r.size),
-        itemStyle: { color: color, borderRadius: [0, 3, 3, 0] },
-        label: {
-          show: true, position: 'right', color: INK, fontSize: 11,
-          formatter: (p) => BYTES(p.value),
-        },
-      }];
-      let legend;
-      if (gzipColor !== undefined) {
-        series.push({
-          name: 'independent gzip',
-          type: 'bar',
-          barGap: '-100%',
-          data: rows.map((r) => r.gzip),
-          itemStyle: { color: gzipColor, borderRadius: [0, 3, 3, 0] },
-          label: {
-            show: true, position: 'right', color: INK, fontSize: 11,
-            formatter: (p) => BYTES(p.value),
-          },
-        });
-        legend = {
-          data: ['raw', 'independent gzip'],
-          selected: { raw: true, 'independent gzip': false },
-          top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 8,
-          itemGap: 10, textStyle: { color: INK, fontSize: 11 },
-        };
-      }
-      const option = Object.assign({}, base, {
-        grid: { left: 4, right: 96, top: legend ? 24 : 12, bottom: 4, containLabel: true },
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          formatter: (ps) => {
-            const r = rows[ps[0].dataIndex];
-            let text = '<b>' + esc(r.name) + '</b><br/>raw ' + NUM(r.size) + ' B (' + PCT(r.size, DATA.fileSize) + ' of file)';
-            // Each local failure belongs to this row, never to the whole file.
-            const gzipRaw = r.gzipRawSize ?? r.size;
-            if (r.gzip !== null && r.gzip !== undefined) {
-              text += '<br/>independent gzip ' + NUM(r.gzip) + ' B (' + PCT(r.gzip, gzipRaw) + ' of encoded raw, ' + RATIO(gzipRaw, r.gzip) + ')';
-            } else if (r.gzipError !== null && r.gzipError !== undefined) {
-              text += '<br/>independent gzip failed: ' + esc(r.gzipError);
-            }
-            return text;
-          },
-        },
-        xAxis: axis({
-          type: 'value',
-          splitNumber: unit === 1 ? 3 : undefined,
-          interval: unit === 1 ? undefined : step,
-          max: top,
-          axisLabel: { color: INK, fontSize: 11, hideOverlap: true, formatter: tick },
-        }),
-        yAxis: axis({
-          type: 'category',
-          inverse: true,
-          data: rows.map((r) => r.name),
-          axisLabel: { color: INK, fontSize: 11, fontFamily: MONO, width: 190, overflow: 'truncate', interval: 0 },
-          splitLine: { show: false },
-        }),
-        series: series,
-      });
-      if (legend !== undefined) option.legend = legend;
-      return option;
-    }
-
-    // Below this share of the ring a slice is too narrow to hold its own label,
-    // so it is identified by the legend and the tooltip instead.
-    const LABELLED_PCT = 6;
-
-    function pieOption(rows) {
-      const total = rows.reduce((sum, r) => sum + r.size, 0);
-      return Object.assign({}, base, {
-        tooltip: {
-          trigger: 'item',
-          formatter: (p) => {
-            const r = rows[p.dataIndex];
-            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B<br/>' + p.percent + '% of the code section';
-            if (r && r.members && r.members.length) text += '<br/>' + esc(r.members.join(', '));
-            return text;
-          },
-        },
-        legend: {
-          type: 'scroll', bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8,
-          textStyle: { color: INK, fontSize: 11 },
-        },
-        series: [{
-          type: 'pie',
-          radius: ['40%', '66%'],
-          center: ['50%', '47%'],
-          avoidLabelOverlap: true,
-          itemStyle: { borderColor: '#fff', borderWidth: 1 },
-          // Labels sit inside the ring, where they cannot collide with the
-          // legend or with each other, and only the slices wide enough to hold
-          // one keep it. Everything else is identified by the legend and the
-          // tooltip — never by a leader line pointing at empty space.
-          label: {
-            position: 'inside',
-            fontSize: 11,
-            color: '#fff',
-            textBorderColor: 'rgba(15,23,42,0.45)',
-            textBorderWidth: 2,
-            formatter: '{d}%',
-          },
-          labelLine: { show: false },
-          data: rows.map((r) => {
-            const labelled = r.size / total * 100 >= LABELLED_PCT;
-            return {
-              name: r.name,
-              value: r.size,
-              label: { show: labelled },
-              labelLine: { show: labelled },
-              itemStyle: r.members && r.members.length ? { color: '#94a3b8' } : undefined,
-            };
-          }),
-        }],
-      });
-    }
-
-    function treemapOption(rows) {
-      return Object.assign({}, base, {
-        tooltip: {
-          // Area remains raw encoded bytes; gzip is an independent measurement.
-          formatter: (p) => {
-            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B';
-            if (p.data && p.data.gzip !== null && p.data.gzip !== undefined) {
-              text += '<br/>independent gzip ' + NUM(p.data.gzip) + ' B (' + RATIO(p.value, p.data.gzip) + ')';
-            } else if (p.data && p.data.gzipError !== null && p.data.gzipError !== undefined) {
-              text += '<br/>independent gzip failed: ' + esc(p.data.gzipError);
-            }
-            if (p.data && p.data.dead) text += '<br/>unreachable';
-            return text;
-          },
-        },
-        series: [{
-          type: 'treemap',
-          roam: false,
-          nodeClick: false,
-          breadcrumb: { show: false },
-          width: '100%',
-          height: '100%',
-          top: 2,
-          left: 2,
-          right: 2,
-          bottom: 2,
-          upperLabel: { show: true, height: 22, fontSize: 11, color: '#fff' },
-          itemStyle: { borderColor: '#fff', borderWidth: 1, gapWidth: 1 },
-          levels: [
-            { itemStyle: { borderWidth: 0, gapWidth: 3 }, colorSaturation: [0.4, 0.55] },
-            { itemStyle: { borderWidth: 1, gapWidth: 1 }, colorSaturation: [0.35, 0.5] },
-          ],
-          data: rows.map((m) => ({
-            name: m.name,
-            value: m.size,
-            children: m.children.map((c) => ({
-              name: c.name,
-              value: c.value,
-              dead: c.dead,
-              gzip: c.gzip,
-              gzipError: c.gzipError,
-              itemStyle: c.dead ? { color: '#f87171' } : undefined,
-            })),
-          })),
-        }],
-      });
-    }
-
-    function emptyInto(id, message) {
-      const el = document.getElementById(id);
-      el.className = 'empty';
-      el.textContent = message;
-    }
-
-    const charts = [];
-
-    function mount(id, option) {
-      const chart = echarts.init(document.getElementById(id));
-      chart.setOption(option);
-      charts.push(chart);
-    }
-
-    function main() {
-      const sections = DATA.sections
-        .map((s) => ({ name: s.name, size: s.total, payload: s.payload, gzip: s.gzip, gzipError: s.gzipError }))
-        .sort((a, b) => b.size - a.size);
-      const top = DATA.functions.slice(0, 20).map((f) => ({ name: f.name, size: f.bodySize, gzipRawSize: f.size, gzip: f.gzip, gzipError: f.gzipError }));
-
-      // Give the two bar charts the height their rows need. A fixed box is what
-      // used to squeeze thirteen rows into a space that fits eight.
-      const barRows = Math.max(sections.length, top.length);
-      const barHeight = Math.max(320, barRows * 26 + 60);
-      ['sections', 'functions'].forEach((id) => {
-        document.getElementById(id).style.height = barHeight + 'px';
-      });
-
-      if (sections.length) mount('sections', barOption(sections, '#60a5fa', sections[0].size, '#a78bfa'));
-      else emptyInto('sections', 'no sections');
-
-      if (top.length) mount('functions', barOption(top, '#34d399', top[0].size));
-      else emptyInto('functions', 'no functions');
-
-      const modules = DATA.modules.filter((m) => m.size > 0);
-      // The ring needs room for the labels that sit outside it, so it is taller
-      // than the default box even though its row is sized by the bar charts.
-      document.getElementById('modules').style.height = '460px';
-      if (DATA.pie.length) mount('modules', pieOption(DATA.pie));
-      else emptyInto('modules', 'no functions');
-
-      if (modules.length) mount('treemap', treemapOption(modules));
-      else emptyInto('treemap', 'no functions');
-
-      window.addEventListener('resize', () => charts.forEach((c) => c.resize()));
-    }
-
-    main();
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BYTES = (v) => {
+  if (v === null || v === undefined) return 'failed';
+  if (v >= 1048576) return (v / 1048576).toFixed(2) + ' MB';
+  if (v >= 1024) return (v / 1024).toFixed(1) + ' KB';
+  return v + ' B';
+};
+const NUM = v => v.toLocaleString('en-US');
+const PCT = (part,whole) => whole > 0 ? (part / whole * 100).toFixed(1) + '%' : 'n/a';
+const RATIO = (raw,gzip) => gzip > 0 ? (raw / gzip).toFixed(2) + 'x' : 'n/a';
+const INK = '#344c59', LINE = '#e5ece9', MONO = 'ui-monospace,SFMono-Regular,Consolas,monospace';
+const PALETTE = ['#147d8d','#576bac','#99724c','#417f68','#916385','#557f9d','#8c7c42','#697a50','#9b6663','#576c7a'];
+// Identity, not rank, chooses a module's color. Both charts use this mapping.
+function moduleColor(name) {
+  let hash = 2166136261;
+  for (let i=0;i<name.length;i++) hash = Math.imul(hash ^ name.charCodeAt(i),16777619) >>> 0;
+  return PALETTE[hash % PALETTE.length];
+}
+const base = {animation:false, aria:{enabled:true}, textStyle:{fontFamily:'system-ui,-apple-system,"Segoe UI",sans-serif'}};
+const axis = extra => Object.assign({axisLine:{show:false},axisTick:{show:false},axisLabel:{color:INK,fontSize:11},splitLine:{lineStyle:{color:LINE}}},extra);
+function labelWidth(id) {
+  const width = document.getElementById(id).clientWidth || window.innerWidth || 1000;
+  return Math.max(76,Math.min(230,Math.floor(width * .28)));
+}
+function barOption(rows,color,maxValue,gzipColor,id) {
+  maxValue = Math.max(1,maxValue,...rows.map(r => r.gzip ?? 0));
+  const unit = maxValue >= 1048576 ? 1048576 : maxValue >= 1024 ? 1024 : 1;
+  const suffix = unit === 1048576 ? ' MB' : unit === 1024 ? ' KB' : ' B';
+  const step = unit * Math.max(1,Math.ceil(maxValue / unit / 4));
+  const top = step * Math.ceil(maxValue / step);
+  const tick = v => unit === 1 ? String(Math.round(v)) : (v / unit).toFixed(1).replace(/\.0$/,'') + suffix;
+  const series = [{name:'raw',type:'bar',barMaxWidth:12,data:rows.map(r=>r.size),
+    itemStyle:{color,borderRadius:[0,3,3,0]},label:{show:true,position:'right',color:INK,fontSize:11,formatter:p=>BYTES(p.value)}}];
+  let legend;
+  if (gzipColor !== undefined) {
+    series.push({name:'independent gzip',type:'bar',barGap:'20%',barMaxWidth:12,data:rows.map(r=>r.gzip),
+      itemStyle:{color:gzipColor,borderRadius:[0,3,3,0]},label:{show:true,position:'right',color:INK,fontSize:11,formatter:p=>BYTES(p.value)}});
+    legend = {data:['raw','independent gzip'],selected:{raw:true,'independent gzip':false},
+      top:0,left:0,icon:'roundRect',itemWidth:10,itemHeight:8,textStyle:{color:INK,fontSize:11}};
+  }
+  return Object.assign({},base,{
+    grid:{left:labelWidth(id)+10,right:80,top:legend?36:12,bottom:30,containLabel:false},
+    tooltip:{trigger:'axis',confine:true,axisPointer:{type:'shadow'},extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',
+      formatter:ps=>{
+        const r=rows[ps[0].dataIndex];
+        let text='<b>'+esc(r.name)+'</b>'+(r.index===undefined?'':'<br/>function #'+r.index)+'<br/>'+(r.body?'body ':'raw ')+NUM(r.size)+' B ('+PCT(r.size,DATA.fileSize)+' of file)';
+        const gzipRaw = r.gzipRawSize ?? r.size;
+        if (r.gzip !== null && r.gzip !== undefined) text+='<br/>independent gzip '+NUM(r.gzip)+' B ('+PCT(r.gzip,gzipRaw)+' of encoded raw, '+RATIO(gzipRaw, r.gzip)+')';
+        else if (r.gzipError !== null && r.gzipError !== undefined) text+='<br/>independent gzip failed: '+esc(r.gzipError);
+        return text;
+      }},
+    xAxis:axis({type:'value',min:0,max:top,interval:step,name:unit===1?'B':'',nameTextStyle:{color:INK},
+      axisLabel:{color:INK,fontSize:11,hideOverlap:true,formatter:tick}}),
+    yAxis:axis({type:'category',inverse:true,data:rows.map(r=>r.name),
+      axisLabel:{color:INK,fontSize:11,fontFamily:MONO,width:labelWidth(id),overflow:'truncate',interval:0},splitLine:{show:false}}),
+    series,...(legend?{legend}:{})
+  });
+}
+function pieOption(rows) {
+  const total=rows.reduce((sum,r)=>sum+r.size,0);
+  return Object.assign({},base,{
+    tooltip:{trigger:'item',confine:true,extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',formatter:p=>{
+      const r=rows[p.dataIndex];
+      let text='<b>'+esc(p.name)+'</b><br/>'+NUM(p.value)+' B<br/>'+PCT(p.value,total)+' of attributed function bytes';
+      text+='<br/>'+PCT(p.value,DATA.codeSize)+' of complete code section';
+      if(r&&r.members&&r.members.length)text+='<br/>'+esc(r.members.join(', '));
+      return text;
+    }},
+    legend:{type:'scroll',bottom:4,left:'center',icon:'circle',itemWidth:9,itemHeight:9,
+      textStyle:{color:INK,fontSize:11,width:190,overflow:'truncate'},tooltip:{show:false}},
+    series:[{type:'pie',radius:['46%','72%'],center:['50%','43%'],avoidLabelOverlap:true,
+      itemStyle:{borderColor:'#fff',borderWidth:2},labelLine:{show:false},
+      label:{position:'inside',fontSize:11,color:'#fff',formatter:'{d}%'},
+      data:rows.map(r=>({name:r.name,value:r.size,label:{show:total>0&&r.size/total>=.07},
+        itemStyle:{color:r.members&&r.members.length?'#7d8990':moduleColor(r.name)}}))}]
+  });
+}
+function treemapOption(rows) {
+  return Object.assign({},base,{
+    tooltip:{confine:true,extraCssText:'max-width:min(460px,80vw);white-space:normal;overflow-wrap:anywhere;',formatter:p=>{
+      let text='<b>'+esc(p.name)+'</b><br/>'+NUM(p.value)+' B';
+      if(p.data&&p.data.index!==undefined)text+='<br/>function #'+p.data.index;
+      if(p.data&&p.data.gzip!==null&&p.data.gzip!==undefined)text+='<br/>independent gzip '+NUM(p.data.gzip)+' B ('+RATIO(p.value, p.data.gzip)+')';
+      else if (p.data && p.data.gzipError !== null && p.data.gzipError !== undefined) text+='<br/>independent gzip failed: '+esc(p.data.gzipError);
+      if(p.data&&p.data.dead)text+='<br/>Unreachable in the current model; investigation candidate, not guaranteed savings.';
+      return text;
+    }},
+    series:[{type:'treemap',roam:false,nodeClick:false,breadcrumb:{show:false},width:'100%',height:'100%',top:0,left:0,
+      upperLabel:{show:true,height:25,fontSize:12,color:'#fff',overflow:'truncate'},
+      label:{show:true,formatter:p=>(p.data.dead?'[unreachable] ':'')+p.name,fontSize:11,overflow:'truncate'},
+      itemStyle:{borderColor:'#fff',borderWidth:1,gapWidth:2},
+      levels:[{itemStyle:{borderWidth:0,gapWidth:4}},{itemStyle:{borderWidth:1,gapWidth:1}}],
+      data:rows.map(m=>({name:m.name,value:m.size,itemStyle:{color:moduleColor(m.name)},
+        children:m.children.map(c=>({name:c.name,value: c.value,index:c.index,dead:c.dead,gzip:c.gzip,gzipError:c.gzipError,
+          itemStyle:{color:moduleColor(m.name),borderColor:c.dead?'#814b22':'#ffffff',borderWidth:c.dead?2:1}}))}))}]
+  });
+}
+function emptyInto(id,message) {
+  const el=document.getElementById(id);el.className='empty';el.style.height='auto';el.textContent=message;
+}
+function unavailable(message) {
+  const status=document.getElementById('chart-status');status.hidden=false;status.textContent=message;
+  document.getElementById('function-details').open=true;
+}
+const charts=[];
+function mount(id,option) {
+  try {const chart=echarts.init(document.getElementById(id));chart.setOption(option);charts.push({id,chart});return chart;}
+  catch(error){emptyInto(id,'Chart unavailable. Read the measured cards and function details below.');
+    unavailable('Some charts could not be drawn. Measured cards, function details and methods remain available.');return null;}
+}
+function main() {
+  const sections=DATA.sections.map(s=>({name:s.name,size:s.total,payload:s.payload,gzip:s.gzip,gzipError:s.gzipError})).sort((a,b)=>b.size-a.size);
+  const top=DATA.functions.slice(0,20).map(f=>({name:f.name,index:f.index,body:true,size:f.bodySize,gzipRawSize: f.size,gzip:f.gzip,gzipError:f.gzipError}));
+  document.getElementById('sections').style.height=Math.max(170,sections.length*36+66)+'px';
+  document.getElementById('functions').style.height=Math.max(150,top.length*31+48)+'px';
+  const compare=document.getElementById('section-compare');
+  if(typeof echarts==='undefined') {
+    unavailable('Charts unavailable: ECharts did not load. All measured cards, function details and methods remain readable. CDN mode needs a network connection.');
+    ['sections','functions','modules','treemap'].forEach(id=>emptyInto(id,'Chart library unavailable; see measured values and function details.'));
+    compare.disabled=true;return;
+  }
+  let sectionChart=null;
+  if(sections.length)sectionChart=mount('sections',barOption(sections,'#148696',sections[0].size,'#8c72ad','sections'));
+  else emptyInto('sections','No sections in this module.');
+  if(top.length)mount('functions',barOption(top,'#168579',top[0].size,undefined,'functions'));
+  else emptyInto('functions','No local functions in this module.');
+  if(DATA.pie.length)mount('modules',pieOption(DATA.pie));else emptyInto('modules','No attributed function bytes.');
+  const modules=DATA.modules.filter(m=>m.size>0);
+  if(modules.length)mount('treemap',treemapOption(modules));else emptyInto('treemap','No local functions to map.');
+  compare.disabled=!sectionChart;
+  if(sectionChart) {
+    let show=false;
+    compare.addEventListener('click',()=>{show=!show;compare.setAttribute('aria-pressed',String(show));
+      sectionChart.dispatchAction({type:show?'legendSelect':'legendUnSelect',name:'independent gzip'});});
+    sectionChart.on('legendselectchanged',event=>{show=!!event.selected['independent gzip'];compare.setAttribute('aria-pressed',String(show));});
+  }
+}
+function wireReport() {
+  const resize=()=>charts.forEach(({id,chart})=>{
+    chart.resize();if(id==='sections'||id==='functions')chart.setOption({yAxis:{axisLabel:{width:labelWidth(id)}},grid:{left:labelWidth(id)+10}});
+  });
+  window.addEventListener('resize',resize);
+  let printState=null;
+  window.addEventListener('beforeprint',()=>{
+    if(!printState){printState=['function-details','method-details'].map(id=>{const el=document.getElementById(id),open=el.open;el.open=true;return [el,open];});}resize();
+  });
+  window.addEventListener('afterprint',()=>{if(printState){printState.forEach(([el,open])=>{el.open=open;});printState=null;}resize();});
+}
+main();
+wireReport();
 </script>
 </body>
 </html>

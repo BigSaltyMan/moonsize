@@ -300,10 +300,8 @@ test "all four report formats retain reference only and mixed diagnostics" {
     let data = json_object(report_data(analysis, "app.wasm"))
     assert_eq(data.get("diagnostics"), json.get("diagnostics"))
     let html = render_html(analysis, "<unsafe>.wasm")
-    assert_true(html.contains("<div class=\"warn\">WARNING:"))
-    assert_true(
-      html.contains("graph incomplete; dead-code results may be inaccurate"),
-    )
+    assert_true(html.contains("<p class=\"warn\">WARNING:"))
+    assert_true(html.contains("graph incomplete; results may be inaccurate"))
     assert_true(!html.contains("<unsafe>"))
     let dot = render_graph("app.wasm", analysis, "graph.dot")
     assert_true(dot.contains("graph [labelloc=\"t\", label=\"WARNING:"))

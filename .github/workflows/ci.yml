@@ -44,6 +44,8 @@ jobs:
         run: bash scripts/test-size-comparison.sh _build/native/release/build/cmd/main/main.exe
       - name: Compression-report CLI regressions
         run: bash scripts/test-compression-report.sh _build/native/release/build/cmd/main/main.exe
+      - name: HTML report data, fallback and formatter regressions
+        run: node scripts/test-html-report.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-diff CLI regressions
         run: bash scripts/test-function-diff.sh _build/native/release/build/cmd/main/main.exe
       - name: Optimization-experiment CLI regressions

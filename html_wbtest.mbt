@@ -88,11 +88,11 @@ test "the data blob carries the file, its sizes and the functions" {
 }
 
 ///|
-test "the three headline numbers are rendered as cards" {
+test "the four headline measurements are rendered as cards" {
   let html = render_html(analysis_with_name("demo::fib"), "app.wasm")
   assert_true(html.contains(">File size<"))
   assert_true(html.contains(">Code section<"))
-  assert_true(html.contains(">Dead code<"))
+  assert_true(html.contains(">Unreachable in model<"))
   assert_true(html.contains(">24 B<"))
 }
 
@@ -487,12 +487,9 @@ test "the sections chart offers both views of the same bars" {
   let html = render_html(analysis_with_name("demo::fib"), "app.wasm")
   // Two series over one axis, with the compressed one hidden until it is asked
   // for, so switching shows the drop rather than rescaling the axis.
-  assert_true(html.contains("data: ['raw', 'independent gzip']"))
-  assert_true(
-    html.contains("selected: { raw: true, 'independent gzip': false }"),
-  )
-  assert_true(html.contains("barGap: '-100%'"))
-  assert_true(html.contains("'#a78bfa')"))
+  assert_true(html.contains("data:['raw','independent gzip']"))
+  assert_true(html.contains("selected:{raw:true,'independent gzip':false}"))
+  assert_true(html.contains("Both views use the same byte axis."))
 }
 
 ///|
@@ -512,7 +509,10 @@ test "every headline card is one well-formed element" {
   // which every substring assertion above is happy to accept. This one looks at
   // the tag itself.
   assert_true(!html.contains("card\">card"))
-  for label in ["File size", "Code section", "Whole-file gzip", "Dead code"] {
+  for
+    label in [
+      "File size", "Code section", "Whole-file gzip", "Unreachable in model",
+    ] {
     assert_true(
       html.contains(
         "      <div class=\"card\">\n        <span class=\"label\">" +
@@ -658,7 +658,189 @@ test "HTML function gzip and treemap use total encoded bytes as their raw denomi
   assert_true(html.contains("RATIO(gzipRaw, r.gzip)"))
   assert_true(html.contains("RATIO(p.value, p.data.gzip)"))
   assert_true(html.contains("value: c.value"))
-  assert_true(html.contains("gzip: c.gzip"))
-  assert_true(html.contains("gzipError: c.gzipError"))
+  assert_true(html.contains("gzip:c.gzip"))
+  assert_true(html.contains("gzipError:c.gzipError"))
   assert_true(html.contains("\"compression_scope\":"))
+}
+
+///|
+test "function table uses the same ranked measurements without new compression" {
+  let analysis = analysis_of(named_module())
+  let measured = measure_compression(analysis)
+  for stat in analysis.stats {
+    measured.functions.set(stat.index, Ok(54321 + stat.index))
+  }
+  let data = report_data(analysis, "named.wasm", compression=measured)
+  let rows = html_data_array(data, "functions")
+  let html = render_html_measured(analysis, "named.wasm", measured, "")
+  assert_true(
+    html.contains(
+      "<details id=\"function-details\" class=\"function-details\" open>",
+    ),
+  )
+  for rank, row in rows {
+    let index = html_data_int(row, "index")
+    assert_true(
+      html.contains(
+        "<tr data-function-index=\"" +
+        index.to_string() +
+        "\"><th scope=\"row\" class=\"number\">" +
+        (rank + 1).to_string() +
+        "</th>",
+      ),
+    )
+    assert_true(
+      html.contains(
+        "<span class=\"function-name\">" +
+        html_escape(html_data_text(row, "name")) +
+        "</span>",
+      ),
+    )
+    assert_true(
+      html.contains("<td class=\"number\">" + grouped(54321 + index) + "</td>"),
+    )
+  }
+}
+
+///|
+test "function table stops at the real top twenty with deterministic body ranking" {
+  let stats : Array[FunctionStat] = []
+  for index in 0..<23 {
+    stats.push({
+      index,
+      name: "same",
+      raw_name: None,
+      module_name: "mod",
+      body_size: index / 2,
+      total_size: index / 2 + 1,
+      offset: 0,
+    })
+  }
+  let data = report_data(analysis_of_stats(stats), "app.wasm")
+  let table = html_function_table(data)
+  let ranked = html_data_array(data, "functions")
+  assert_eq(html_data_int(ranked[0], "index"), 22)
+  assert_eq(html_data_int(ranked[1], "index"), 20)
+  assert_eq(html_data_int(ranked[2], "index"), 21)
+  for i, row in ranked {
+    let marker = "<tr data-function-index=\"" +
+      html_data_int(row, "index").to_string() +
+      "\">"
+    assert_eq(table.contains(marker), i < 20)
+  }
+}
+
+///|
+test "HTML failure reasons are readable in their own cards and function cells" {
+  let analysis = analysis_of(minimal_module())
+  let measured = measure_compression(analysis)
+  measured.sections[0] = Err("section <one>")
+  measured.functions.set(analysis.stats[0].index, Err("function <two>\nreason"))
+  let failed : CompressionMeasurements = {
+    ..measured,
+    whole_file: Err("whole <three>"),
+  }
+  let html = render_html_measured(analysis, "app.wasm", failed, "")
+  assert_true(
+    html.contains("<p class=\"measurement-error\">whole &lt;three&gt;</p>"),
+  )
+  assert_true(
+    html.contains(": independent gzip failed — section &lt;one&gt;</p>"),
+  )
+  assert_true(
+    html.contains(
+      "<span class=\"measurement-error\">failed — function &lt;two&gt;\nreason</span>",
+    ),
+  )
+  assert_true(html.contains("\"gzipSize\":null"))
+  assert_false(html.contains("failed — whole &lt;three&gt;</span>"))
+}
+
+///|
+test "full names and modules are escaped selectable HTML with separate function identities" {
+  let name = "中文\"<&>\n</script>" + repeat_text("long", 500)
+  let analysis = analysis_of_stats([
+    {
+      index: 2,
+      name,
+      raw_name: None,
+      module_name: "<module>",
+      body_size: 2,
+      total_size: 3,
+      offset: 0,
+    },
+    {
+      index: 3,
+      name,
+      raw_name: None,
+      module_name: "<module>",
+      body_size: 2,
+      total_size: 3,
+      offset: 0,
+    },
+  ])
+  let html = render_html(analysis, "路径<&>.wasm")
+  assert_true(
+    html.contains(
+      "<span class=\"function-name\">" + html_escape(name) + "</span>",
+    ),
+  )
+  assert_true(
+    html.contains("<span class=\"module-name\">&lt;module&gt;</span>"),
+  )
+  for index in [2, 3] {
+    assert_true(
+      html.contains("data-function-index=\"" + index.to_string() + "\""),
+    )
+  }
+  assert_false(html.contains(name))
+  assert_false(html.contains("</script>long"))
+}
+
+///|
+test "diagnostics precede all chart and method disclosures and scope is always visible" {
+  let analysis = analysis_of_module(diagnostic_module(b"\xd2\x01\x14\x00"))
+  let html = render_html(analysis, "incomplete.wasm")
+  assert_false(is_graph_complete(analysis.graph))
+  assert_true(
+    html.contains("<h2>Detected graph gaps</h2><p class=\"warn\">WARNING:"),
+  )
+  assert_true(
+    html.contains(
+      "<p class=\"scope-note\">Model results identify investigation candidates, not guaranteed deletion savings.</p>",
+    ),
+  )
+  assert_true(
+    html.contains(
+      "Shares are based on attributed function bytes; code-section overhead is excluded.",
+    ),
+  )
+  assert_true(
+    render_html(analysis_of(minimal_module()), "good.wasm").contains(
+      "<h2>No detected graph gaps</h2>",
+    ),
+  )
+}
+
+///|
+test "empty fallback document retains measurements table and explicit resource mode" {
+  let analysis = analysis_of(b"\x00asm\x01\x00\x00\x00")
+  let cdn = render_html(analysis, "empty.wasm")
+  assert_true(cdn.contains("No local functions in this module.</td>"))
+  assert_true(
+    cdn.contains("CDN fallback mode: charts need a network connection"),
+  )
+  assert_true(cdn.contains("<noscript>"))
+  assert_true(
+    cdn.contains("<nav class=\"report-nav\" aria-label=\"Report sections\">"),
+  )
+  let inline = render_html(
+    analysis,
+    "empty.wasm",
+    echarts="/* embedded source */",
+  )
+  assert_false(inline.contains("<script src="))
+  assert_true(
+    inline.contains("ECharts, styles, scripts and measured data are embedded"),
+  )
 }

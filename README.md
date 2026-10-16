@@ -27,6 +27,19 @@ moon build --release
 The module declares `supported_targets = "+native"`, so a project that depends on
 it builds with `--target native` as well.
 
+## Visual report development
+
+Start the local HTTP server before visual acceptance, screenshots, printing, or
+browser tests:
+
+```sh
+npm run dev
+```
+
+Then open [http://localhost:5173/](http://localhost:5173/). The root serves
+`examples/report.html`; use this HTTP URL for all browser-based checks rather
+than opening the report with `file://`.
+
 ## Usage
 
 ```
@@ -608,62 +621,58 @@ roots, every edge and every indirect site's candidate set.
 
 ## HTML report
 
-`--html <path>` writes the same analysis as one self-contained page: no server,
-no build step, no network. Open the file and the four charts are there, with the
-compressed sizes the text report only shows under `--compress`.
+```sh
+moonsize examples/fib.wasm --html examples/report.html
+```
 
-![moonsize HTML report](examples/report.png)
+The original analysis page starts with the full input path, section navigation
+and four exact byte counts: **File size**, **Code section**, **Whole-file gzip**
+and **Unreachable in model**. The analysis status follows the cards. Detected
+graph gaps and their actual diagnostic positions remain visible; “No detected
+graph gaps” means only that no gaps were detected within this model. Model
+results identify investigation candidates, not guaranteed deletion savings.
 
-A worked example is checked in at [`examples/report.html`](examples/report.html),
-generated from [`examples/fib.wasm`](examples/fib.wasm) — a 10,675-byte MoonBit
-program. It is one file: the chart library is inlined, so it can be moved,
-emailed or opened from anywhere. The source it was built from is
-[`examples/fib.mbt`](examples/fib.mbt), which is also a package here: building
-`--target wasm` produces the example alongside the tool.
+Then read the sections and module composition, Top 20 functions, module map,
+and expandable methods. Section and function bars have independent row heights.
+The section legend and keyboard-accessible comparison button share one byte
+axis for raw and independent gzip, including small streams that grow.
+Independent gzip sizes are not additive and are not whole-file transfer shares.
+Each failed measurement retains its own reason.
 
-**Four headline numbers.** File size, the code section, whole-file gzip,
-and how much of it is unreachable. The gzip card carries the share of
-raw and the ratio underneath, and the dead-code card turns red when there is
-anything to delete, which is the one number most people open the report for.
+**Full function names without hovering.** Expand or collapse the function table
+below the ranking. Its same Top 20 local functions expose index, full name/module,
+body bytes, encoded bytes, independent gzip and model reachability. Long names
+wrap and can be selected/copied; the table scrolls locally on narrow screens.
+Ranking uses body bytes, while independent gzip ratios use the full encoded
+range, including its size prefix. Function indices include preceding imports;
+the displayed function count explicitly counts local functions.
 
-**Sections** — a horizontal bar per section, widest first, with the share of the
-file in the tooltip. This is the stage-one section table, drawn. Both bar charts
-are sized to their row count, so every row keeps its label; a fixed-height box
-makes ECharts drop most of them, and the rows that survive look like headings for
-the unlabelled ones below.
+**Module shares and colors.** The ring divides attributed function encodings,
+excluding code-section overhead. Its tooltip separately computes a share of
+the complete code section. The ring and module→function treemap use the same
+identity-based module colors, independent of rank. Treemap area remains raw
+function encoding; unreachable functions also have text and outlined cells,
+which do not imply removal savings.
 
-The sections chart switches between `raw` and `independent gzip` on one axis.
-Each section is compressed separately; these sizes are not additive and do not
-represent whole-file transfer shares. Tooltips show each local measurement's
-size, ratio or failure reason, independently of the whole-file card.
+When ECharts is embedded, the generated file contains its library, styles,
+scripts and data without remote fonts or sibling assets. If the CLI cannot find
+`assets/echarts.min.js`, it announces CDN fallback; that mode visibly states
+that charts require network access. If chart loading fails, a message replaces
+the blank charts. The measured cards, MoonBit-rendered function table and native
+method disclosures remain readable, including without JavaScript.
 
-**Top 20 functions by body size** — what the compiler could shrink. Body size is
-used rather than the encoded size so that the ranking answers "where is the
-code", not "where are the size prefixes". Gzip tooltips use the full encoded
-function range and its matching raw denominator.
+The current [generated example](examples/report.html) uses the unchanged
+[stored input](examples/fib.wasm), SHA-256
+`0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c`.
+It measures 10,675 B file, 5,166 B code, 5,207 B whole-file gzip and 0 B
+unreachable local function encodings. [Page usage and verification limits](docs/html-report.md)
+record the real HTTP-browser checks, screenshots and remaining print/offline limits.
 
-**Modules** — a donut of how the code section divides between packages, as a
-share of the code section rather than of the file, so the slices mean "which
-package is responsible for the code". Slices below 0.5% are rolled into a
-single `other` slice, named on hover: a slice that thin cannot carry a label, and leaving it in draws a sliver nobody can read or aim at. Labels sit
-inside the ring, so they never collide with the legend.
+![Current report at 1440 px](examples/report-desktop.jpg)
 
-**Treemap** — module → function, where area is bytes. This is the one chart that
-shows the whole binary at once: the big cells are the functions worth looking at,
-and cells are drawn red when the function is unreachable. The area stays the raw
-encoded size. Independent function gzip and its ratio or failure reason appear
-in the tooltip; they do not estimate transfer savings from deletion.
-
-Hovering any bar, slice or cell shows the exact bytes and percentage. Every
-number in the page comes from the same `Analysis` the text report uses, so the
-two cannot disagree — including the compressed ones, which the page computes with
-the same compressor and the same level as `--compress`.
-
-The library is vendored in [`assets/echarts.min.js`](assets/README.md) and inlined
-into the page. When that file is not next to the working directory — running a
-installed binary from elsewhere, say — the page falls back to a CDN `<script
-src>` tag instead and the command says so; that report needs a network
-connection to draw.
+[390 px mobile capture](examples/report-mobile.jpg). Both captures use the real
+HTTP browser. The [earlier image](examples/report.png) is preserved separately
+and predates this redesign.
 
 ## CI integration
 

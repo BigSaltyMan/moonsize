@@ -239,3 +239,15 @@ budget_report.mbt 提供逐规则英文文本、独立版本 1 JSON 和 Markdown
 scripts/demo-budget.mjs 在 `_build/budget-demo/` 同路径工程内以 wasm/debug/no-strip 构建 before→after→rollback，记录源码、命令、toolchain、实际哈希、运行输出和 JSON/Markdown。新增可选输出后，当前工具链实测 file.raw +423 B、whole gzip +149 B、code.raw +44 B、demo::budgetdemo +29 B；限额来自实际测量，不固定跨平台 gzip 字节。通过反例精确为 0/3，另验证坏输入为 1；回退恢复完整字节、原输出和规则结果。基础输出保持、可选输出有意增加，不声称行为完全等价。原有三个源码演示全部通过。
 
 两份 README、帮助、docs/budgets.md 和两个实际配置同步更新。examples/budget.json 用于真实演示包；examples/ci-budget.json 对本次新构建示例设置 file/gzip/code 绝对预算。CI 保留全部原有任务，新增预算回归与源码演示、上传预算证据，并将新示例的实际 Markdown 写入 GITHUB_STEP_SUMMARY。原生检查、测试、release、格式和 diff 检查通过；新构建 10675 B 示例的旧 100KB/0B 预算分别为 0/3，多指标配置通过。接口增量限定为预算 opaque/结果/错误类型、入口/渲染和 Options 三字段，原有公开函数签名不变。远端验证以本次最终 SHA 对应的实际 Actions 运行记录为准。
+
+## 18. 原 HTML 报告的信息层级与可读性（2026-10-16）
+
+改版范围为原 --html 报告，未改实验报告、CLI 参数或分析算法。新增 html_assets.mbt 集中维护可读的 CSS/JS；顶部提供完整路径、章节导航、四张精确字节卡和始终可见的模型边界。实际图诊断置于折叠区之外，无诊断也不宣称完整验证或安全删除。布局使用系统字体、暖白背景、深色正文和青色重点；四/二/一卡片、双/单列图表、局部表格滚动、键盘焦点及打印样式分别处理。
+
+段/函数柱图按各自条目数确定高度，标签适应容器，raw 与独立 gzip 使用固定的同一数值轴；压缩失败保留该项原因，压缩变大不隐藏。模块环图明确以已归因函数编码之和为分母，code 完整段占比在提示中另外计算。环图和 raw encoded treemap 使用模块身份确定颜色，文本和轮廓补充模型不可达状态。新增原生可折叠 Top 20 函数表，直接消费同一份已排序 JSON 和已有 gzip Result，显示 full-space index、完整名称/模块、body/encoded/gzip 与模型状态，不重复分析或压缩。图表库缺失或初始化失败保留静态卡片、表格和方法说明。
+
+公开 render_html 签名和 schema_version=1 不变，旧 payload 字段和值逐项对账一致；仅 treemap 函数叶子增加 index。示例输入继续使用未替换的 examples/fib.wasm，SHA-256 为 0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c，file/code/whole gzip 分别为 10675/5166/5207 B，模型不可达编码 0 B、47 个本地函数。已有 report.png 未覆盖，新截图分别保存为 report-desktop.jpg 和 report-mobile.jpg。
+
+新增 6 项库测试，native 共 **336/336**。新 scripts/test-html-report.mjs 用 6 个 V8 验证的模块及长路径/CDN 场景运行 **8 个真实进程场景**，与原有 719 个合计 **727 个 CLI 场景**；对实际输出逐行核对排序、索引、原始范围、数值与错误，并执行生成脚本的可观察图表/DOM 适配器，验证轴、分母、颜色、空/失败、切换、resize 和打印状态。这些适配器不冒充浏览器布局。原十个脚本、四个源码演示与回退检查、预算 100KB/0B 正反例继续通过。CI 追加新回归，保留既有任务。
+
+按用户指定，通过 npm run dev 的 HTTP 页面 http://localhost:5173 做真实 Chromium 验收，复用已运行的 5173 服务器。1440/1024/768/390 宽度均无页面横向溢出，图表绘制和 gzip 切换正常；验证实际 tooltip、手机局部表格滚动、Enter 展开/收起、454 字符 Unicode 名称与重名索引、移除图表库后的静态回退和真实缺口警告。两张 JPEG 来自真实视口。初始 file 协议被浏览器拒绝后未绕过，用户指定 HTTP 后在该地址验收。实际断网下打开迁移文件、打印/PDF 输出未完成，现有浏览器 API 没有网络切断、打印或 PDF 导出能力；资源自包含及打印事件回归不能替代这两项实测。详细边界见 docs/html-report.md。远端 Linux 结果以推送后目标 SHA 的实际 CI 记录为准。

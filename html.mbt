@@ -208,6 +208,7 @@ fn report_data(
       leaf.set("value", int_json(child.total_size))
       set_gzip_fields(leaf, measured.functions[child.index])
       leaf.set("dead", Json::boolean(!analysis.reachable.contains(child.index)))
+      leaf.set("index", int_json(child.index))
       children.push(Json::object(leaf))
     }
     let row : Map[String, Json] = Map([])
@@ -246,7 +247,7 @@ priv struct PieSlice {
 }
 
 ///|
-/// A slice below half a percent of the code section cannot carry a legible label
+/// A slice below half a percent of attributed function bytes cannot carry a legible label
 /// or be aimed at with a pointer, so the ones below it are rolled into a single
 /// slice that names them on hover.
 const MIN_SLICE_TENTHS : Int = 5
@@ -384,14 +385,6 @@ fn html_escape(text : String) -> String {
 }
 
 ///|
-/// The document's styling.
-const HTML_STYLE : String = "      :root {\n      --bg: #f6f8fb; --panel: #ffffff; --ink: #0f172a;\n      --muted: #64748b; --line: #e2e8f0; --accent: #2563eb;\n    }\n    * { box-sizing: border-box; }\n    body {\n      margin: 0; background: var(--bg); color: var(--ink);\n      font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif;\n    }\n    header { padding: 26px 28px 6px; }\n    h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }\n    h1 span { color: var(--muted); font-weight: 400; }\n    .file {\n      margin: 5px 0 0; color: var(--muted); font-size: 12px; word-break: break-all;\n      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n    }\n    .cards {\n      display: grid; gap: 12px; padding: 16px 28px 4px;\n      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));\n    }\n    .card {\n      background: var(--panel); border: 1px solid var(--line);\n      border-radius: 10px; padding: 14px 16px;\n    }\n    .card .label {\n      display: block; color: var(--muted); font-size: 11px; font-weight: 600;\n      text-transform: uppercase; letter-spacing: 0.07em;\n    }\n    .card .value {\n      display: block; margin-top: 7px; font-size: 23px; font-weight: 600;\n      font-variant-numeric: tabular-nums;\n    }\n    .card .sub { display: block; margin-top: 1px; color: var(--muted); font-size: 12px; }\n    .charts {\n      display: grid; gap: 12px; padding: 12px 28px 28px;\n      grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));\n    }\n    .panel {\n      background: var(--panel); border: 1px solid var(--line);\n      border-radius: 10px; padding: 14px 16px 6px; overflow: hidden;\n    }\n    .panel.wide { grid-column: 1 / -1; }\n    .panel h2 {\n      margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--muted);\n      text-transform: uppercase; letter-spacing: 0.07em;\n    }\n    .chart { width: 100%; height: 320px; }\n    .chart.tall { height: 440px; }\n    .empty {\n      height: 320px; display: flex; align-items: center; justify-content: center;\n      color: var(--muted); font-size: 13px;\n    }\n    .card.alert .value { color: #dc2626; }\n    .warn {\n      margin: 10px 28px 0; padding: 10px 14px; border-radius: 8px;\n      background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;\n      font-size: 12px; line-height: 1.5; white-space: pre-line;\n    }\n    footer { padding: 0 28px 30px; color: var(--muted); font-size: 12px; }"
-
-///|
-/// The page's script: number formatting, four chart builders, and the wiring.
-const HTML_SCRIPT : String = "    const DATA = __DATA__;\n\n    const esc = (s) => String(s).replace(/[&<>\"']/g, (c) => ({\n      '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;',\n    }[c]));\n\n    const BYTES = (v) => {\n      if (v === null || v === undefined) return 'failed';\n      if (v >= 1048576) return (v / 1048576).toFixed(2) + ' MB';\n      if (v >= 1024) return (v / 1024).toFixed(1) + ' KB';\n      return v + ' B';\n    };\n\n    const NUM = (v) => v.toLocaleString('en-US');\n    const PCT = (part, whole) => whole > 0 ? (part / whole * 100).toFixed(1) + '%' : 'n/a';\n    const RATIO = (raw, gzip) => gzip > 0 ? (raw / gzip).toFixed(2) + 'x' : 'n/a';\n\n    const INK = '#334155';\n    const LINE = '#e2e8f0';\n    const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';\n\n    const axis = (extra) => Object.assign({\n      axisLine: { lineStyle: { color: '#cbd5e1' } },\n      axisTick: { show: false },\n      axisLabel: { color: INK, fontSize: 11 },\n      splitLine: { lineStyle: { color: LINE } },\n    }, extra || {});\n\n    // A static report: the grow-in animation would leave a chart empty in a\n    // screenshot, a print, or any capture that does not run animation frames.\n    const base = {\n      animation: false,\n      textStyle: { fontFamily: 'ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif' },\n    };\n\n    function barOption(rows, color, maxValue, gzipColor) {\n      maxValue = Math.max(maxValue, ...rows.map((r) => r.gzip ?? 0));\n      // One unit across the axis: mixing \"1000 B\" with \"2.9 KB\" makes the ticks\n      // read as unrelated numbers and, being long, collide with each other.\n      const unit = maxValue >= 1048576 ? 1048576 : maxValue >= 1024 ? 1024 : 1;\n      const suffix = unit === 1048576 ? ' MB' : unit === 1024 ? ' KB' : ' B';\n      // A step that is a whole number of units keeps every tick round: stepping\n      // by whole kilobytes reads \"0, 2, 4 KB\" instead of \"0.9, 2.9, 4.9 KB\".\n      const step = unit * Math.max(1, Math.ceil(maxValue / unit / 4));\n      // Pinning the top of the axis to a whole step keeps ECharts from adding a\n      // final tick at its own niced extent, which is the one label that would\n      // not be round.\n      const top = unit === 1 ? undefined : step * Math.ceil(maxValue / step);\n      const tick = (v) => unit === 1 ? String(Math.round(v)) : (v / unit).toFixed(1).replace(/\\.0$/, '') + suffix;\n      // Raw and independent gzip share an axis, including streams that grow.\n      const series = [{\n        name: 'raw',\n        type: 'bar',\n        data: rows.map((r) => r.size),\n        itemStyle: { color: color, borderRadius: [0, 3, 3, 0] },\n        label: {\n          show: true, position: 'right', color: INK, fontSize: 11,\n          formatter: (p) => BYTES(p.value),\n        },\n      }];\n      let legend;\n      if (gzipColor !== undefined) {\n        series.push({\n          name: 'independent gzip',\n          type: 'bar',\n          barGap: '-100%',\n          data: rows.map((r) => r.gzip),\n          itemStyle: { color: gzipColor, borderRadius: [0, 3, 3, 0] },\n          label: {\n            show: true, position: 'right', color: INK, fontSize: 11,\n            formatter: (p) => BYTES(p.value),\n          },\n        });\n        legend = {\n          data: ['raw', 'independent gzip'],\n          selected: { raw: true, 'independent gzip': false },\n          top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 8,\n          itemGap: 10, textStyle: { color: INK, fontSize: 11 },\n        };\n      }\n      const option = Object.assign({}, base, {\n        grid: { left: 4, right: 96, top: legend ? 24 : 12, bottom: 4, containLabel: true },\n        tooltip: {\n          trigger: 'axis',\n          axisPointer: { type: 'shadow' },\n          formatter: (ps) => {\n            const r = rows[ps[0].dataIndex];\n            let text = '<b>' + esc(r.name) + '</b><br/>raw ' + NUM(r.size) + ' B (' + PCT(r.size, DATA.fileSize) + ' of file)';\n            // Each local failure belongs to this row, never to the whole file.\n            const gzipRaw = r.gzipRawSize ?? r.size;\n            if (r.gzip !== null && r.gzip !== undefined) {\n              text += '<br/>independent gzip ' + NUM(r.gzip) + ' B (' + PCT(r.gzip, gzipRaw) + ' of encoded raw, ' + RATIO(gzipRaw, r.gzip) + ')';\n            } else if (r.gzipError !== null && r.gzipError !== undefined) {\n              text += '<br/>independent gzip failed: ' + esc(r.gzipError);\n            }\n            return text;\n          },\n        },\n        xAxis: axis({\n          type: 'value',\n          splitNumber: unit === 1 ? 3 : undefined,\n          interval: unit === 1 ? undefined : step,\n          max: top,\n          axisLabel: { color: INK, fontSize: 11, hideOverlap: true, formatter: tick },\n        }),\n        yAxis: axis({\n          type: 'category',\n          inverse: true,\n          data: rows.map((r) => r.name),\n          axisLabel: { color: INK, fontSize: 11, fontFamily: MONO, width: 190, overflow: 'truncate', interval: 0 },\n          splitLine: { show: false },\n        }),\n        series: series,\n      });\n      if (legend !== undefined) option.legend = legend;\n      return option;\n    }\n\n    // Below this share of the ring a slice is too narrow to hold its own label,\n    // so it is identified by the legend and the tooltip instead.\n    const LABELLED_PCT = 6;\n\n    function pieOption(rows) {\n      const total = rows.reduce((sum, r) => sum + r.size, 0);\n      return Object.assign({}, base, {\n        tooltip: {\n          trigger: 'item',\n          formatter: (p) => {\n            const r = rows[p.dataIndex];\n            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B<br/>' + p.percent + '% of the code section';\n            if (r && r.members && r.members.length) text += '<br/>' + esc(r.members.join(', '));\n            return text;\n          },\n        },\n        legend: {\n          type: 'scroll', bottom: 0, icon: 'circle', itemWidth: 8, itemHeight: 8,\n          textStyle: { color: INK, fontSize: 11 },\n        },\n        series: [{\n          type: 'pie',\n          radius: ['40%', '66%'],\n          center: ['50%', '47%'],\n          avoidLabelOverlap: true,\n          itemStyle: { borderColor: '#fff', borderWidth: 1 },\n          // Labels sit inside the ring, where they cannot collide with the\n          // legend or with each other, and only the slices wide enough to hold\n          // one keep it. Everything else is identified by the legend and the\n          // tooltip — never by a leader line pointing at empty space.\n          label: {\n            position: 'inside',\n            fontSize: 11,\n            color: '#fff',\n            textBorderColor: 'rgba(15,23,42,0.45)',\n            textBorderWidth: 2,\n            formatter: '{d}%',\n          },\n          labelLine: { show: false },\n          data: rows.map((r) => {\n            const labelled = r.size / total * 100 >= LABELLED_PCT;\n            return {\n              name: r.name,\n              value: r.size,\n              label: { show: labelled },\n              labelLine: { show: labelled },\n              itemStyle: r.members && r.members.length ? { color: '#94a3b8' } : undefined,\n            };\n          }),\n        }],\n      });\n    }\n\n    function treemapOption(rows) {\n      return Object.assign({}, base, {\n        tooltip: {\n          // Area remains raw encoded bytes; gzip is an independent measurement.\n          formatter: (p) => {\n            let text = '<b>' + esc(p.name) + '</b><br/>' + NUM(p.value) + ' B';\n            if (p.data && p.data.gzip !== null && p.data.gzip !== undefined) {\n              text += '<br/>independent gzip ' + NUM(p.data.gzip) + ' B (' + RATIO(p.value, p.data.gzip) + ')';\n            } else if (p.data && p.data.gzipError !== null && p.data.gzipError !== undefined) {\n              text += '<br/>independent gzip failed: ' + esc(p.data.gzipError);\n            }\n            if (p.data && p.data.dead) text += '<br/>unreachable';\n            return text;\n          },\n        },\n        series: [{\n          type: 'treemap',\n          roam: false,\n          nodeClick: false,\n          breadcrumb: { show: false },\n          width: '100%',\n          height: '100%',\n          top: 2,\n          left: 2,\n          right: 2,\n          bottom: 2,\n          upperLabel: { show: true, height: 22, fontSize: 11, color: '#fff' },\n          itemStyle: { borderColor: '#fff', borderWidth: 1, gapWidth: 1 },\n          levels: [\n            { itemStyle: { borderWidth: 0, gapWidth: 3 }, colorSaturation: [0.4, 0.55] },\n            { itemStyle: { borderWidth: 1, gapWidth: 1 }, colorSaturation: [0.35, 0.5] },\n          ],\n          data: rows.map((m) => ({\n            name: m.name,\n            value: m.size,\n            children: m.children.map((c) => ({\n              name: c.name,\n              value: c.value,\n              dead: c.dead,\n              gzip: c.gzip,\n              gzipError: c.gzipError,\n              itemStyle: c.dead ? { color: '#f87171' } : undefined,\n            })),\n          })),\n        }],\n      });\n    }\n\n    function emptyInto(id, message) {\n      const el = document.getElementById(id);\n      el.className = 'empty';\n      el.textContent = message;\n    }\n\n    const charts = [];\n\n    function mount(id, option) {\n      const chart = echarts.init(document.getElementById(id));\n      chart.setOption(option);\n      charts.push(chart);\n    }\n\n    function main() {\n      const sections = DATA.sections\n        .map((s) => ({ name: s.name, size: s.total, payload: s.payload, gzip: s.gzip, gzipError: s.gzipError }))\n        .sort((a, b) => b.size - a.size);\n      const top = DATA.functions.slice(0, 20).map((f) => ({ name: f.name, size: f.bodySize, gzipRawSize: f.size, gzip: f.gzip, gzipError: f.gzipError }));\n\n      // Give the two bar charts the height their rows need. A fixed box is what\n      // used to squeeze thirteen rows into a space that fits eight.\n      const barRows = Math.max(sections.length, top.length);\n      const barHeight = Math.max(320, barRows * 26 + 60);\n      ['sections', 'functions'].forEach((id) => {\n        document.getElementById(id).style.height = barHeight + 'px';\n      });\n\n      if (sections.length) mount('sections', barOption(sections, '#60a5fa', sections[0].size, '#a78bfa'));\n      else emptyInto('sections', 'no sections');\n\n      if (top.length) mount('functions', barOption(top, '#34d399', top[0].size));\n      else emptyInto('functions', 'no functions');\n\n      const modules = DATA.modules.filter((m) => m.size > 0);\n      // The ring needs room for the labels that sit outside it, so it is taller\n      // than the default box even though its row is sized by the bar charts.\n      document.getElementById('modules').style.height = '460px';\n      if (DATA.pie.length) mount('modules', pieOption(DATA.pie));\n      else emptyInto('modules', 'no functions');\n\n      if (modules.length) mount('treemap', treemapOption(modules));\n      else emptyInto('treemap', 'no functions');\n\n      window.addEventListener('resize', () => charts.forEach((c) => c.resize()));\n    }\n\n    main();"
-
-///|
 /// A compressed size as JSON: the number, or `null` when the compressor gave
 /// none. `null` is not `0` and not the raw size — the page has to be able to say
 /// "not measured" and have it survive the trip.
@@ -490,7 +483,13 @@ fn card(
   html_escape(value) +
   "</span>\n        <span class=\"sub\">" +
   html_escape(sub) +
-  "</span>\n      </div>\n"
+  "</span>\n" +
+  (if title.is_empty() {
+    ""
+  } else {
+    "        <p class=\"measurement-error\">" + html_escape(title) + "</p>\n"
+  }) +
+  "      </div>\n"
 }
 
 ///|
@@ -515,6 +514,113 @@ pub fn render_html(
 }
 
 ///|
+fn html_data_field(row : Json, key : String) -> Json {
+  match row {
+    Object(fields) => fields.get(key).unwrap_or(Json::null())
+    _ => Json::null()
+  }
+}
+
+///|
+fn html_data_text(row : Json, key : String) -> String {
+  match html_data_field(row, key) {
+    String(text) => text
+    _ => ""
+  }
+}
+
+///|
+fn html_data_int(row : Json, key : String) -> Int {
+  match html_data_field(row, key) {
+    Number(n, ..) => n.to_int()
+    _ => 0
+  }
+}
+
+///|
+fn html_data_array(row : Json, key : String) -> Array[Json] {
+  match html_data_field(row, key) {
+    Array(items) => items
+    _ => []
+  }
+}
+
+///|
+/// The exact ranked rows and measurements already prepared for the charts.
+/// This table is usable without JavaScript or ECharts.
+fn html_function_table(data : Json) -> String {
+  let out = StringBuilder()
+  out.write_string(
+    "<details id=\"function-details\" class=\"function-details\" open><summary>Function details · full names and measured bytes</summary>\n",
+  )
+  out.write_string(
+    "<div class=\"table-scroll\" tabindex=\"0\" role=\"region\" aria-label=\"Function details, scroll horizontally on narrow screens\"><table>\n",
+  )
+  out.write_string(
+    "<caption>Same Top 20 local functions as the body-size chart. Encoded B includes the size prefix. Indices use the full function index space, including imports. Reachability is within the current model.</caption>\n",
+  )
+  out.write_string(
+    "<colgroup><col style=\"width:5%\"><col style=\"width:6%\"><col style=\"width:38%\"><col style=\"width:8%\"><col style=\"width:8%\"><col style=\"width:16%\"><col style=\"width:19%\"></colgroup>\n",
+  )
+  out.write_string(
+    "<thead><tr><th scope=\"col\" class=\"number\">Rank</th><th scope=\"col\" class=\"number\">Index</th><th scope=\"col\">Function / module</th><th scope=\"col\" class=\"number\">Body B</th><th scope=\"col\" class=\"number\">Encoded B</th><th scope=\"col\" class=\"number\">Independent gzip B</th><th scope=\"col\">Model reachability</th></tr></thead><tbody>\n",
+  )
+  let functions = html_data_array(data, "functions")
+  for rank, row in functions {
+    if rank >= 20 {
+      break
+    }
+    let index = html_data_int(row, "index").to_string()
+    let dead = html_data_field(row, "dead") == Json::boolean(true)
+    out.write_string(
+      "<tr data-function-index=\"" +
+      index +
+      "\"><th scope=\"row\" class=\"number\">" +
+      (rank + 1).to_string() +
+      "</th>",
+    )
+    out.write_string(
+      "<td class=\"number\">" +
+      index +
+      "</td><td><span class=\"function-name\">" +
+      html_escape(html_data_text(row, "name")) +
+      "</span><span class=\"module-name\">" +
+      html_escape(html_data_text(row, "module")) +
+      "</span></td>",
+    )
+    for key in ["bodySize", "size"] {
+      out.write_string(
+        "<td class=\"number\">" + grouped(html_data_int(row, key)) + "</td>",
+      )
+    }
+    out.write_string("<td class=\"number\">")
+    match html_data_field(row, "gzip") {
+      Number(n, ..) => out.write_string(grouped(n.to_int()))
+      _ =>
+        out.write_string(
+          "<span class=\"measurement-error\">failed — " +
+          html_escape(html_data_text(row, "gzipError")) +
+          "</span>",
+        )
+    }
+    out.write_string(
+      "</td><td><span class=\"reachability" +
+      (if dead { " unreachable" } else { "" }) +
+      "\">" +
+      (if dead { "Unreachable in model" } else { "Reachable in model" }) +
+      "</span></td></tr>\n",
+    )
+  }
+  if functions.is_empty() {
+    out.write_string(
+      "<tr><td colspan=\"7\">No local functions in this module.</td></tr>\n",
+    )
+  }
+  out.write_string("</tbody></table></div></details>\n")
+  out.to_string()
+}
+
+///|
 fn render_html_measured(
   analysis : Analysis,
   file_path : String,
@@ -525,48 +631,51 @@ fn render_html_measured(
   let file_size = parsed.file_size
   let code_size = section_size(parsed, Code)
   let dead = dead_size(analysis)
-  let json = escape_for_script(
-    report_data(analysis, file_path, compression~).stringify(),
-  )
+  let data = report_data(analysis, file_path, compression~)
+  let json = escape_for_script(data.stringify())
   let script = replace_all(HTML_SCRIPT, "__DATA__", json)
   let title = html_escape(file_path)
-  let out = StringBuilder(size_hint=json.length() + echarts.length() + 16384)
+  let out = StringBuilder(size_hint=json.length() + echarts.length() + 24576)
   out.write_string(
-    "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n" +
-    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
-    "<title>moonsize — " +
+    "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>moonsize — " +
     title +
     "</title>\n<style>\n" +
     HTML_STYLE +
     "\n</style>\n</head>\n<body>\n",
   )
   out.write_string(
-    "<header>\n  <h1>moonsize <span>· size report</span></h1>\n" +
-    "  <p class=\"file\">" +
+    "<a class=\"skip-link\" href=\"#overview\">Skip to report</a><main class=\"shell\" id=\"report\">\n<header class=\"report-header\"><div class=\"brand\"><span class=\"brand-mark\" aria-hidden=\"true\">m</span>moonsize</div>\n<p class=\"eyebrow\">WebAssembly / size analysis</p><h1>WebAssembly size report</h1>\n<p class=\"file\">" +
     title +
-    "</p>\n</header>\n",
+    "</p>\n",
   )
-  // Said once at the top of the page for the same reason the text report says it
-  // at the top of the report: the sections it undermines are spread out below,
-  // and `white-space: pre-line` keeps the two lines together.
-  let warning = render_graph_warning(analysis.graph)
-  if warning.length() > 0 {
-    out.write_string("<div class=\"warn\">" + html_escape(warning) + "</div>\n")
-  }
   out.write_string(
-    "<p class=\"model-scope\">" +
-    html_escape(retained_modeling_scope()) +
-    " Unreachable functions are candidates for investigation, not a safe-deletion list.</p>\n",
+    "<p class=\"report-meta\">" +
+    grouped(analysis.stats.length()) +
+    " local functions · " +
+    grouped(html_data_array(data, "modules").length()) +
+    " module labels · " +
+    grouped(analysis.graph.edges.length()) +
+    " modeled references</p>\n",
   )
-  out.write_string("<section class=\"cards\">\n")
   out.write_string(
-    card("File size", grouped(file_size) + " B", human_bytes(file_size), false),
+    "<nav class=\"report-nav\" aria-label=\"Report sections\"><a href=\"#overview\">Overview</a><a href=\"#composition\">Composition</a><a href=\"#function-ranking\">Functions</a><a href=\"#module-map\">Module map</a><a href=\"#methodology\">Methods &amp; limits</a></nav></header>\n",
+  )
+  out.write_string(
+    "<section id=\"overview\" class=\"cards\" aria-label=\"Key measurements\" tabindex=\"-1\">\n",
+  )
+  out.write_string(
+    card(
+      "File size",
+      grouped(file_size) + " B",
+      human_bytes(file_size) + " · complete artifact",
+      false,
+    ),
   )
   out.write_string(
     card(
       "Code section",
       grouped(code_size) + " B",
-      share_text(code_size, file_size) + " of file",
+      share_text(code_size, file_size) + " of file · complete encoding",
       false,
     ),
   )
@@ -577,45 +686,99 @@ fn render_html_measured(
   out.write_string(
     card("Whole-file gzip", gzip_value, gzip_sub, false, title=gzip_title),
   )
+  let warning = render_graph_warning(analysis.graph)
   out.write_string(
     card(
-      "Dead code",
+      "Unreachable in model",
       grouped(dead) + " B",
-      if !is_graph_complete(analysis.graph) {
-        "graph incomplete; dead-code results may be inaccurate"
+      if !warning.is_empty() {
+        "graph incomplete; results may be inaccurate"
       } else if dead == 0 {
-        "nothing unreachable"
+        "no unreachable local function bytes"
       } else {
-        share_text(dead, file_size) + " of file"
+        "encoded local function bytes · " +
+        share_text(dead, file_size) +
+        " of file"
       },
       dead > 0,
-      title=if is_graph_complete(analysis.graph) { "" } else { warning },
     ),
   )
-  out.write_string("</section>\n")
   out.write_string(
-    "<section class=\"charts\">\n" +
-    "  <div class=\"panel\"><h2>Sections</h2><p>Each section is compressed separately. These sizes are not additive and do not represent whole-file transfer shares.</p><div id=\"sections\" class=\"chart\"></div></div>\n" +
-    "  <div class=\"panel\"><h2>Top 20 functions by body size</h2>" +
-    "<p>Function gzip uses independent streams including size prefixes, with ratios based on encoded size. It does not measure transfer savings from removal.</p><div id=\"functions\" class=\"chart\"></div></div>\n" +
-    "  <div class=\"panel\"><h2>Modules — share of the code section</h2>" +
-    "<div id=\"modules\" class=\"chart\"></div></div>\n" +
-    "  <div class=\"panel wide\"><h2>Treemap — module → function, area is bytes</h2>" +
-    "<p>Area is raw encoded bytes. Tooltip gzip values are independent function streams, not additive transfer shares.</p><div id=\"treemap\" class=\"chart tall\"></div></div>\n" +
-    "</section>\n",
+    "</section>\n<section id=\"analysis-status\" class=\"analysis-status" +
+    (if warning.is_empty() { "" } else { " warning" }) +
+    "\" aria-label=\"Analysis status\">\n",
   )
   out.write_string(
-    "<footer>\n  " +
-    plural(analysis.stats.length(), "function") +
-    " analysed, " +
-    plural(group_modules(analysis.stats).length(), "module") +
-    ", " +
-    grouped(analysis.graph.edges.length()) +
-    " references in the call graph. Red cells are unreachable within the model.\n" +
+    if warning.is_empty() {
+      "<h2>No detected graph gaps</h2><p>No gaps detected within the current reference model. This is not full Wasm verification.</p>\n"
+    } else {
+      "<h2>Detected graph gaps</h2><p class=\"warn\">" +
+      html_escape(warning) +
+      "</p>\n"
+    },
+  )
+  out.write_string(
+    "<p class=\"scope-note\">Model results identify investigation candidates, not guaranteed deletion savings.</p><p>Unreachable functions are not a safe-deletion list. <a href=\"#methodology\">Read the model and measurement limits</a>.</p></section>\n",
+  )
+  out.write_string(
+    "<p id=\"chart-status\" class=\"chart-status\" role=\"status\" hidden></p><noscript><p class=\"chart-status\">JavaScript is disabled. Measured cards, full function details and methods below remain readable; charts require JavaScript.</p></noscript>\n",
+  )
+  out.write_string(
+    "<p id=\"chart-resource-mode\" class=\"panel-note\">" +
+    (if echarts.is_empty() {
+      "CDN chart mode: charts require a network connection. Measured cards, function details and methods are included in this file."
+    } else {
+      "Chart library and report data are embedded in this file; no network or sibling assets are required."
+    }) +
+    "</p>\n",
+  )
+  out.write_string(
+    "<section id=\"composition\" aria-labelledby=\"composition-title\"><div class=\"section-heading\"><h2 id=\"composition-title\">Where the bytes go</h2><p>Complete sections, then attributed function encodings</p></div><div class=\"composition-grid\">\n",
+  )
+  out.write_string(
+    "<article class=\"panel\"><div class=\"panel-tools\"><h3>Sections</h3><button id=\"section-compare\" type=\"button\" aria-pressed=\"false\" aria-controls=\"sections\">Compare independent gzip</button></div><p class=\"panel-note\">Raw sizes include section headers and payloads. Both views use the same byte axis.</p><p class=\"panel-note\">Each section is compressed separately. These sizes are not additive and do not represent whole-file transfer shares.</p><div id=\"sections\" class=\"chart\" role=\"img\" aria-label=\"Section sizes in encoded bytes\"></div>\n",
+  )
+  for row in html_data_array(data, "sections") {
+    if html_data_field(row, "gzipError") is String(error) {
+      out.write_string(
+        "<p class=\"measurement-error\">" +
+        html_escape(html_data_text(row, "name")) +
+        ": independent gzip failed — " +
+        html_escape(error) +
+        "</p>\n",
+      )
+    }
+  }
+  out.write_string(
+    "</article><article class=\"panel\"><h3>Modules · attributed function bytes</h3><p class=\"panel-note\">Shares are based on attributed function bytes; code-section overhead is excluded. Small modules may be grouped as other.</p><div id=\"modules\" class=\"chart ring\" role=\"img\" aria-label=\"Module shares of attributed function encodings\"></div></article></div></section>\n",
+  )
+  out.write_string(
+    "<section id=\"function-ranking\" aria-labelledby=\"functions-title\"><div class=\"section-heading\"><h2 id=\"functions-title\">Functions to investigate</h2><p>Top 20 local functions, ranked by body bytes</p></div><article class=\"panel\"><p class=\"panel-note\">Function gzip uses independent streams including size prefixes, with ratios based on encoded size. It does not measure transfer savings from removal.</p><div id=\"functions\" class=\"chart\" role=\"img\" aria-label=\"Top 20 functions by body bytes; complete names in the table below\"></div>\n",
+  )
+  out.write_string(html_function_table(data))
+  out.write_string(
+    "</article></section>\n<section id=\"module-map\" aria-labelledby=\"map-title\"><div class=\"section-heading\"><h2 id=\"map-title\">Module map</h2><p>Module → function · raw encoded bytes</p></div><article class=\"panel\"><p class=\"panel-note\">Area is raw encoded bytes. Tooltip gzip values are independent function streams, not additive transfer shares. Modules keep their ring colors; outlined cells and text identify functions unreachable in the model.</p><div id=\"treemap\" class=\"chart map\" role=\"img\" aria-label=\"Module and function encodings; areas are raw bytes\"></div></article></section>\n",
+  )
+  out.write_string(
+    "<section id=\"methodology\" class=\"methods\"><details id=\"method-details\"><summary>Methods, measurement ranges &amp; model limits</summary><h3>Reference model</h3><p>" +
     html_escape(graph_modeling_scope()) +
-    "\n" +
-    (if warning.is_empty() { "" } else { html_escape(warning) + "\n" }) +
-    "</footer>\n",
+    "</p><p>" +
+    html_escape(retained_modeling_scope()) +
+    "</p><h3>Compression</h3><p>" +
+    html_escape(html_data_text(data, "compression_scope")) +
+    "</p><h3>Chart availability</h3><p>",
+  )
+  out.write_string(
+    if echarts.is_empty() {
+      "CDN fallback mode: charts need a network connection to load ECharts. The measured cards, function details and methods are included in this file and remain readable without it."
+    } else {
+      "ECharts, styles, scripts and measured data are embedded in this file. No remote fonts, chart assets or sibling files are required; the report can be moved to another directory."
+    },
+  )
+  out.write_string(
+    "</p></details></section>\n<footer>Generated by moonsize · " +
+    grouped(analysis.stats.length()) +
+    " local functions. Model findings guide investigation; verify optimization outcomes by rebuilding and comparing complete artifacts.</footer>\n</main>\n",
   )
   if echarts.length() > 0 {
     out.write_string(

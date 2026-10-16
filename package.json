@@ -1,0 +1,8 @@
+{
+  "name": "moonsize",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "test:visual": "node scripts/test-html-report.mjs"
+  }
+}

@@ -65,9 +65,9 @@ function run(args) {
 function charts(script) {
   const options = {}, elements = {};
   const context = vm.createContext({
-    document: { getElementById(id) { return elements[id] ??= { id, style: {} }; } },
+    document: { getElementById(id) { return elements[id] ??= { id, style: {}, addEventListener() {}, setAttribute() {} }; } },
     window: { addEventListener() {} },
-    echarts: { init(element) { return { setOption(option) { options[element.id] = option; } }; } },
+    echarts: { init(element) { return { setOption(option) { options[element.id] = option; }, on() {}, dispatchAction() {}, resize() {} }; } },
   });
   vm.runInContext(script + '\nglobalThis.formatBytes = BYTES;', context, { timeout: 1000 });
   return { options, context };
