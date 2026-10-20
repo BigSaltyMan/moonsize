@@ -12,6 +12,8 @@ moon add BigSaltyMan/moonsize@0.4.0
 
 当前交付版本为 **0.4.0**，相对公开 0.3.0 含破坏性库接口变化，见[迁移说明](docs/migration-0.4.md)。moon add 添加的是库依赖，不会安装独立 CLI；CLI 请克隆源码后按下方命令构建。
 
+下述统一输出保护属于 0.4.0 之后的源码更新，本次未发布新的 Mooncakes 版本。请从当前源码重建 CLI 使用；已发布的 0.4.0 包仍保留旧的 HTML/调用图写入行为。
+
 [公开复审证据](https://github.com/BigSaltyMan/moonsize/blob/main/docs/review-evidence.md)提供指标边界、真实源码重建、路径、预算与两份 PDF；[0.4.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)记录对应源码 SHA、目标 Linux CI、实际包摘要和独立消费验证。历史开发日志中的数量保持当时快照。
 
 ## 构建
@@ -38,8 +40,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --dead-code          从根不可达的函数
   --compress           整文件 gzip 与各段独立 gzip 大小
   --strict             调用图不完整时拒绝输出报告，而不是带着警告输出
-  --call-graph <path>  把调用图写成 .dot 或 .json
-  --html <path>        把图表写成自包含的 HTML 报告
+  --call-graph <path>  新建 .dot 或 .json 调用图，拒绝已有路径
+  --html <path>        新建自包含 HTML 报告，拒绝已有路径
   --max-size <size>    超过这个大小就以退出码 3 失败，size 可以是字节数或
                        10KB、1.5MB 这种带 KB/MB/GB 后缀的写法
   --baseline <path>    与另一个模块对比并打印变化；此时 --max-size 限制的是
@@ -58,6 +60,8 @@ moonsize app.wasm --retained --dead-code        # 完整文本报告
 moonsize app.wasm --html report.html            # 图表，浏览器打开
 moonsize app.wasm --call-graph graph.dot        # 给 Graphviz
 ```
+
+所有报告目标（包括 HTML、DOT/JSON 调用图）都默认拒绝覆盖已有文件、目录和链接别名，保护失败返回 1。解析和 strict 检查通过后统一检查所有目标，写入时采用原生独占创建，防止检查后出现的同名目标被截断。这不提供多文件事务或崩溃原子写入；后续失败可能留下之前的新文件或本次新建的部分文件，也不防御父目录被恶意并发替换。详见[文件保护范围与并发边界](docs/output-protection.md)。更新报告时先生成到新暂存路径，核对后再由用户明确替换发布副本。生产 CLI 不增加 Node 依赖或强制覆盖参数。
 
 ## 优化实验报告
 
@@ -395,7 +399,7 @@ Dead code
 ## HTML 报告
 
 ```sh
-moonsize examples/fib.wasm --html examples/report.html
+moonsize examples/fib.wasm --html new-report.html
 ```
 
 原分析页先显示完整输入路径、章节导航和四个精确字节数：File size、Code section、
@@ -593,14 +597,23 @@ bash scripts/test-parser-boundaries.sh _build/native/release/build/cmd/main/main
 ```sh
 moon build --target wasm
 
-cp _build/wasm/debug/build/examples/examples.wasm \
-  examples/fib.wasm
+stage=$(mktemp -d examples/report-update.XXXXXX)
+cp _build/wasm/debug/build/examples/examples.wasm "$stage/fib.wasm"
 
 moon run cmd/main -- \
-  --html examples/report.html \
-  examples/fib.wasm
+  --html "$stage/report.html" \
+  "$stage/fib.wasm"
+
+sha256sum _build/wasm/debug/build/examples/examples.wasm "$stage/fib.wasm"
 ```
 
-第一步构建 `examples/`，产物落在 `_build/wasm/debug/build/examples/examples.wasm`；第二步更新仓库里的 `examples/fib.wasm` 副本；第三步依据该副本生成 HTML。在 `http://localhost:5173/` 确认新报告后，再分别使用 1440 × 1000 和 390 × 844 视口更新 `examples/report-desktop.jpg` 与 `examples/report-mobile.jpg`。仅运行构建不会更新仓库示例副本或报告。
+构建产物和暂存输入的摘要应一致，替换前先核对输入身份及报告数值。执行 npm run dev 并打开 http://127.0.0.1:5173/，再查看 http://127.0.0.1:5173/report-update.XXXXXX/report.html（使用实际目录名）。报告记录的是本次暂存输入路径。确认报告后，由用户执行下面明确的替换步骤；CLI 不删除旧报告：
+
+```sh
+cp "$stage/fib.wasm" examples/fib.wasm
+cp "$stage/report.html" examples/report.html
+```
+
+确认新页面后，再分别以 1440 × 1000 和 390 × 844 视口更新 report-desktop.jpg 与 report-mobile.jpg，不覆盖无关的 report.png。验收后可保留暂存目录，或只清理本次自行创建的目录。
 
 `.moonignore` 把渲染出来的页面挡在发布包之外——它占了原本 2.4 MB 模块中的 1.2 MB，而没人会为了看一张截图去 `moon add` 这个模块——源码、示例二进制和图表库都照常发布。

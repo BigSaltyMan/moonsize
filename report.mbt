@@ -465,8 +465,8 @@ pub fn usage() -> String {
   "  --compress           whole-file gzip and independent section gzip sizes\n" +
   "  --strict             refuse to report when the call graph is incomplete,\n" +
   "                       instead of reporting it with a warning\n" +
-  "  --call-graph <path>  write the call graph as .dot or .json\n" +
-  "  --html <path>        write the charts as a self-contained HTML report\n" +
+  "  --call-graph <path>  write a new .dot or .json call graph; refuses existing paths\n" +
+  "  --html <path>        write a new self-contained HTML report; refuses existing paths\n" +
   "  --max-size <size>    fail with exit code 3 above this size, where size is\n" +
   "                       bytes or a KB/MB/GB count such as 10KB or 1.5MB\n" +
   "  --budget <path>      validated multi-metric byte budgets; growth needs --baseline\n" +
@@ -484,6 +484,9 @@ pub fn usage() -> String {
   "                       query mode allows only these flags and --strict\n" +
   "                       element functions are conservative roots; paths are\n" +
   "                       not execution traces or predictions of savings\n\n" +
+  "All report outputs refuse existing files, directories and link aliases.\n" +
+  "Targets are checked together; each file is created exclusively. Output errors use exit 1.\n" +
+  "Multiple files are not a transaction; a later failure may leave earlier new outputs.\n\n" +
   "Exit codes: 0 completed, 1 input/query/output/unavailable measurement, 2 bad arguments/config,\n" +
   "            3 over budget, incomplete strict graph, or path search limited."
 }

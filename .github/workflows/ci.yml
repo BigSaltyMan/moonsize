@@ -34,6 +34,8 @@ jobs:
         run: moon test
       - name: Build native CLI
         run: moon build --target native --release
+      - name: Report output protection and exclusive-create regressions
+        run: node scripts/test-output-protection.mjs _build/native/release/build/cmd/main/main.exe
       - name: Tail-call CLI regressions
         run: bash scripts/test-tail-calls.sh _build/native/release/build/cmd/main/main.exe
       - name: Graph-diagnostic CLI regressions

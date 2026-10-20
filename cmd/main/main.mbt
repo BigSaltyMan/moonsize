@@ -14,17 +14,6 @@ fn read_input(path : String) -> Bytes {
 }
 
 ///|
-/// Write an export to disk, reporting failure and exiting when it cannot.
-fn write_output(path : String, contents : String) -> Unit {
-  @fs.write_string_to_file(path, contents) catch {
-    _ => {
-      println("moonsize: cannot write \{path}")
-      @sys.exit(1)
-    }
-  }
-}
-
-///|
 /// The module to compare against, or `None` when the invocation named none.
 fn read_baseline(options : @lib.Options) -> (Bytes, @lib.WasmModule)? {
   match options.baseline {
@@ -89,11 +78,6 @@ fn print_report(
 /// A separate output mode: validate all evidence before writing a new report.
 /// Existing paths are refused, including input aliases and existing reports.
 fn run_experiment(options : @lib.Options, target : String) -> Unit {
-  if @fs.path_exists(target) {
-    println("moonsize: experiment output already exists: " + target)
-    @sys.exit(@lib.EXIT_INPUT)
-    return
-  }
   let context = match options.experiment_context {
     None => Json::null()
     Some(path) => {
@@ -189,6 +173,7 @@ fn run_experiment(options : @lib.Options, target : String) -> Unit {
   } else {
     report.stringify(indent=2) + "\n"
   }
+  check_outputs(options)
   write_output(target, contents)
   println("Optimization experiment written to " + target)
   if code != @lib.EXIT_OK {
@@ -226,11 +211,7 @@ fn run_function_path(options : @lib.Options, target_index : Int) -> Unit {
   }
   match options.why_json {
     Some(target) => {
-      if @fs.path_exists(target) {
-        println("moonsize: path query output already exists: " + target)
-        @sys.exit(@lib.EXIT_INPUT)
-        return
-      }
+      check_outputs(options)
       write_output(target, @lib.render_function_path_json(report))
       println("Function path written to " + target)
     }
@@ -373,15 +354,8 @@ fn main {
     @sys.exit(@lib.EXIT_OVER_SIZE)
     return
   }
+  check_outputs(options)
   if budget_report is Some(report) {
-    // No normal output before all fallible preparation and strict checking.
-    for target in [options.budget_json, options.budget_md] {
-      if target is Some(path) && @fs.path_exists(path) {
-        println("moonsize: budget output already exists: " + path)
-        @sys.exit(1)
-        return
-      }
-    }
     if options.budget_json is Some(target) {
       write_output(
         target,

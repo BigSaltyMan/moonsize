@@ -15,6 +15,7 @@ examples/report.html
 examples/report.png
 examples/report-desktop.jpg
 examples/report-mobile.jpg
+examples/report-update.*/
 
 # Repository-only review evidence and local plans; never needed by consumers.
 docs/review-artifacts/

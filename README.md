@@ -28,6 +28,10 @@ links measured rebuild cases, real PDFs and explicit model boundaries. The
 records the exact source SHA, target Linux CI, registry checksum and clean consumer
 verification; historic devlog counts are snapshots.
 
+The unified output protection described below is a source-checkout update after
+0.4.0, not a new Mooncakes publication. Rebuild the CLI from current source to
+use it; the already published 0.4.0 HTML/graph writer retains its old behavior.
+
 ## Building
 
 ```sh
@@ -71,8 +75,8 @@ identify candidates for investigation.
   --compress           whole-file gzip and independent section gzip sizes
   --strict             refuse to report when the call graph is incomplete,
                        instead of reporting it with a warning
-  --call-graph <path>  write the call graph as .dot or .json
-  --html <path>        write the charts as a self-contained HTML report
+  --call-graph <path>  write a new .dot or .json call graph; refuses existing paths
+  --html <path>        write a new self-contained HTML report; refuses existing paths
   --max-size <size>    fail with exit code 3 above this size, where size is
                        bytes or a KB/MB/GB count such as 10KB or 1.5MB
   --budget <path>      validated multi-metric byte budgets; growth needs --baseline
@@ -91,6 +95,10 @@ identify candidates for investigation.
                        element functions are conservative roots; paths are
                        not execution traces or predictions of savings
 
+All report outputs refuse existing files, directories and link aliases.
+Targets are checked together; each file is created exclusively. Output errors use exit 1.
+Multiple files are not a transaction; a later failure may leave earlier new outputs.
+
 Exit codes: 0 completed, 1 input/query/output/unavailable measurement, 2 bad arguments/config,
             3 over budget, incomplete strict graph, or path search limited.
 ```
@@ -105,6 +113,16 @@ moonsize app.wasm --retained --dead-code        # the full text report
 moonsize app.wasm --html report.html            # charts, opens in a browser
 moonsize app.wasm --call-graph graph.dot        # for Graphviz
 ```
+
+All report destinations, including HTML and DOT/JSON graphs, refuse existing
+files, directories and link aliases. Output protection failures return 1. Targets
+are checked together after parsing and strict refusal; each write uses native
+exclusive creation. This prevents truncation if a target appears after preflight,
+but is not a multi-file transaction or crash-atomic write. Later failure can leave
+earlier new files or a partial new file; hostile parent-directory changes remain
+outside this guarantee. See [protection and concurrency boundaries](docs/output-protection.md).
+Generate an update at a fresh staging path, verify it, then explicitly replace the
+published copy yourself. No production Node dependency or overwrite flag is added.
 
 ## Optimization experiments
 
@@ -645,7 +663,7 @@ roots, every edge and every indirect site's candidate set.
 ## HTML report
 
 ```sh
-moonsize examples/fib.wasm --html examples/report.html
+moonsize examples/fib.wasm --html new-report.html
 ```
 
 The original analysis page starts with the full input path, section navigation
@@ -960,21 +978,31 @@ stale. Build, copy the artifact, then generate the report:
 ```sh
 moon build --target wasm
 
-cp _build/wasm/debug/build/examples/examples.wasm \
-  examples/fib.wasm
+stage=$(mktemp -d examples/report-update.XXXXXX)
+cp _build/wasm/debug/build/examples/examples.wasm "$stage/fib.wasm"
 
 moon run cmd/main -- \
-  --html examples/report.html \
-  examples/fib.wasm
+  --html "$stage/report.html" \
+  "$stage/fib.wasm"
+
+sha256sum _build/wasm/debug/build/examples/examples.wasm "$stage/fib.wasm"
 ```
 
-The first step builds `examples/` and leaves the artifact at
-`_build/wasm/debug/build/examples/examples.wasm`. The second step updates the
-repository's `examples/fib.wasm` copy; the third generates HTML from that copy.
-After checking the new report at `http://localhost:5173/`, update
-`examples/report-desktop.jpg` with a 1440 × 1000 viewport and
-`examples/report-mobile.jpg` with a 390 × 844 viewport. Rebuilding alone does
-not update the stored binary or report.
+The build and staged input hashes must match. Check the measurements against
+that input before replacing either checked-in artifact. Start npm run dev, open
+http://127.0.0.1:5173/, then inspect the staged page at
+http://127.0.0.1:5173/report-update.XXXXXX/report.html (use the actual directory).
+The report records the actual staged input path. After accepting the new report,
+run these **explicit replacement steps**; the CLI never removes the old report:
+
+```sh
+cp "$stage/fib.wasm" examples/fib.wasm
+cp "$stage/report.html" examples/report.html
+```
+
+Update report-desktop.jpg (1440 × 1000) and report-mobile.jpg (390 × 844) only
+after reviewing the accepted page. Do not overwrite an unrelated report.png.
+Keep or explicitly clean up only your own staging directory after review.
 
 `.moonignore` keeps the rendered page out of the published package — it is
 1.2 MB of what would otherwise be a 2.4 MB module, and nobody `moon add`s this

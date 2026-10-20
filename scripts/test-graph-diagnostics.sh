@@ -276,7 +276,9 @@ for(const name of ['set','tail','imported','exported','initializer','combined'])
     assert(!fs.existsSync(output)); refusal(run(3,[input,'--strict',flag,output])); assert(!fs.existsSync(output));
     fs.writeFileSync(output,sentinel); refusal(run(3,[input,'--strict',flag,output])); assert.deepEqual(fs.readFileSync(output),sentinel);
     if(ext!=='json') {
-      run(0,[input,flag,output]); const text=fs.readFileSync(output,'utf8');
+      const fresh=path.join(dir,'dynamic-readable-'+name+'.'+ext);
+      assert(!fs.existsSync(fresh)); run(0,[input,flag,fresh]); const text=fs.readFileSync(fresh,'utf8');
+      assert.deepEqual(fs.readFileSync(output),sentinel);
       assert.match(text,/do not use them as proof that a function can be removed/);
       const reason={set:'table.set',tail:'table.set',imported:'imported table contents',exported:'exported table contents',initializer:'explicit table initializer',combined:'table.set'}[name];
       assert(text.includes(reason),name);

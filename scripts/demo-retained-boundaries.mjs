@@ -23,9 +23,13 @@ function run(command, args, cwd = repo, expected = 0) {
 function measure(file) {
   const bytes = fs.readFileSync(file);
   assert(WebAssembly.validate(bytes), `${file} is not a valid Wasm module for this V8`);
-  const jsonPath = file + '.graph.json';
+  // The CLI always gets a new target. After validation, this demo explicitly
+  // updates its own stable evidence copy for CI; production output never replaces it.
+  const jsonPath = path.join(fs.mkdtempSync(path.join(path.dirname(file), 'graph-')), 'graph.json');
   run(cli, [file, '--call-graph', jsonPath]);
   const graph = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+  assert.equal(graph.schema_version, 1);
+  fs.copyFileSync(jsonPath, file + '.graph.json');
   const text = run(cli, [file, '--compress', '--retained', '--dead-code', '--top', '1000000']);
   fs.writeFileSync(file + '.report.txt', text);
   const gzip = text.match(/^\s*gzip\s+(\d+)\s+B/m);

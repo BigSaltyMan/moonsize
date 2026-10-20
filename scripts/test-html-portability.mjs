@@ -90,6 +90,9 @@ if (process.argv.includes('--browser')) {
     // Load the original in a separate context, then CLOSE it before offline copy.
     const originalContext = await browser.newContext({serviceWorkers:'block'});
     const originalPage = await originalContext.newPage();
+    // Open the required development entry before browser delivery assertions.
+    await originalPage.goto(origin+'/');
+    await originalPage.waitForFunction(()=>document.querySelectorAll('canvas').length===4);
     const originalUrl = origin+'/delivery-original.html';
     await originalContext.route(originalUrl,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(example.target)}));
     await originalPage.goto(originalUrl);await originalPage.waitForFunction(()=>document.querySelectorAll('canvas').length===4);
