@@ -39,6 +39,9 @@ pub struct Options {
   budget_md : String?
   /// Print whole-file gzip and independent section gzip measurements.
   compress : Bool
+  /// Append encoded data-entry details; JSON implies this flag.
+  data_segments : Bool
+  data_json : String?
   /// Refuse to report at all when the call graph is incomplete, rather than
   /// printing the numbers with a warning above them.
   strict : Bool
@@ -72,6 +75,8 @@ pub fn Options::default(path : String) -> Options {
     budget_json: None,
     budget_md: None,
     compress: false,
+    data_segments: false,
+    data_json: None,
     strict: false,
   }
 }
@@ -281,6 +286,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut budget_json : String? = None
   let mut budget_md : String? = None
   let mut compress = false
+  let mut data_segments = false
+  let mut data_json : String? = None
   let mut strict = false
   let mut i = 1
   while i < args.length() {
@@ -342,6 +349,18 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         return Err("moonsize: --why-json needs a .json path\n\n" + usage())
       }
       why_json = Some(args[i + 1])
+      i += 2
+    } else if arg == "--data-segments" {
+      data_segments = true
+      i += 1
+    } else if arg == "--data-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err("moonsize: --data-json needs a new .json path\n\n" + usage())
+      }
+      data_json = Some(args[i + 1])
+      data_segments = true
       i += 2
     } else if arg == "--retained" {
       retained = true
@@ -411,6 +430,27 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if data_segments {
+    if html is Some(_) ||
+      call_graph is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) ||
+      diff_functions {
+      return Err(
+        "moonsize: data segment details cannot be combined with --html, --call-graph, --experiment, function-path queries, --budget or --diff-functions\n\n" +
+        usage(),
+      )
+    }
+    if data_json is Some(target) && !target.has_suffix(".json") {
+      return Err("moonsize: --data-json wants a .json path\n\n" + usage())
+    }
   }
   if budget is None && (budget_json is Some(_) || budget_md is Some(_)) {
     return Err(
@@ -549,6 +589,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     budget_json,
     budget_md,
     compress,
+    data_segments,
+    data_json,
     strict,
   })
 }

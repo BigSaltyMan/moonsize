@@ -48,6 +48,21 @@ moon build --target native --release
 The module declares `supported_targets = "+native"`, so a project that depends on
 it builds with `--target native` as well.
 
+## Data segment encodings
+
+```sh
+moonsize app.wasm --data-segments --top 20
+moonsize app.wasm --data-json new-data.json
+```
+
+This source-checkout feature is not yet published to Mooncakes. It accounts for
+data-entry payload, encoding metadata and section overhead in file bytes.
+Active offset expressions are recorded without evaluation; no source attribution
+or deletion savings are inferred. Text Top does not truncate the JSON or totals.
+It supports ordinary text, strict, max-size and baseline (no data-entry diff),
+and rejects HTML, graph, experiment, path, budget and function-diff combinations.
+See [encoding ledger, real sample and API migration](docs/data-segments.md).
+
 ## Visual report development
 
 Start the local HTTP server before visual acceptance, screenshots, printing, or
@@ -67,6 +82,7 @@ than opening the report with `file://`.
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--data-segments] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
        moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
@@ -79,6 +95,9 @@ identify candidates for investigation.
   --retained           dominated function bytes in the current graph model
   --dead-code          functions no root can reach
   --compress           whole-file gzip and independent section gzip sizes
+  --data-segments      append data-entry file bytes (payload-ranked by --top)
+  --data-json <path>   enable details and write all entries to a new .json file
+                       offset expressions are recorded, not evaluated
   --strict             refuse to report when the call graph is incomplete,
                        instead of reporting it with a warning
   --call-graph <path>  write a new .dot or .json call graph; refuses existing paths

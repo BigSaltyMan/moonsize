@@ -36,8 +36,66 @@ test "defaults to the ten heaviest functions" {
       inspect(options.path, content="app.wasm")
       inspect(options.top, content="10")
       assert_false(options.diff_functions)
+      assert_false(options.data_segments)
+      assert_eq(options.data_json, None)
     }
     Err(message) => fail(message)
+  }
+}
+
+///|
+test "data details enable text and JSON while keeping ordinary options" {
+  let options = options_of([
+    "moonsize", "app.wasm", "--data-json", "data.json", "--top", "1", "--strict",
+    "--baseline", "old.wasm", "--max-size", "100KB", "--retained", "--dead-code",
+    "--compress",
+  ])
+  assert_true(options.data_segments)
+  assert_eq(options.data_json, Some("data.json"))
+  assert_eq(options.top, 1)
+  assert_true(options.strict)
+  assert_eq(options.baseline, Some("old.wasm"))
+  assert_true(
+    options_of(["moonsize", "app.wasm", "--data-segments"]).data_segments,
+  )
+  assert_false(Options::default("app.wasm").data_segments)
+  assert_eq(Options::default("app.wasm").data_json, None)
+}
+
+///|
+test "data details reject output and independent mode conflicts before input IO" {
+  for
+    flags in [
+      ["--html", "r.html"],
+      ["--call-graph", "g.json"],
+      ["--experiment", "e.json"],
+      ["--experiment-context", "c.json"],
+      ["--why-index", "0"],
+      ["--why-root", "0"],
+      ["--why-json", "p.json"],
+      ["--budget", "b.json"],
+      ["--budget-json", "r.json"],
+      ["--budget-md", "r.md"],
+      ["--diff-functions"],
+    ] {
+    let args = ["moonsize", "missing.wasm", "--data-segments"] + flags
+    match parse_options(args) {
+      Err(message) =>
+        assert_true(message.contains("data segment details cannot be combined"))
+      Ok(_) => fail("data mode conflict accepted")
+    }
+  }
+  for
+    tail in [
+      ["--data-json"],
+      ["--data-json", ""],
+      ["--data-json", "--strict"],
+      ["--data-json", "data.txt"],
+    ] {
+    match parse_options(["moonsize", "missing.wasm"] + tail) {
+      Err(message) => assert_true(message.contains("--data-json"))
+      Ok(_) => fail("bad data output path accepted")
+    }
   }
 }
 

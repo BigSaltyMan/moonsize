@@ -307,6 +307,8 @@ pub fn describe_error(error : WasmError) -> String {
       offset.to_string() +
       ": " +
       reason
+    InvalidDataEncoding(offset, reason) =>
+      "invalid data encoding at offset " + offset.to_string() + ": " + reason
     InvalidImportKind(kind) =>
       "unknown import kind " + kind.to_string() + " (expected 0..4)"
     UnknownOpcode(offset, byte) =>

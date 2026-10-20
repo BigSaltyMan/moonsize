@@ -33,6 +33,7 @@ moon build --target native --release
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--data-segments] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
@@ -41,6 +42,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --retained           当前图模型中受支配函数的编码字节总和
   --dead-code          从根不可达的函数
   --compress           整文件 gzip 与各段独立 gzip 大小
+  --data-segments      追加 data 条目的文件字节明细，按 payload 排序并复用 --top
+  --data-json <path>   启用明细，并将全部条目写入新的 .json 文件；表达式只记录不求值
   --strict             调用图不完整时拒绝输出报告，而不是带着警告输出
   --call-graph <path>  新建 .dot 或 .json 调用图，拒绝已有路径
   --html <path>        新建自包含 HTML 报告，拒绝已有路径
@@ -64,6 +67,20 @@ moonsize app.wasm --call-graph graph.dot        # 给 Graphviz
 ```
 
 所有报告目标（包括 HTML、DOT/JSON 调用图）都默认拒绝覆盖已有文件、目录和链接别名，保护失败返回 1。解析和 strict 检查通过后统一检查所有目标，写入时采用原生独占创建，防止检查后出现的同名目标被截断。这不提供多文件事务或崩溃原子写入；后续失败可能留下之前的新文件或本次新建的部分文件，也不防御父目录被恶意并发替换。详见[文件保护范围与并发边界](docs/output-protection.md)。更新报告时先生成到新暂存路径，核对后再由用户明确替换发布副本。生产 CLI 不增加 Node 依赖或强制覆盖参数。
+
+## 数据段编码明细
+
+```sh
+moonsize app.wasm --data-segments --top 20
+moonsize app.wasm --data-json new-data.json
+```
+
+这是尚未发布到 Mooncakes 的源码更新，需从当前源码构建。逐条解释初始化 payload、
+条目元数据和段级开销，记录的是文件偏移，不是内存地址。active 表达式尚未求值，
+不推断源码归属或删除收益。Top 只影响文本展示，汇总和 JSON 保留全部条目。
+可与普通文本、strict、max-size、baseline 组合，但不比较 baseline 数据条目；
+暂不与 HTML、调用图、实验、路径、budget 和函数差异组合。
+编码账本、真实结果和错误类型迁移见[数据段说明](docs/data-segments.md)。
 
 ## 优化实验报告
 

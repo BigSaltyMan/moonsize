@@ -34,6 +34,8 @@ jobs:
         run: moon test
       - name: Build native CLI
         run: moon build --target native --release
+      - name: Data-segment encoding CLI regressions
+        run: node scripts/test-data-segments.mjs _build/native/release/build/cmd/main/main.exe
       - name: Small large-module benchmark smoke (no timing gate)
         run: node scripts/bench-large-modules.mjs _build/native/release/build/cmd/main/main.exe --smoke --cli-source-sha "$GITHUB_SHA"
       - name: Large-module smoke evidence

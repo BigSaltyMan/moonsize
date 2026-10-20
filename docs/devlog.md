@@ -315,3 +315,13 @@ cmd/main/output.mbt集中预检与写入，全部目标在第一次写入前一�
 本地仅执行语法检查、一次native release构建、一次定向smoke和一次默认基准；没有moon info/fmt、全量native/CLI、HTML/PDF或四个源码演示重跑。默认原始记录run-4kyAei：1k普通报告中位30.9541ms，10k普通67.8865ms、retained83.2089ms，受控重复间接调用37.7880ms，fib33.2310ms，全部成功；正式原始记录重算统计一致。两种报告都已计算retained，差值不能解释成支配树耗时。当前形态没有明显瓶颈，暂不为后续优化制造结论。未执行50k档，峰值内存和真实大型项目未覆盖。
 
 详细输入哈希、环境、完整原始时间与复现命令见[性能基准](performance.md)。CI仅复用现有Node24/native构建追加一次smoke并上传小型证据，无毫秒门槛，默认与large不进入常规CI；既有完整检查保留，最终远程结果以本次提交SHA的CI为准。原图片、AGENTS及规划文件继续排除，不发布Mooncakes。
+
+## 23. Wasm 数据段编码明细（2026-10-20）
+
+基线c1c233d。没有安排性能重构；新增inspect_data_segments，内部执行parse_module，复用有界Reader、受检查的u32转换和指令解码器。支持data模式0/1/2，datacount如存在须匹配实际数量，两段payload均完整消费。只保存条目和payload范围、实际字段宽度及表达式范围，不复制全部payload；表达式包括end，明确not_evaluated/passive not_applicable，不输出内存偏移。
+
+新增文本与独立schema_version 1 JSON；文本按payload降序、原始序号升序，Top不改变全部汇总和原序JSON。默认报告与analyze签名不变，不增加Analysis、WasmModule、Sections字段。Options新增两个开关，WasmError新增InvalidDataEncoding（位置、原因），外部穷举匹配须迁移。全部可失败解析在正常输出前完成，strict拒绝仍早于统一目标预检与独占写入；错误1、冲突2、strict/max-size的3保持原契约。
+
+本地35项定向测试通过（新增数据段5项及受影响CLI文件），覆盖账本、三种模式、空值区别、多字节与合法非最短编码、立即数0x0b、截断/未知指令/非法模式/尾随字节/datacount不匹配，以及参数冲突。一次native release构建后，轻量脚本5个真实CLI场景通过，V8独立验证38字节混合模块；22 B data = 6 B payload + 13 B条目元数据 + 3 B段级开销。文本Top1、完整JSON、baseline/max-size/strict可组合，坏输入无报告，已有JSON拒绝且原字节不变。证据在_build/data-segments-verification/run-KOKUko，详见[数据段说明](data-segments.md)。
+
+生成接口经审查，增量仅数据段元数据/渲染入口、Options和错误分支（新类型派生Eq/Debug）；没有无关接口调整。受限进程首次格式化/测试遇到旧_build缓存权限，提升执行权限后定向检查通过，没有把权限失败计作测试成功。完整回归、原有源码演示及预算由目标SHA Linux CI执行；本地未重跑数百CLI、默认性能基准、HTML/截图/PDF或四个源码演示。不新增HTML、跨构建条目匹配、重复内容分析或预算指标，不发布Mooncakes。原图片、AGENTS及规划文件继续排除。

@@ -35,6 +35,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
       options.why_json,
       options.budget_json,
       options.budget_md,
+      options.data_json,
     ] {
     if target is Some(path) {
       let bytes = @utf8.encode(path)

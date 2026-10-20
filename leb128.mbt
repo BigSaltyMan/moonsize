@@ -25,6 +25,8 @@ pub enum WasmError {
   TrailingSectionBytes(Int, SectionId)
   /// Unsupported or malformed table encoding, with its field offset and reason.
   InvalidTableEncoding(Int, String)
+  /// Data mode/count inconsistency, with file offset and reason.
+  InvalidDataEncoding(Int, String)
   /// An import descriptor whose kind byte is outside the assigned range.
   InvalidImportKind(Int)
   /// A byte where an opcode was expected that no instruction uses.

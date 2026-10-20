@@ -296,6 +296,19 @@ fn main {
     Some((_, baseline_module)) => Some(baseline_module.file_size)
     None => None
   }
+  // Opt-in structural inspection must fail before any normal report is printed.
+  let data_details = if options.data_segments {
+    match @lib.inspect_data_segments(bytes) {
+      Ok(report) => Some(report)
+      Err(error) => {
+        println("moonsize: " + options.path + ": " + @lib.describe_error(error))
+        @sys.exit(@lib.EXIT_INPUT)
+        return
+      }
+    }
+  } else {
+    None
+  }
   let budget_report = match budget {
     None => None
     Some(compiled) => {
@@ -355,6 +368,10 @@ fn main {
     return
   }
   check_outputs(options)
+  if data_details is Some(report) && options.data_json is Some(target) {
+    write_output(target, @lib.render_data_segments_json(report))
+    println("Data segment details written to " + target)
+  }
   if budget_report is Some(report) {
     if options.budget_json is Some(target) {
       write_output(
@@ -410,6 +427,10 @@ fn main {
   if function_diff is Some(diff) {
     println("")
     println(@lib.render_function_diff(diff, options.top))
+  }
+  if data_details is Some(report) {
+    println("")
+    println(@lib.render_data_segments(report, options.top))
   }
   if budget_report is Some(report) {
     println("")
