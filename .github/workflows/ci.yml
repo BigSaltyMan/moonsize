@@ -34,6 +34,15 @@ jobs:
         run: moon test
       - name: Build native CLI
         run: moon build --target native --release
+      - name: Small large-module benchmark smoke (no timing gate)
+        run: node scripts/bench-large-modules.mjs _build/native/release/build/cmd/main/main.exe --smoke --cli-source-sha "$GITHUB_SHA"
+      - name: Large-module smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: large-module-benchmark-smoke
+          path: _build/large-module-benchmark/
+          if-no-files-found: warn
       - name: Report output protection and exclusive-create regressions
         run: node scripts/test-output-protection.mjs _build/native/release/build/cmd/main/main.exe
       - name: Tail-call CLI regressions

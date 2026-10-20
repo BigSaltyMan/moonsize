@@ -18,6 +18,8 @@ moon add BigSaltyMan/moonsize@0.4.0
 
 ## 构建
 
+[大模块分析基准](docs/performance.md)使用四个受控代表输入测量真实 native CLI，保留原始时间、散列、环境与失败记录。CI 仅运行两个小输入的 `--smoke`，不设毫秒门槛；本地基线未测量 50k 函数或峰值内存。
+
 ```sh
 moon build --target native --release
 ./_build/native/release/build/cmd/main/main.exe app.wasm

@@ -34,6 +34,12 @@ use it; the already published 0.4.0 HTML/graph writer retains its old behavior.
 
 ## Building
 
+[Reproducible CLI performance baseline](docs/performance.md): run the built native
+CLI against four bounded representative inputs, or use the two-input `--smoke`
+check. Raw times, hashes, failures and environment are retained. CI runs smoke
+only, without a millisecond gate; 50k functions and peak memory are not claimed
+as measured by this local baseline.
+
 ```sh
 moon build --target native --release
 ./_build/native/release/build/cmd/main/main.exe app.wasm
