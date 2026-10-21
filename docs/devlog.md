@@ -325,3 +325,13 @@ cmd/main/output.mbt集中预检与写入，全部目标在第一次写入前一�
 本地35项定向测试通过（新增数据段5项及受影响CLI文件），覆盖账本、三种模式、空值区别、多字节与合法非最短编码、立即数0x0b、截断/未知指令/非法模式/尾随字节/datacount不匹配，以及参数冲突。一次native release构建后，轻量脚本5个真实CLI场景通过，V8独立验证38字节混合模块；22 B data = 6 B payload + 13 B条目元数据 + 3 B段级开销。文本Top1、完整JSON、baseline/max-size/strict可组合，坏输入无报告，已有JSON拒绝且原字节不变。证据在_build/data-segments-verification/run-KOKUko，详见[数据段说明](data-segments.md)。
 
 生成接口经审查，增量仅数据段元数据/渲染入口、Options和错误分支（新类型派生Eq/Debug）；没有无关接口调整。受限进程首次格式化/测试遇到旧_build缓存权限，提升执行权限后定向检查通过，没有把权限失败计作测试成功。完整回归、原有源码演示及预算由目标SHA Linux CI执行；本地未重跑数百CLI、默认性能基准、HTML/截图/PDF或四个源码演示。不新增HTML、跨构建条目匹配、重复内容分析或预算指标，不发布Mooncakes。原图片、AGENTS及规划文件继续排除。
+
+## 24. 按 payload 内容分组的数据段基线比较（2026-10-21）
+
+基线b7a4456。新增compare_data_segments，复用两侧inspect_data_segments和ComparisonError，不修改旧明细报告或analyze签名。完整文件摘要识别产物，payload摘要只分桶；命中后比较长度和实际字节，重复及空payload按次数累计。分组期间仅保留原始范围视图，现有crypto所需临时Bytes副本不进入结果。完整组摘要、索引、次数、payload/条目/元数据总量与差值和两侧明细全部保留，不推断一对一条目身份或初始化语义等价。
+
+--diff-data要求baseline，隐含当前明细，沿用原模式限制与strict/max-size退出契约。baseline文件只读一次，比较的当前明细直接复用，不重复执行inspector。文本按完整条目差值绝对值、完整摘要、长度、发现顺序id确定排序；JSON保留完整发现顺序，不受Top限制。--data-json仅在diff-data启用时写独立moonsize-data-segments-diff/schema_version 1，原单文件格式和公开渲染接口不变；内部提取Json构造函数，没有解析自己的JSON字符串。仍走统一preflight和独占创建，不增加事务保证。
+
+42项定向测试通过，覆盖自比/重排、重复减少、模式和合法非最短宽度变化、内容独有组、空段与空payload、两侧错误、实际字节比较及参数依赖。一次release构建后，原数据脚本扩展为8个CLI场景（只追加成功比较、坏baseline、已有目标三项），全部通过，两个合法输入由V8独立验证。实测data 22→15 B，payload仍6 B，元数据13→6 B，段级开销仍3 B：差值-7 = 0 - 7 + 0；组完整条目差值+2 + 0 - 9 = -7。Top1显示xyz组，完整JSON保留三组。已有目标原字节、两侧输入与旧单文件JSON不变；证据在_build/data-segments-verification/run-KnKfj2，详见[数据段比较](data-segments.md)。
+
+接口审查只增加比较类型/入口、两种渲染及Options.diff_data；现有完整回归和CI数据脚本步骤保留。未在本地重跑性能基准、HTML/PDF或四个源码演示，完整验证以目标提交Linux CI为准。不做字符串/模糊匹配、自动去重建议、offset求值、HTML和新预算指标。相同payload不证明语义等价，重复不证明可安全去重，文件差值不预测重编译或gzip收益。不发布Mooncakes，原图片、AGENTS、规划和构建产物排除。

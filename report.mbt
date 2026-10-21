@@ -453,7 +453,7 @@ pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
   "                 [--compress] [--strict] [--call-graph <path>] [--html <path>]\n" +
   "                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]\n" +
-  "                 [--data-segments] [--data-json <new-path.json>]\n" +
+  "                 [--data-segments] [--diff-data] [--data-json <new-path.json>]\n" +
   "                 [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]\n" +
   "                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]\n" +
   "       moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]\n\n" +
@@ -467,6 +467,8 @@ pub fn usage() -> String {
   "  --data-segments      append data-entry file bytes (payload-ranked by --top)\n" +
   "  --data-json <path>   enable details and write all entries to a new .json file\n" +
   "                       offset expressions are recorded, not evaluated\n" +
+  "  --diff-data          compare exact payload content groups; requires --baseline\n" +
+  "                       --data-json then writes the data comparison format\n" +
   "  --strict             refuse to report when the call graph is incomplete,\n" +
   "                       instead of reporting it with a warning\n" +
   "  --call-graph <path>  write a new .dot or .json call graph; refuses existing paths\n" +

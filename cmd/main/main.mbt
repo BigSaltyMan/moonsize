@@ -297,7 +297,30 @@ fn main {
     None => None
   }
   // Opt-in structural inspection must fail before any normal report is printed.
-  let data_details = if options.data_segments {
+  let data_diff = if options.diff_data {
+    match baseline {
+      Some((baseline_bytes, _)) =>
+        match @lib.compare_data_segments(baseline_bytes, bytes) {
+          Ok(report) => Some(report)
+          Err(error) => {
+            match error {
+              Baseline(error) =>
+                println("moonsize: baseline: " + @lib.describe_error(error))
+              Current(error) =>
+                println("moonsize: current: " + @lib.describe_error(error))
+            }
+            @sys.exit(@lib.EXIT_INPUT)
+            return
+          }
+        }
+      None => None // parse_options rejects this combination before I/O.
+    }
+  } else {
+    None
+  }
+  let data_details = if data_diff is Some(report) {
+    Some(report.current) // Reuse the comparison's inspection, not a third scan.
+  } else if options.data_segments {
     match @lib.inspect_data_segments(bytes) {
       Ok(report) => Some(report)
       Err(error) => {
@@ -369,7 +392,16 @@ fn main {
   }
   check_outputs(options)
   if data_details is Some(report) && options.data_json is Some(target) {
-    write_output(target, @lib.render_data_segments_json(report))
+    let contents = match data_diff {
+      Some(diff) =>
+        @lib.render_data_segments_diff_json(
+          diff,
+          options.baseline.unwrap_or(""),
+          options.path,
+        )
+      None => @lib.render_data_segments_json(report)
+    }
+    write_output(target, contents)
     println("Data segment details written to " + target)
   }
   if budget_report is Some(report) {
@@ -431,6 +463,17 @@ fn main {
   if data_details is Some(report) {
     println("")
     println(@lib.render_data_segments(report, options.top))
+  }
+  if data_diff is Some(report) {
+    println("")
+    println(
+      @lib.render_data_segments_diff(
+        report,
+        options.baseline.unwrap_or(""),
+        options.path,
+        options.top,
+      ),
+    )
   }
   if budget_report is Some(report) {
     println("")

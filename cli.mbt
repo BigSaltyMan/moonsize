@@ -42,6 +42,8 @@ pub struct Options {
   /// Append encoded data-entry details; JSON implies this flag.
   data_segments : Bool
   data_json : String?
+  /// Compare exact payload groups against baseline; implies data_segments.
+  diff_data : Bool
   /// Refuse to report at all when the call graph is incomplete, rather than
   /// printing the numbers with a warning above them.
   strict : Bool
@@ -77,6 +79,7 @@ pub fn Options::default(path : String) -> Options {
     compress: false,
     data_segments: false,
     data_json: None,
+    diff_data: false,
     strict: false,
   }
 }
@@ -288,6 +291,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut compress = false
   let mut data_segments = false
   let mut data_json : String? = None
+  let mut diff_data = false
   let mut strict = false
   let mut i = 1
   while i < args.length() {
@@ -350,6 +354,10 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
       why_json = Some(args[i + 1])
       i += 2
+    } else if arg == "--diff-data" {
+      diff_data = true
+      data_segments = true
+      i += 1
     } else if arg == "--data-segments" {
       data_segments = true
       i += 1
@@ -430,6 +438,17 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if diff_data {
+    match baseline {
+      Some(target) if !target.trim().is_empty() && !target.has_prefix("--") =>
+        ()
+      _ =>
+        return Err(
+          "moonsize: --diff-data requires --baseline with a non-empty path\n\n" +
+          usage(),
+        )
+    }
   }
   if data_segments {
     if html is Some(_) ||
@@ -591,6 +610,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     compress,
     data_segments,
     data_json,
+    diff_data,
     strict,
   })
 }

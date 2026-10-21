@@ -19,7 +19,8 @@ CLI=_build/native/release/build/cmd/main/main.exe
 排列；Top 只限制显示，汇总包含全部条目，JSON 按原始序号保留全部条目。
 
 可组合普通文本、`--retained`、`--dead-code`、`--compress`、`--strict`、
-`--max-size` 和 `--baseline`。baseline 仍只执行原有比较，不比较数据条目。
+`--max-size` 和 `--baseline`。未启用 `--diff-data` 时，baseline 仍只执行原有
+比较，不比较数据条目。
 暂不与 HTML、调用图导出、experiment、函数路径、budget 或 `--diff-functions`
 组合；参数阶段拒绝这些组合并返回2，在读取输入前报错。
 
@@ -27,6 +28,74 @@ CLI=_build/native/release/build/cmd/main/main.exe
 预检查和写入前拒绝不完整图并返回3。原有 max-size 行为不变，超限仍可保存明细
 后返回3。新 JSON 使用统一预检查及原生独占创建，不删除已有目标。这不提供
 多文件事务；后续失败可能留下之前的新文件或本次新建的部分文件。
+
+## 按 payload 内容分组的基线比较
+
+```sh
+"$CLI" after.wasm --baseline before.wasm --diff-data
+"$CLI" after.wasm --baseline before.wasm --diff-data --top 20
+"$CLI" after.wasm --baseline before.wasm --diff-data --data-json new-diff.json
+```
+
+`--diff-data` 必须提供 baseline，隐含启用当前数据明细，并追加两侧内容组比较。
+组合限制、strict、max-size 退出码和输出保护沿用单文件模式；坏 baseline/current
+均在正常输出和创建目标前失败。主程序只读取 baseline 一次，直接复用比较结果的
+当前明细，不重复调用当前数据 inspector。原有模块段表检查和分析流程仍保留。
+
+完整文件 SHA-256 识别两侧产物；payload SHA-256 只用于分桶，命中后仍核对长度
+和实际字节。重复项、空 payload 按出现次数累计。重排不制造内容新增/消失；
+payload 改变时给出两侧独有内容组，不猜测哪两个条目是“同一条目修改”。
+
+内容组分类为 `shared_payload`、`baseline_only`、`current_only`。保存两侧索引、
+次数、payload/完整条目/元数据总量及 current − baseline 差值，差值可正、负或零。
+两侧完整明细保留 mode、memory 和未求值的表达式范围。即使内容、次数和大小都
+相等，也不标记“完全未变化”，因为本功能不比较初始化语义。
+
+```text
+delta(data section) = delta(payload) + delta(entry metadata) + delta(header + count)
+sum(group encoded delta) = delta(payload) + delta(entry metadata)
+```
+
+datacount 仍单独保留，不加入 data 账本。相同 payload 因模式、表达式或非最短
+编码不同，也可能有元数据差值。内容组不是源码身份；相同内容不证明初始化语义
+等价，重复内容不证明可安全去重；原始字节差值不预测重编译或整文件 gzip 收益。
+
+文本按完整条目差值绝对值降序，然后完整摘要字典序、单份长度和报告内 group id
+升序。id 来自先 baseline 文件顺序、再 current 尚未出现内容的发现顺序，亦可
+区分同一完整摘要下不同实际字节的组。摘要前12位只用于显示，不是唯一身份。
+Top 仅限制文本行数，汇总和 JSON 全量保留；JSON 的组数组按发现顺序排列。
+
+比较 JSON 独立使用 `format: "moonsize-data-segments-diff"`、`schema_version: 1`。
+`baseline` / `current` 包含作为标签的 path、实际文件 sha256 及原格式的完整 details；
+`groups` 含完整摘要、索引和两侧总量/差值，`delta` 含段级差值。仅在 `--diff-data`
+开启时，`--data-json` 才写这种格式；单文件的 format、schema 和渲染签名不变。
+
+### 本次比较实测（2026-10-21）
+
+扩展后的轻量 CLI 脚本使用下述实际输入，两个合法模块均由 V8 独立验证：
+
+- baseline：下文38字节混合样本，data 22 B，payload 6 B，条目元数据13 B。
+- current：31字节，三个 passive 条目，payload 依次为 `abc`、`abc`、空；
+  data 15 B，payload 6 B，条目元数据6 B，段级开销仍为3 B。
+
+current 编码为
+`0061736d0100000005030100010c01030b0d03010361626301036162630100`，SHA-256 为
+`9b1f873793772c31c68ae8567aa7b01033b09f52ab9142d1b387935f81b54fdc`。
+
+| 内容（仅此已知 fixture 的说明标签） | 分类 | 前/后次数 | payload 差值 B | 完整条目差值 B | 元数据差值 B |
+| --- | --- | --- | ---: | ---: | ---: |
+| abc | shared_payload | 1 / 2 | +3 | +2 | -1 |
+| 空 | shared_payload | 1 / 1 | 0 | 0 | 0 |
+| xyz | baseline_only | 1 / 0 | -3 | -9 | -6 |
+
+账本：data 差值 -7 = payload 0 + 元数据 -7 + 段级开销0；组完整条目差值
++2 + 0 - 9 = -7。datacount 两侧各3 B，均声明3，不计入 data 差值。
+这里的 abc/xyz 是合成输入的已知说明，产品不解析或输出字符串内容。
+Top 1 展示 xyz 内容组，完整 JSON 仍包含三个组和两侧全部明细。
+
+首次实际证据：`_build/data-segments-verification/run-KnKfj2/` 的 `diff.json`、
+`cli-5.log` 及 `verification.json`。每次脚本新建运行目录；没有为本功能重跑
+性能基准、HTML/PDF 或源码演示。
 
 ## 编码和范围
 
@@ -105,5 +174,14 @@ JSON 独立使用 `format: "moonsize-data-segments"`、`schema_version: 1`：
 模式/数量错误原因，外部穷举匹配须补充分支。Reader/指令错误和尾随字节继续使用
 原错误类别；Options 增加 `data_segments`、`data_json`，默认分别为 false、None。
 
+比较入口为 `compare_data_segments(baseline, current)`，返回
+`Result[DataSegmentsComparison, ComparisonError]`，错误分别为 Baseline/Current；
+结果保留两侧明细、完整文件摘要、内容组和差值。
+`render_data_segments_diff(report, baseline_path, current_path, top)` 生成文本，
+`render_data_segments_diff_json(report, baseline_path, current_path)` 生成完整 JSON。
+路径只作标签；结果不保留原始 payload 内容。Options 仅再增加默认 false 的
+`diff_data`；旧 DataSegmentsReport 和公开函数签名没有变化，没有新增依赖。
+
 本地只做新增及受影响测试、native 检查和一次 release 构建；完整回归由目标提交
-Linux CI 执行。HTML、跨构建条目匹配、重复内容分析和新预算指标留到后续。
+Linux CI 执行。HTML、跨构建稳定条目匹配、字符串/模糊分析、自动去重建议、
+offset 求值和新预算指标留到后续。

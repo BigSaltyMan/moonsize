@@ -33,7 +33,7 @@ moon build --target native --release
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
-                 [--data-segments] [--data-json <new-path.json>]
+                 [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
@@ -44,6 +44,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --compress           整文件 gzip 与各段独立 gzip 大小
   --data-segments      追加 data 条目的文件字节明细，按 payload 排序并复用 --top
   --data-json <path>   启用明细，并将全部条目写入新的 .json 文件；表达式只记录不求值
+  --diff-data          按完全相同的 payload 内容分组比较，必须配合 --baseline
+                       此时 --data-json 输出独立的数据段比较格式
   --strict             调用图不完整时拒绝输出报告，而不是带着警告输出
   --call-graph <path>  新建 .dot 或 .json 调用图，拒绝已有路径
   --html <path>        新建自包含 HTML 报告，拒绝已有路径
@@ -78,9 +80,15 @@ moonsize app.wasm --data-json new-data.json
 这是尚未发布到 Mooncakes 的源码更新，需从当前源码构建。逐条解释初始化 payload、
 条目元数据和段级开销，记录的是文件偏移，不是内存地址。active 表达式尚未求值，
 不推断源码归属或删除收益。Top 只影响文本展示，汇总和 JSON 保留全部条目。
-可与普通文本、strict、max-size、baseline 组合，但不比较 baseline 数据条目；
+可与普通文本、strict、max-size、baseline 组合；未启用 diff-data 时只展示当前明细，
 暂不与 HTML、调用图、实验、路径、budget 和函数差异组合。
 编码账本、真实结果和错误类型迁移见[数据段说明](docs/data-segments.md)。
+
+新增 `--baseline before.wasm --diff-data` 可追加内容组比较，按重复次数核算
+payload 和编码开销；加 `--data-json new-diff.json` 输出独立比较格式。
+未启用 diff-data 时，单文件 JSON 及原 baseline 行为不变。内容组不代表源码身份，
+相同内容不证明初始化语义等价，重复内容也不证明可安全去重；原始差值不预测
+重编译或 gzip 收益。
 
 ## 优化实验报告
 

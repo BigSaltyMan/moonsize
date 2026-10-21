@@ -38,6 +38,7 @@ test "defaults to the ten heaviest functions" {
       assert_false(options.diff_functions)
       assert_false(options.data_segments)
       assert_eq(options.data_json, None)
+      assert_false(options.diff_data)
     }
     Err(message) => fail(message)
   }
@@ -78,11 +79,15 @@ test "data details reject output and independent mode conflicts before input IO"
       ["--budget-md", "r.md"],
       ["--diff-functions"],
     ] {
-    let args = ["moonsize", "missing.wasm", "--data-segments"] + flags
-    match parse_options(args) {
-      Err(message) =>
-        assert_true(message.contains("data segment details cannot be combined"))
-      Ok(_) => fail("data mode conflict accepted")
+    for mode in [["--data-segments"], ["--diff-data", "--baseline", "old.wasm"]] {
+      let args = ["moonsize", "missing.wasm"] + mode + flags
+      match parse_options(args) {
+        Err(message) =>
+          assert_true(
+            message.contains("data segment details cannot be combined"),
+          )
+        Ok(_) => fail("data mode conflict accepted")
+      }
     }
   }
   for
@@ -97,6 +102,34 @@ test "data details reject output and independent mode conflicts before input IO"
       Ok(_) => fail("bad data output path accepted")
     }
   }
+}
+
+///|
+test "data diff needs baseline and implies details with existing text options" {
+  for
+    tail in [
+      ["--diff-data"],
+      ["--diff-data", "--baseline", ""],
+      ["--diff-data", "--baseline", "--strict"],
+    ] {
+    match parse_options(["moonsize", "missing.wasm"] + tail) {
+      Err(message) =>
+        assert_true(message.contains("--diff-data requires --baseline"))
+      Ok(_) => fail("data diff without baseline accepted")
+    }
+  }
+  let options = options_of([
+    "moonsize", "after", "--baseline", "before", "--diff-data", "--data-json", "diff.json",
+    "--top", "1", "--strict", "--max-size", "0B",
+  ])
+  assert_true(options.diff_data)
+  assert_true(options.data_segments)
+  assert_eq(options.data_json, Some("diff.json"))
+  assert_eq(options.top, 1)
+  assert_false(Options::default("input").diff_data)
+  assert_false(
+    options_of(["moonsize", "after", "--baseline", "before", "--data-segments"]).diff_data,
+  )
 }
 
 ///|

@@ -59,9 +59,17 @@ This source-checkout feature is not yet published to Mooncakes. It accounts for
 data-entry payload, encoding metadata and section overhead in file bytes.
 Active offset expressions are recorded without evaluation; no source attribution
 or deletion savings are inferred. Text Top does not truncate the JSON or totals.
-It supports ordinary text, strict, max-size and baseline (no data-entry diff),
+It supports ordinary text, strict, max-size and baseline (single-file details
+unless `--diff-data` is enabled),
 and rejects HTML, graph, experiment, path, budget and function-diff combinations.
 See [encoding ledger, real sample and API migration](docs/data-segments.md).
+
+With `--baseline before.wasm --diff-data`, the text report also compares exact
+payload content groups, including duplicate counts and encoding overhead. Add
+`--data-json new-diff.json` for the independent `moonsize-data-segments-diff`
+format; without `--diff-data`, JSON keeps the original single-file format.
+Groups do not establish source identity, equivalent initialization or safe
+deduplication, and raw differences do not predict rebuild or gzip savings.
 
 ## Visual report development
 
@@ -82,7 +90,7 @@ than opening the report with `file://`.
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
-                 [--data-segments] [--data-json <new-path.json>]
+                 [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
        moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
@@ -98,6 +106,8 @@ identify candidates for investigation.
   --data-segments      append data-entry file bytes (payload-ranked by --top)
   --data-json <path>   enable details and write all entries to a new .json file
                        offset expressions are recorded, not evaluated
+  --diff-data          compare exact payload content groups; requires --baseline
+                       --data-json then writes the data comparison format
   --strict             refuse to report when the call graph is incomplete,
                        instead of reporting it with a warning
   --call-graph <path>  write a new .dot or .json call graph; refuses existing paths

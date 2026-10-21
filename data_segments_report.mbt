@@ -105,7 +105,7 @@ fn data_range_json(range : DataByteRange) -> Json {
 
 ///|
 /// Independent schema. All entries in original order; no payload contents.
-pub fn render_data_segments_json(report : DataSegmentsReport) -> String {
+fn data_segments_json(report : DataSegmentsReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("schema_version", int_json(1))
   root.set("format", Json::string("moonsize-data-segments"))
@@ -163,5 +163,11 @@ pub fn render_data_segments_json(report : DataSegmentsReport) -> String {
       }),
     ),
   )
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+/// The original single-file format and signature are unchanged.
+pub fn render_data_segments_json(report : DataSegmentsReport) -> String {
+  data_segments_json(report).stringify(indent=2) + "\n"
 }
