@@ -1,7 +1,8 @@
 # Wasm 数据段编码明细
 
-本功能是 0.4.0 发布后的源码更新，尚未发布到 Mooncakes；请从当前源码构建
-native CLI。它解释 data 段中哪些文件字节属于初始化 payload，哪些属于编码元数据。
+本功能纳入 0.5.0 源码；实际发布与精确版本消费状态见
+[0.5.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)，
+接口变化见[迁移说明](migration-0.5.md)。它解释 data 段中哪些文件字节属于初始化 payload，哪些属于编码元数据。
 不推断源码归属，不把文件字节视为运行时内存占用，也不预测删除后的重编译收益。
 
 ## 使用

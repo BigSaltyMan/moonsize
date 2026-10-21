@@ -1,9 +1,10 @@
-# 复审证据入口 · 0.4.0
+# 复审证据入口 · 0.5.0
 
 先读[项目说明](october-proposal.md)、[针对原驳回理由的回复](october-review-response.md)。
 本页按评审问题组织，可直接阅读仓库文件；CI 附件提供更完整的重跑记录，
-不是唯一证据。[0.4.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)
-在源码提交产生后记录对应 SHA、目标 Linux CI、注册表 ZIP 校验和及精确版本消费结果。
+不是唯一证据。[0.5.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)
+在各步骤实际完成后记录对应 SHA、目标 Linux CI、注册表 ZIP 校验和及精确版本消费结果；
+[0.4.0 历史发布](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)不作为本轮成功凭据。
 
 ## 指标究竟证明什么？
 
@@ -20,6 +21,11 @@
 的比例或不等式。** `strict` 成功也不是精确收益、业务正确或完整 Wasm 验证证明。
 不可达是调查候选，路径是模型引用而非执行轨迹。
 
+数据段新增证据：[22 B 账本 JSON](review-artifacts/data-segments.json)、
+[22→15 B 比较 JSON](review-artifacts/data-segments-diff.json)、[定义与复现](data-segments.md)。
+比较差值 -7 = payload 0 + 元数据 -7 + 段级开销 0；按实际字节分组，不推断条目身份、
+初始化语义等价或去重收益。[性能基准](performance.md)仍未测 50k、峰值内存及真实大型项目。
+
 ## 源码、输入与重跑方式
 
 测量快照保留实际工具链、输入和源码 SHA-256，不手改结果。路径/预算快照为
@@ -27,7 +33,9 @@
 v0.10.13+cbb11c36f、Node 24.18.0；固定 wasm/debug/no-strip，函数身份用
 `#inline(never)` 保留。retained 快照另有 release 对照及明确标注的人工 Wasm 控制。
 源码实现基线为 [3a07e03](https://github.com/BigSaltyMan/moonsize/commit/3a07e035b4e0de914f43d1eeac43c19497522914)；
-本轮仅整理版本、材料和消费回归，未更改分析算法。
+上述快照属于此前 0.4.0；当前 0.5.0 功能基线为
+[3af65f3](https://github.com/BigSaltyMan/moonsize/commit/3af65f3316a397a8415b5789015af748ff7a7830)。
+本次仅整理版本、材料和消费回归，不新增分析功能。
 
 ```sh
 moon build --target native --release
@@ -53,7 +61,13 @@ rollback 检查；路径目标由构建产物发现，不硬编码编译器索�
 | 迁移后离线渲染 | 关闭原上下文，复制件哈希一致；新上下文创建时即断网，只映射主 HTTP 文档，零外部请求及阻断错误，四图/tooltip/表格正常。 | 没有测试 OS 双击 `file://`，没有使用原标签缓存证明断网。 |
 | A4 PDF 可读 | [example.pdf · 5页](review-artifacts/example.pdf)、[long-name-warning.pdf · 4页](review-artifacts/long-name-warning.pdf)、[全部9页人工检查记录](review-artifacts/pdf-page-review.md)。 | Edge 156.0.4314.23 / Windows 10.0.26300 / Playwright1.58.2 / Poppler26.07.0，A4纵向12mm。非Chromium和实体打印机未验证。 |
 
-两个公开 PDF **直接复制**自已验收的 run-JM2Zrx，文件名来自现有记录；其哈希与
+新增 [data-entries.pdf · 10页](review-artifacts/data-entries.pdf) 与
+[原定向人工记录](review-artifacts/data-entries-page-review.md)直接复制自 run-d7HW85。
+Edge 156.0.4314.36 / Windows 10.0.26300 x64 / Playwright1.58.2 / Poppler26.07.0；
+45 条输入哈希与 PDF 哈希见清单。PDF 只打印当时展示的 40/45 条，第 5–10 页人工检查，
+第 1–4 页沿用自动检查，不宣称本次重新验收。
+
+两个历史公开 PDF **直接复制**自已验收的 run-JM2Zrx，文件名来自现有记录；其哈希与
 [原始验收快照](html-delivery-results.json)一致。它们是历史本地人工验收证据，
 不冒充本次提交的干净 CI PDF。PDF 图表、完整名称、关键数值、诊断与模型/压缩
 边界均保留；打印后布局和折叠状态恢复。所有公开附件见
@@ -75,11 +89,15 @@ node scripts/test-html-portability.mjs "$CLI" --browser
 
 旧公开0.3.0包实际不含本轮成果，已按下载 ZIP 对比 API；
 [0.4.0迁移说明](migration-0.4.md)列出签名变化、诊断、Options、模式约束和独立
-JSON版本。不是“无破坏变化”。精确版本命令：
+JSON版本。不是“无破坏变化”。历史精确版本命令：
 
 ```sh
 node scripts/verify-release-consumer.mjs 0.4.0 consumer-result.json
 ```
+
+0.5.0 使用 `node scripts/verify-release-consumer.mjs 0.5.0 consumer-result.json`，
+在注册表发布后验证数据账本、自比零差值及 HTML 新入口；成功状态只在发布记录中确认。
+[0.5 迁移说明](migration-0.5.md)列出相对公开 0.4.0 的变化。
 
 独立消费项目从 Mooncakes 安装，编译并实际执行 parse/stat、尾调用路径、差异、
 实验和预算0/3，不引用开发工作区。发布记录连接“源码SHA → 该SHA CI → 干净

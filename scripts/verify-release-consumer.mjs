@@ -18,6 +18,20 @@ function moon(args) {
 }
 fs.writeFileSync(path.join(cwd, 'moon.mod'), 'name = "review/releaseconsumer"\nversion = "0.1.0"\n');
 fs.writeFileSync(path.join(cwd, 'moon.pkg'), 'import { "BigSaltyMan/moonsize" }\npkgtype(kind: "executable")\nsupported_targets = "+native"\n');
+// Keep the public 0.4 consumer usable; newer APIs must not enter its source.
+const withData = Number(version.split('.')[1]) >= 5;
+const dataSource = withData ? `
+  let data_module : Bytes = [0,97,115,109,1,0,0,0,5,3,1,0,1,12,1,3,11,20,3,0,65,11,11,3,97,98,99,1,0,2,0,65,0,11,3,120,121,122]
+  let details = match @moonsize.inspect_data_segments(data_module) { Ok(r) => r; Err(e) => abort(@moonsize.describe_error(e)) }
+  guard details.entries.length() == 3 && details.section_size == 22 else { abort("data entries") }
+  guard details.section_size == details.payload_size + details.entry_metadata_size + details.header_size + details.count_size else { abort("data ledger") }
+  let compared = match @moonsize.compare_data_segments(data_module, data_module) { Ok(r) => r; Err(_) => abort("data self comparison") }
+  guard compared.delta.section_size == 0 && compared.delta.payload_size == 0 && compared.delta.entry_metadata_size == 0 && compared.delta.section_overhead_size == 0 else { abort("data self delta") }
+  let data_parsed = match @moonsize.parse_module(data_module) { Ok(r) => r; Err(e) => abort(@moonsize.describe_error(e)) }
+  let data_analysis = match @moonsize.analyze(data_module, data_parsed) { Ok(r) => r; Err(e) => abort(@moonsize.describe_error(e)) }
+  let html = @moonsize.render_html_with_data_segments(data_analysis, "consumer.wasm", details, echarts="/* consumer stub; no browser assertion */")
+  guard html.contains("dataSegments") && html.contains("not_evaluated") else { abort("HTML data entry point") }
+` : '';
 const source = `fn main {
   // Complete 39-byte module: exported 0 tail-calls local 1.
   let data : Bytes = [0,97,115,109,1,0,0,0,1,4,1,96,0,0,3,3,2,0,0,7,7,1,3,114,117,110,0,0,10,9,2,4,0,18,1,11,2,0,11]
@@ -43,6 +57,7 @@ const source = `fn main {
   ignore(@moonsize.render_experiment_html(experiment))
   ignore(@moonsize.render_function_path_json(query))
   ignore(@moonsize.Options::default("app.wasm"))
+${dataSource}
   println("public consumer: parse/stat/build/path/diff/experiment/budget 0/3 passed")
 }
 `;
@@ -57,7 +72,7 @@ const result = {
   version, package: `BigSaltyMan/moonsize@${version}`, source: 'public Mooncakes dependency, no local override',
   toolchain: moon(['version', '--all']).trim(), platform: process.platform,
   source_sha256: crypto.createHash('sha256').update(source).digest('hex'),
-  cases: ['parse/stat', 'safe build', 'tail-call path with real opcode', 'function/package diff', 'experiment', 'budget passed 0', 'budget exceeded 3', 'Options constructor'],
+  cases: ['parse/stat', 'safe build', 'tail-call path with real opcode', 'function/package diff', 'experiment', 'budget passed 0', 'budget exceeded 3', 'Options constructor', ...(withData ? ['data ledger', 'data self comparison', 'HTML data entry point'] : [])],
   status: 'passed', output: log.trim(),
 };
 if (process.argv[3]) fs.writeFileSync(process.argv[3], JSON.stringify(result, null, 2) + '\n');

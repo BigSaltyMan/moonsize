@@ -1,7 +1,7 @@
 # moonsize
 
 ```sh
-moon add BigSaltyMan/moonsize@0.4.0
+moon add BigSaltyMan/moonsize@0.5.0
 ```
 
 A size analyzer for WebAssembly, built for MoonBit's output. It reads a `.wasm`
@@ -17,8 +17,10 @@ before interpreting a removal candidate.
 
 Chinese version: [README.zh.md](README.zh.md).
 
-Version **0.4.0** includes breaking library changes from public 0.3.0;
-read the [migration guide](docs/migration-0.4.md). The moon add command adds a library
+Version **0.5.0** adds data-entry inspection, exact-payload group comparison and
+opt-in HTML details. It also changes report writes to exclusive creation; read
+the [0.5 migration guide](docs/migration-0.5.md) for behavior and API changes.
+The [0.4 migration guide](docs/migration-0.4.md) remains historical. The moon add command adds a library
 dependency; it does not install a standalone CLI. For the CLI, clone this source
 repository and run the build below.
 
@@ -28,9 +30,11 @@ links measured rebuild cases, real PDFs and explicit model boundaries. The
 records the exact source SHA, target Linux CI, registry checksum and clean consumer
 verification; historic devlog counts are snapshots.
 
-The unified output protection described below is a source-checkout update after
-0.4.0, not a new Mooncakes publication. Rebuild the CLI from current source to
-use it; the already published 0.4.0 HTML/graph writer retains its old behavior.
+The source here prepares **0.5.0**. Publication, exact-version consumption and
+the target CI result are recorded separately in the
+[0.5.0 release record](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)
+when completed; this document is not a publication receipt. The published 0.4.0
+HTML/graph writer retains its old behavior.
 
 ## Building
 
@@ -56,7 +60,7 @@ moonsize app.wasm --data-json new-data.json
 moonsize app.wasm --html new-report.html --data-json new-data.json
 ```
 
-This source-checkout feature is not yet published to Mooncakes. It accounts for
+The 0.5.0 data-segment feature accounts for
 data-entry payload, encoding metadata and section overhead in file bytes.
 Active offset expressions are recorded without evaluation; no source attribution
 or deletion savings are inferred. Text Top does not truncate the JSON or totals.

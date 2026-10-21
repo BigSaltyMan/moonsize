@@ -185,3 +185,13 @@ formal HTML SHA-256 `9b4208c24d6bfc2397acef6d784896a79968053c05896bac05038501651
 No README screenshot or user report.png was replaced. This is Chromium-family
 A4 evidence; other engines and physical printers remain untested. Final clean
 commit evidence comes from the target Linux CI, not this pre-commit Windows run.
+
+## 0.5.0 release evidence reuse
+
+The data-entry PDF and original targeted review above are copied byte-for-byte
+into [public review artifacts](review-artifacts/manifest.json). This is reuse of
+the recorded acceptance, not a new browser/print run. The native embedded-resource
+contract and library optional-resource behavior remain unchanged. Exact release
+SHA, target Linux CI, public package hashes and consumer verification belong in
+the [0.5.0 release record](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)
+when those steps complete.

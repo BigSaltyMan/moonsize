@@ -1,13 +1,13 @@
 # moonsize 项目说明
 
-moonsize 帮助 MoonBit 开发者定位 Wasm 体积来源、解释当前模型中的函数引用关系，通过构建前后对比验证实际变化，并在 CI 中阻止体积回归。项目由 BigSaltyMan 开发，主体为 MoonBit，源码采用 MIT；仓库为 [BigSaltyMan/moonsize](https://github.com/BigSaltyMan/moonsize)，本轮交付版本为 [Mooncakes 0.4.0](https://mooncakes.io/docs/BigSaltyMan/moonsize@0.4.0)，精确提交、CI 与消费验证见[发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)。
+moonsize 帮助 MoonBit 开发者定位 Wasm 体积来源、解释当前模型中的函数引用关系，通过构建前后对比验证实际变化，并在 CI 中阻止体积回归。项目由 BigSaltyMan 开发，主体为 MoonBit，源码采用 MIT；仓库为 [BigSaltyMan/moonsize](https://github.com/BigSaltyMan/moonsize)，本轮源码准备 0.5.0，精确提交、目标 CI、实际 Mooncakes 发布与消费验证分别记录在[0.5.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)；此前 [0.4.0 交付记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)保留历史身份，不作为本轮成功凭据。
 
-原有基础包括二进制解析、段与函数编码统计、包级归因、引用图、可达性、支配树 retained size，以及文本、图和 HTML 报告。本轮补齐尾调用依赖、引用调用和动态表能力诊断、有界 LEB/模块结构检查，纠正独立 gzip 的含义；新增函数与包差异、优化实验报告、带根来源和指令证据的函数路径查询、多指标预算，并完成内联资源的 HTML 迁移与实际打印验收。
+原有基础包括二进制解析、段与函数编码统计、包级归因、引用图、可达性、支配树 retained size，以及文本、图和 HTML 报告。本轮补齐尾调用依赖、引用调用和动态表能力诊断、有界 LEB/模块结构检查，纠正独立 gzip 的含义；新增函数与包差异、优化实验报告、带根来源和指令证据的函数路径查询、多指标预算，并完成内联资源的 HTML 迁移与实际打印验收。0.5.0 进一步统一报告独占创建，增加数据段文件字节账本、按实际 payload 内容分组的基线比较及 HTML 当前输入明细；内容组不代表跨构建条目身份，也不证明可安全去重。
 
 实现直接读取 Wasm 编码范围，通过保守引用图、根集合和支配关系解释函数编码归因；路径采用有界、确定性 BFS。retained 仅是固定模型下受支配函数的编码权重，不是重编译减量，也不提供实际收益的通用上下界。模型不可达函数是调查候选，路径不是执行轨迹，strict 成功不证明精确收益或完整 Wasm 语义。整文件 gzip 是指定压缩器下的完整表示体测量；独立段/函数 gzip 仅反映局部可压缩性，不可相加为网络份额。
 
 实际流程是“分析产物 → 调查候选/查询入口 → 修改源码 → 同条件重建 → 运行项目业务检查 → 比较完整文件与整文件 gzip → 回退核对”。实验报告记录产物哈希、实测差值、声明的构建条件和验证结果，明确区分实测与调用者声明。两个 MoonBit debug 案例中，模型 retained 52/16 B 分别对应重建减量 656/127 B、整文件 gzip 减量 237/41 B；它们有意移除可选输出，只检查保留的基础行为，不宣称完整行为等价。
 
-交付包含公开库、原生 CLI、可复现源码案例和锁定工具链 CI；336 项 native 测试、730 个 CLI 场景、四个源码演示及预算正反例构成本轮回归入口，重跑数量以发布记录为准。HTML 在记录的 Chromium 环境中完成复制件 HTTP 主文档映射的全新断网上下文验收，外部请求为零；两份 A4 PDF 共九页已经逐页检查。file:// 双击、非 Chromium 浏览器和实体打印机尚未验证。
+交付包含公开库、原生 CLI、可复现源码案例和锁定工具链 CI；此前 0.4.0 的 336 项 native 测试、730 个 CLI 场景是历史快照，本轮数量以目标提交 CI 及发布记录为准，保留四个源码演示与预算检查。HTML 在记录的 Chromium 环境中完成复制件 HTTP 主文档映射的全新断网上下文验收，外部请求为零；两份历史 A4 PDF 共九页已经逐页检查。数据段新增 PDF 共十页，第 5–10 页有定向人工检查，其余沿用自动检查；本轮只复用证据，不重新宣称验收。50k 函数、峰值内存和真实大型项目未测量。file:// 双击、非 Chromium 浏览器和实体打印机尚未验证。
 
-[复审回复](october-review-response.md)逐项回应指标承诺；[公开证据索引](review-evidence.md)提供定义、源码、命令、哈希、测量快照与真实 PDF；[迁移说明](migration-0.4.md)列明与公开 0.3.0 的接口差异。模型参考 Twiggy（MIT/Apache-2.0），不是源码移植；gzip 依赖 bikallem/compress，图表使用固定 ECharts 5.6.0，来源与第三方许可见 [assets](../assets/README.md)。不承诺仅凭二进制精确预测源码删除或实际网络收益，也不承诺复审结果。
+[复审回复](october-review-response.md)逐项回应指标承诺；[公开证据索引](review-evidence.md)提供定义、源码、命令、哈希、测量快照与真实 PDF；[0.5 迁移说明](migration-0.5.md)列明与公开 0.4.0 的行为及接口差异，旧版迁移记录保留。报名初审通过不等于最终验收通过。模型参考 Twiggy（MIT/Apache-2.0），不是源码移植；gzip 依赖 bikallem/compress，图表使用固定 ECharts 5.6.0，来源与第三方许可见 [assets](../assets/README.md)。不承诺仅凭二进制精确预测源码删除或实际网络收益，也不承诺复审结果。

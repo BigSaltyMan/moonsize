@@ -1,0 +1,264 @@
+{
+  "format": "moonsize-data-segments-diff",
+  "schema_version": 1,
+  "scope": "Exact payload content groups are not source or stable entry identities. Equal payloads do not prove equal initialization semantics; duplicates do not prove safe deduplication. Raw byte differences do not predict recompiled or whole-file gzip savings. File offsets are not memory addresses; file bytes are not runtime memory usage. Active offset expressions are not_evaluated; passive offsets are not_applicable. No source attribution or deletion savings are inferred. This is structural inspection, not full type, constant-expression, memory-index or instantiation validation.",
+  "baseline": {
+    "path": "D:\\project\\moonsize\\_build\\data-segments-verification\\run-KnKfj2\\mixed.wasm",
+    "sha256": "1cd4ff01e7869a1fd4cf8f03261e7af6484226e9b5bc06318e0cdd3405f6d46a",
+    "details": {
+      "schema_version": 1,
+      "format": "moonsize-data-segments",
+      "scope": "File offsets are not memory addresses; file bytes are not runtime memory usage. Active offset expressions are not_evaluated; passive offsets are not_applicable. No source attribution or deletion savings are inferred. This is structural inspection, not full type, constant-expression, memory-index or instantiation validation.",
+      "file_size": 38,
+      "summary": {
+        "present": true,
+        "file_offset": 16,
+        "total_size": 22,
+        "header_size": 2,
+        "count_size": 1,
+        "entry_count": 3,
+        "payload_size": 6,
+        "entry_metadata_size": 13,
+        "section_overhead_size": 3
+      },
+      "datacount": 3,
+      "entries": [
+        {
+          "index": 0,
+          "mode": "active",
+          "memory_index": 0,
+          "encoding": {
+            "file_offset": 19,
+            "size": 8
+          },
+          "payload": {
+            "file_offset": 24,
+            "size": 3
+          },
+          "offset_expression": {
+            "file_offset": 20,
+            "size": 3
+          },
+          "offset_status": "not_evaluated",
+          "mode_size": 1,
+          "memory_index_size": 0,
+          "payload_length_size": 1
+        },
+        {
+          "index": 1,
+          "mode": "passive",
+          "memory_index": null,
+          "encoding": {
+            "file_offset": 27,
+            "size": 2
+          },
+          "payload": {
+            "file_offset": 29,
+            "size": 0
+          },
+          "offset_expression": null,
+          "offset_status": "not_applicable",
+          "mode_size": 1,
+          "memory_index_size": 0,
+          "payload_length_size": 1
+        },
+        {
+          "index": 2,
+          "mode": "active",
+          "memory_index": 0,
+          "encoding": {
+            "file_offset": 29,
+            "size": 9
+          },
+          "payload": {
+            "file_offset": 35,
+            "size": 3
+          },
+          "offset_expression": {
+            "file_offset": 31,
+            "size": 3
+          },
+          "offset_status": "not_evaluated",
+          "mode_size": 1,
+          "memory_index_size": 1,
+          "payload_length_size": 1
+        }
+      ]
+    }
+  },
+  "current": {
+    "path": "D:\\project\\moonsize\\_build\\data-segments-verification\\run-KnKfj2\\after.wasm",
+    "sha256": "9b1f873793772c31c68ae8567aa7b01033b09f52ab9142d1b387935f81b54fdc",
+    "details": {
+      "schema_version": 1,
+      "format": "moonsize-data-segments",
+      "scope": "File offsets are not memory addresses; file bytes are not runtime memory usage. Active offset expressions are not_evaluated; passive offsets are not_applicable. No source attribution or deletion savings are inferred. This is structural inspection, not full type, constant-expression, memory-index or instantiation validation.",
+      "file_size": 31,
+      "summary": {
+        "present": true,
+        "file_offset": 16,
+        "total_size": 15,
+        "header_size": 2,
+        "count_size": 1,
+        "entry_count": 3,
+        "payload_size": 6,
+        "entry_metadata_size": 6,
+        "section_overhead_size": 3
+      },
+      "datacount": 3,
+      "entries": [
+        {
+          "index": 0,
+          "mode": "passive",
+          "memory_index": null,
+          "encoding": {
+            "file_offset": 19,
+            "size": 5
+          },
+          "payload": {
+            "file_offset": 21,
+            "size": 3
+          },
+          "offset_expression": null,
+          "offset_status": "not_applicable",
+          "mode_size": 1,
+          "memory_index_size": 0,
+          "payload_length_size": 1
+        },
+        {
+          "index": 1,
+          "mode": "passive",
+          "memory_index": null,
+          "encoding": {
+            "file_offset": 24,
+            "size": 5
+          },
+          "payload": {
+            "file_offset": 26,
+            "size": 3
+          },
+          "offset_expression": null,
+          "offset_status": "not_applicable",
+          "mode_size": 1,
+          "memory_index_size": 0,
+          "payload_length_size": 1
+        },
+        {
+          "index": 2,
+          "mode": "passive",
+          "memory_index": null,
+          "encoding": {
+            "file_offset": 29,
+            "size": 2
+          },
+          "payload": {
+            "file_offset": 31,
+            "size": 0
+          },
+          "offset_expression": null,
+          "offset_status": "not_applicable",
+          "mode_size": 1,
+          "memory_index_size": 0,
+          "payload_length_size": 1
+        }
+      ]
+    }
+  },
+  "delta": {
+    "section_size": -7,
+    "payload_size": 0,
+    "entry_metadata_size": -7,
+    "section_overhead_size": 0
+  },
+  "groups": [
+    {
+      "id": 0,
+      "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "payload_length": 3,
+      "kind": "shared_payload",
+      "baseline_indices": [
+        0
+      ],
+      "current_indices": [
+        0,
+        1
+      ],
+      "baseline": {
+        "count": 1,
+        "payload_size": 3,
+        "encoded_size": 8,
+        "metadata_size": 5
+      },
+      "current": {
+        "count": 2,
+        "payload_size": 6,
+        "encoded_size": 10,
+        "metadata_size": 4
+      },
+      "delta": {
+        "count": 1,
+        "payload_size": 3,
+        "encoded_size": 2,
+        "metadata_size": -1
+      }
+    },
+    {
+      "id": 1,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "payload_length": 0,
+      "kind": "shared_payload",
+      "baseline_indices": [
+        1
+      ],
+      "current_indices": [
+        2
+      ],
+      "baseline": {
+        "count": 1,
+        "payload_size": 0,
+        "encoded_size": 2,
+        "metadata_size": 2
+      },
+      "current": {
+        "count": 1,
+        "payload_size": 0,
+        "encoded_size": 2,
+        "metadata_size": 2
+      },
+      "delta": {
+        "count": 0,
+        "payload_size": 0,
+        "encoded_size": 0,
+        "metadata_size": 0
+      }
+    },
+    {
+      "id": 2,
+      "sha256": "3608bca1e44ea6c4d268eb6db02260269892c0b42b86bbf1e77a6fa16c3c9282",
+      "payload_length": 3,
+      "kind": "baseline_only",
+      "baseline_indices": [
+        2
+      ],
+      "current_indices": [],
+      "baseline": {
+        "count": 1,
+        "payload_size": 3,
+        "encoded_size": 9,
+        "metadata_size": 6
+      },
+      "current": {
+        "count": 0,
+        "payload_size": 0,
+        "encoded_size": 0,
+        "metadata_size": 0
+      },
+      "delta": {
+        "count": -1,
+        "payload_size": -3,
+        "encoded_size": -9,
+        "metadata_size": -6
+      }
+    }
+  ]
+}

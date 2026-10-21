@@ -1,7 +1,7 @@
 # moonsize
 
 ```sh
-moon add BigSaltyMan/moonsize@0.4.0
+moon add BigSaltyMan/moonsize@0.5.0
 ```
 
 面向 MoonBit 产物的 WebAssembly 体积分析器。读取 `.wasm` 文件，测量每个段，把 code 段归因到具体函数，并根据引用图提供需要进一步调查的优化候选，不预测删除源码后的精确减量。
@@ -10,9 +10,9 @@ moon add BigSaltyMan/moonsize@0.4.0
 
 英文版见 [README.md](README.md)。
 
-当前交付版本为 **0.4.0**，相对公开 0.3.0 含破坏性库接口变化，见[迁移说明](docs/migration-0.4.md)。moon add 添加的是库依赖，不会安装独立 CLI；CLI 请克隆源码后按下方命令构建。
+当前源码准备 **0.5.0**，新增数据段明细、内容组比较和 HTML 当前输入明细，并将报告写入改为独占创建；行为与 API 变化见[0.5 迁移说明](docs/migration-0.5.md)。[0.4 迁移说明](docs/migration-0.4.md)保留历史身份。moon add 添加的是库依赖，不会安装独立 CLI；CLI 请克隆源码后按下方命令构建。
 
-下述统一输出保护属于 0.4.0 之后的源码更新，本次未发布新的 Mooncakes 版本。请从当前源码重建 CLI 使用；已发布的 0.4.0 包仍保留旧的 HTML/调用图写入行为。
+0.5.0 的实际注册表发布、精确版本消费及目标 CI 状态统一记录在[0.5.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)，各步骤完成后分别记录；本文不是发布成功凭据。已发布的 0.4.0 包仍保留旧的 HTML/调用图写入行为。
 
 [公开复审证据](https://github.com/BigSaltyMan/moonsize/blob/main/docs/review-evidence.md)提供指标边界、真实源码重建、路径、预算与两份 PDF；[0.4.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)记录对应源码 SHA、目标 Linux CI、实际包摘要和独立消费验证。历史开发日志中的数量保持当时快照。
 
@@ -79,7 +79,7 @@ moonsize app.wasm --data-json new-data.json
 moonsize app.wasm --html new-report.html --data-json new-data.json
 ```
 
-这是尚未发布到 Mooncakes 的源码更新，需从当前源码构建。逐条解释初始化 payload、
+0.5.0 新增数据段编码明细（实际发布状态见上方发布记录）。逐条解释初始化 payload、
 条目元数据和段级开销，记录的是文件偏移，不是内存地址。active 表达式尚未求值，
 不推断源码归属或删除收益。Top 只影响文本展示，汇总和 JSON 保留全部条目。
 可与普通文本、strict、max-size、baseline 组合；未启用 diff-data 时只展示当前明细，

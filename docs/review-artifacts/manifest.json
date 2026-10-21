@@ -48,6 +48,55 @@
       "file": "pdf-page-review.md",
       "bytes": 1777,
       "sha256": "4c3185985260ad47a7fa91fb1d177e2fa59a435a0726c004211c45b7b6e7d2a1"
+    },
+    {
+      "file": "data-entries.pdf",
+      "bytes": 144567,
+      "sha256": "f7985acc0b1b0bcc55a1c1c8cd3657bf72e6f0f063ac4c4facc05c61845f95fb"
+    },
+    {
+      "file": "data-entries-page-review.md",
+      "bytes": 1043,
+      "sha256": "15839c2e0440160f3ea77685c8a5a9680f0d0d14b7665d64f187caf4b456b47d"
+    },
+    {
+      "file": "data-segments.json",
+      "bytes": 1950,
+      "sha256": "1303f2b667cfc22331fe917207b972bfd57c93e5be459f910227ab2fd4d1021e"
+    },
+    {
+      "file": "data-segments-diff.json",
+      "bytes": 7597,
+      "sha256": "7e91f0841160f2f10a1198769011a18b2e8e96ad6cd31b6f2544db9c793553d4"
     }
-  ]
+  ],
+  "data_segment_evidence": {
+    "date": "2026-10-21",
+    "source_baseline": "3af65f3316a397a8415b5789015af748ff7a7830",
+    "description": "Byte-for-byte copies of existing local evidence; not a new release-time browser or print acceptance.",
+    "pdf": {
+      "source_run": "_build/html-delivery-verification/run-d7HW85",
+      "pages": 10,
+      "human_reviewed_pages": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "other_pages": "existing automated chart/text/bounds checks",
+      "input_sha256": "ec51e960d520337777d0265895da284b5b0ab99e3c8f4370accd98c60414bc55",
+      "environment": "Microsoft Edge 156.0.4314.36; Windows 10.0.26300 x64; Playwright 1.58.2; Poppler 26.07.0",
+      "displayed_rows": 40,
+      "total_rows": 45,
+      "recorded_git_head": "eb709277c4ceb6703a195a8272f32b2751b2a49f",
+      "recorded_source_dirty": true,
+      "cli_sha256": "c523e06c465d3ed1e1204322ef31e219c953cb47e7c9cc840c3f7a11fc4f1ed2"
+    },
+    "json_sources": [
+      "run-KOKUko/data.json: 22 = 6 + 13 + 3 bytes",
+      "run-KnKfj2/diff.json: 22 -> 15 bytes; delta -7 = 0 - 7 + 0"
+    ]
+  }
 }

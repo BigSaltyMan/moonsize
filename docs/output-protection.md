@@ -1,10 +1,13 @@
 # Report output protection
 
-This is a source-checkout change after the published 0.4.0 package. Build the CLI
-from current source; no new Mooncakes version is published as part of this fix.
+This behavior is included in the 0.5.0 source. See the
+[0.5 migration guide](migration-0.5.md) and the
+[release record](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)
+for the actual publication and exact-version verification status.
 
 All CLI report destinations follow one policy: `--html`, `--call-graph` (DOT/JSON),
-`--experiment` (HTML/JSON), `--why-json`, `--budget-json` and `--budget-md` require
+`--experiment` (HTML/JSON), `--why-json`, `--budget-json`, `--budget-md` and
+`--data-json` (single input or comparison) require
 a **new** target. There is no overwrite flag. Failure returns 1 with
 `output already exists` or `cannot safely write output`; no success notice follows.
 

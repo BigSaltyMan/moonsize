@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "format": "moonsize-data-segments",
+  "scope": "File offsets are not memory addresses; file bytes are not runtime memory usage. Active offset expressions are not_evaluated; passive offsets are not_applicable. No source attribution or deletion savings are inferred. This is structural inspection, not full type, constant-expression, memory-index or instantiation validation.",
+  "file_size": 38,
+  "summary": {
+    "present": true,
+    "file_offset": 16,
+    "total_size": 22,
+    "header_size": 2,
+    "count_size": 1,
+    "entry_count": 3,
+    "payload_size": 6,
+    "entry_metadata_size": 13,
+    "section_overhead_size": 3
+  },
+  "datacount": 3,
+  "entries": [
+    {
+      "index": 0,
+      "mode": "active",
+      "memory_index": 0,
+      "encoding": {
+        "file_offset": 19,
+        "size": 8
+      },
+      "payload": {
+        "file_offset": 24,
+        "size": 3
+      },
+      "offset_expression": {
+        "file_offset": 20,
+        "size": 3
+      },
+      "offset_status": "not_evaluated",
+      "mode_size": 1,
+      "memory_index_size": 0,
+      "payload_length_size": 1
+    },
+    {
+      "index": 1,
+      "mode": "passive",
+      "memory_index": null,
+      "encoding": {
+        "file_offset": 27,
+        "size": 2
+      },
+      "payload": {
+        "file_offset": 29,
+        "size": 0
+      },
+      "offset_expression": null,
+      "offset_status": "not_applicable",
+      "mode_size": 1,
+      "memory_index_size": 0,
+      "payload_length_size": 1
+    },
+    {
+      "index": 2,
+      "mode": "active",
+      "memory_index": 0,
+      "encoding": {
+        "file_offset": 29,
+        "size": 9
+      },
+      "payload": {
+        "file_offset": 35,
+        "size": 3
+      },
+      "offset_expression": {
+        "file_offset": 31,
+        "size": 3
+      },
+      "offset_status": "not_evaluated",
+      "mode_size": 1,
+      "memory_index_size": 1,
+      "payload_length_size": 1
+    }
+  ]
+}
