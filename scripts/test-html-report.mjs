@@ -6,6 +6,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import {htmlDataFixture} from './html-data-fixture.mjs';
 const cli=path.resolve(process.argv[2]||'_build/native/release/build/cmd/main/main.exe');
 const parent=path.resolve(os.tmpdir()),work=fs.mkdtempSync(path.join(parent,'moonsize-html-'));
 let cases=0,fixtures=0;
@@ -153,6 +154,35 @@ try {
   const longPath=path.join(folder,'很长的输入文件名.wasm');fs.copyFileSync(f.file,longPath);
   const longReport=path.join(work,'long-path.html');run([longPath,'--html',longReport]);
   const longHtml=fs.readFileSync(longReport,'utf8');assert(longHtml.includes(`<p class="file">${longPath}</p>`));assert.equal(read(longHtml).data.file,longPath);
+  const dataBytes=htmlDataFixture();assert(WebAssembly.validate(dataBytes));fixtures++;
+  const dataInput=path.join(work,'current data &.wasm'),dataHtml=path.join(work,'data.html'),dataJson=path.join(work,'data.json');
+  fs.writeFileSync(dataInput,dataBytes);
+  const dataNotice=run([dataInput,'--html',dataHtml,'--data-json',dataJson,'--top','1','--baseline',dataInput]);
+  assert(!dataNotice.includes('DATA SEGMENT ENCODINGS'));
+  const dataDocument=fs.readFileSync(dataHtml,'utf8'),dataParsed=read(dataDocument),details=JSON.parse(fs.readFileSync(dataJson,'utf8'));
+  assert.deepEqual(dataParsed.data.dataSegments,details);
+  assert.equal(details.entries.length,45);
+  const ordered=details.entries.slice().sort((a,b)=>b.payload.size-a.payload.size||a.index-b.index);
+  const rows=[...dataDocument.matchAll(/<tr data-segment-index="(\d+)">([\s\S]*?)<\/tr>/g)];
+  assert.equal(rows.length,20);assert.deepEqual(rows.map(r=>Number(r[1])),ordered.slice(0,20).map(e=>e.index));
+  for(const [i,row] of rows.entries()) {
+    const e=ordered[i];assert(row[2].includes(`[${e.encoding.file_offset}, ${e.encoding.file_offset+e.encoding.size})`));
+    assert(row[2].includes(`[${e.payload.file_offset}, ${e.payload.file_offset+e.payload.size})`));
+  }
+  assert(dataDocument.includes('Showing 20 of 45 entries'));
+  assert(dataDocument.includes('Current input only.'));
+  assert(dataDocument.includes('id="data-more" type="button" aria-controls="data-rows" hidden'));
+  assert(dataDocument.includes('Complete data '+details.summary.total_size+' B = payload '+details.summary.payload_size+' B'));
+  new vm.Script(dataParsed.script); // Real DOM pagination is covered by browser acceptance, not another adapter.
+  // Both targets must be preflighted together, before creating the HTML.
+  const protectedHtml=path.join(work,'protected.html');
+  let r=spawnSync(cli,[dataInput,'--html',protectedHtml,'--data-json',dataJson],{encoding:'utf8',timeout:5000});cases++;
+  assert.ifError(r.error);assert.equal(r.status,1);assert(!fs.existsSync(protectedHtml));assert.deepEqual(JSON.parse(fs.readFileSync(dataJson)),details);
+  const bad=path.join(work,'bad-data.wasm'),badHtml=path.join(work,'bad.html'),badJson=path.join(work,'bad.json');
+  fs.writeFileSync(bad,Buffer.from('0061736d010000000b020103','hex'));
+  r=spawnSync(cli,[bad,'--html',badHtml,'--data-json',badJson],{encoding:'utf8',timeout:5000});cases++;
+  assert.ifError(r.error);assert.equal(r.status,1);assert(!/written to|section report/.test(r.stdout));
+  assert(!fs.existsSync(badHtml));assert(!fs.existsSync(badJson));
   console.log(`HTML-report CLI regressions passed (${cases} process cases, ${fixtures} V8-validated modules; script adapters at 1440/1024/768/390, not browser layout acceptance).`);
 } finally {
   assert.equal(path.dirname(work),parent);assert(path.basename(work).startsWith('moonsize-html-'));fs.rmSync(work,{recursive:true,force:true});

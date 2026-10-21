@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import os from 'node:os';
+import {htmlDataFixture} from './html-data-fixture.mjs';
+const dataOnly = process.argv.includes('--data-only');
 const root = fileURLToPath(new URL('../', import.meta.url));
 const cli = path.resolve(process.argv[2] || '_build/native/release/build/cmd/main/main.exe');
 const out = path.join(root, '_build/html-delivery-verification');
@@ -26,9 +28,9 @@ const input = path.join(root, 'examples/fib.wasm');
 const expectedInput = '0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c';
 assert.equal(hash(fs.readFileSync(input)), expectedInput);
 let cases = 0;
-const generate = (file, name, workingDirectory=cwd) => {
+const generate = (file, name, workingDirectory=cwd, withData=false) => {
   const target = path.join(work, name+'.html');
-  const result = spawnSync(cli, [file, '--html', target], {cwd:workingDirectory,encoding:'utf8',timeout:15000});
+  const result = spawnSync(cli, [file, '--html', target, ...(withData?['--data-segments']:[])], {cwd:workingDirectory,encoding:'utf8',timeout:15000});
   assert.ifError(result.error);assert.equal(result.status,0,result.stdout+result.stderr);cases++;
   assert(!result.stdout.includes('CDN'));
   const html = fs.readFileSync(target,'utf8');
@@ -41,7 +43,9 @@ const generate = (file, name, workingDirectory=cwd) => {
   assert.equal(data.fileSize,fs.statSync(file).size);assert(html.includes('Licensed to the Apache Software Foundation'));
   return {target,html,data,sha256:hash(Buffer.from(html))};
 };
-const example = generate(input,'example');
+let example,stress,copy;
+if (!dataOnly) {
+example = generate(input,'example');
 assert.deepEqual([example.data.fileSize,example.data.codeSize,example.data.gzipSize,example.data.deadSize],[10675,5166,5207,0]);
 // Neither local nor parent "assets" may supply executable code to a report.
 for (const parent of [cwd,work]) {fs.mkdirSync(path.join(parent,'assets'));fs.writeFileSync(path.join(parent,'assets/echarts.min.js'),'throw Error("cwd resource used");');}
@@ -60,16 +64,27 @@ const fixture = cat(Buffer.from('0061736d01000000','hex'),section(1,[1,96,0,0]),
   section(0,cat(str('name'),section(1,cat([3],...names.map((n,i)=>cat(leb(i),str(n))))))));
 assert(WebAssembly.validate(fixture));
 const stressInput = path.join(cwd,'long name & warning.wasm');fs.writeFileSync(stressInput,fixture);
-const stress = generate(stressInput,'long-name-warning');assert.equal(stress.data.graph_complete,false);
+stress = generate(stressInput,'long-name-warning');assert.equal(stress.data.graph_complete,false);
 const copied = path.join(work,'moved report 中文 with spaces');fs.mkdirSync(copied);
-const copy = path.join(copied,'report.html');fs.copyFileSync(example.target,copy);
+copy = path.join(copied,'report.html');fs.copyFileSync(example.target,copy);
 assert.equal(hash(fs.readFileSync(copy)),example.sha256);assert.deepEqual(fs.readdirSync(copied),['report.html']);
+}
+const dataBytes=htmlDataFixture();assert(WebAssembly.validate(dataBytes));
+const dataInput=path.join(cwd,'data entries.wasm');fs.writeFileSync(dataInput,dataBytes);
+const dataArtifact=generate(dataInput,'data-entries',cwd,true);
+assert.equal(dataArtifact.data.dataSegments.entries.length,45);
+const dataCopyFolder=path.join(work,'data report copy 中文');fs.mkdirSync(dataCopyFolder);
+const dataCopy=path.join(dataCopyFolder,'report.html');fs.copyFileSync(dataArtifact.target,dataCopy);
+assert.equal(hash(fs.readFileSync(dataCopy)),dataArtifact.sha256);
+assert.deepEqual(fs.readdirSync(dataCopyFolder),['report.html']);
+const primary=example??dataArtifact;
 const evidence = {platform:process.platform,os_release:os.release(),arch:process.arch,node:process.version,
   git_head:spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),
   source_dirty:spawnSync('git',['diff','--quiet'],{cwd:root}).status!==0,
-  cli:{sha256:hash(fs.readFileSync(cli)),bytes:fs.statSync(cli).size},input:{path:input,sha256:expectedInput},
-  command:[cli,input,'--html',example.target],cwd,report:{original:example.target,copy,sha256:example.sha256},
-  cli_cases:cases,cwd_generation:'passed',cwd_asset_override:'ignored',copy_identical:true,
+  cli:{sha256:hash(fs.readFileSync(cli)),bytes:fs.statSync(cli).size},input:{path:dataOnly?dataInput:input,sha256:dataOnly?hash(dataBytes):expectedInput},
+  command:[cli,dataOnly?dataInput:input,'--html',primary.target,...(dataOnly?['--data-segments']:[])],cwd,report:{original:primary.target,copy:dataOnly?dataCopy:copy,sha256:primary.sha256},
+  data_only:dataOnly,data_input:{path:dataInput,sha256:hash(dataBytes)},
+  cli_cases:cases,cwd_generation:'passed',cwd_asset_override:dataOnly?'not tested in targeted data run':'ignored',copy_identical:true,
   browser:'not-run (pass --browser)',verification_directory:work};
 fs.writeFileSync(path.join(work,'evidence.json'),JSON.stringify(evidence,null,2)+'\n');
 
@@ -94,15 +109,15 @@ if (process.argv.includes('--browser')) {
     await originalPage.goto(origin+'/');
     await originalPage.waitForFunction(()=>document.querySelectorAll('canvas').length===4);
     const originalUrl = origin+'/delivery-original.html';
-    await originalContext.route(originalUrl,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(example.target)}));
+    await originalContext.route(originalUrl,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(primary.target)}));
     await originalPage.goto(originalUrl);await originalPage.waitForFunction(()=>document.querySelectorAll('canvas').length===4);
     await originalPage.close();await originalContext.close();
-    for (const [name,artifact,file] of [['example',example,copy],['long-name-warning',stress,stress.target]]) {
+    for (const [name,artifact,file] of [...(dataOnly?[]:[['example',example,copy],['long-name-warning',stress,stress.target]]),['data-entries',dataArtifact,dataCopy]]) {
       // A NEW context, offline from birth, with no service worker or warmed cache.
       // Only its main HTML response is fulfilled from the copied local bytes.
       // Every subresource and explicit control probe stays subject to offline mode.
       const context = await browser.newContext({offline:true,serviceWorkers:'block',viewport:{width:1440,height:1000}});
-      const url = origin+'/moved%20report%20%E4%B8%AD%E6%96%87/'+name+'.html';
+      const url = name==='data-entries'?origin+'/':origin+'/moved%20report%20%E4%B8%AD%E6%96%87/'+name+'.html';
       const requests=[],errors=[],failed=[];
       await context.route(url,r=>r.fulfill({contentType:'text/html; charset=utf-8',body:fs.readFileSync(file)}));
       const page = await context.newPage();
@@ -126,8 +141,40 @@ if (process.argv.includes('--browser')) {
       await page.locator('#sections canvas').hover({position:{x:300,y:55}});
       await page.waitForFunction(()=>document.querySelector('#sections').textContent.includes('independent gzip'));
       await page.screenshot({path:path.join(work,name+'-screen.png'),fullPage:true});
+      if(name==='data-entries') {
+        assert.equal(await page.locator('tr[data-segment-index]').count(),20);
+        const s=artifact.data.dataSegments.summary;
+        assert.deepEqual(await page.locator('.data-summary dd').allTextContents(),[s.total_size,s.payload_size,s.entry_metadata_size,s.section_overhead_size,s.entry_count].map(n=>n.toLocaleString('en-US')));
+        assert.equal(await page.locator('#data-shown').textContent(),'Showing 20 of 45 entries. Printing includes only the displayed subset.');
+        await page.locator('#data-segments').screenshot({path:path.join(work,'data-desktop.png')});
+        await page.locator('#data-more').focus();await page.keyboard.press('Enter');
+        assert.equal(await page.locator('tr[data-segment-index]').count(),40);
+        const expected=artifact.data.dataSegments.entries.slice().sort((a,b)=>b.payload.size-a.payload.size||a.index-b.index).slice(0,40);
+        assert.deepEqual(await page.locator('tr[data-segment-index]').evaluateAll(rows=>rows.map(r=>Number(r.dataset.segmentIndex))),expected.map(e=>e.index));
+        await page.locator('.data-entry-details > summary').first().focus();await page.keyboard.press('Enter');
+        assert.equal(await page.locator('.data-entry-details').first().evaluate(el=>el.open),true);
+        await page.setViewportSize({width:390,height:900});
+        assert((await page.evaluate(()=>document.documentElement.scrollWidth))<=390);
+        const scroll=await page.locator('#data-segments .table-scroll').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));
+        assert(scroll.scroll>scroll.client,'Narrow table must scroll internally');
+        await page.locator('#data-segments').screenshot({path:path.join(work,'data-mobile.png')});
+        await page.setViewportSize({width:1440,height:1000});
+        await page.waitForFunction(()=>['sections','functions','modules','treemap'].every(id=>{const e=document.getElementById(id);return echarts.getInstanceByDom(e).getWidth()===e.clientWidth;}));
+        // Same browser, small targeted fallback checks, no new DOM adapters.
+        for(const js of [false,true]) {
+          const fallback=await browser.newContext({offline:true,serviceWorkers:'block',javaScriptEnabled:js});
+          const body=js?artifact.html.replace(/<script>\n[\s\S]*?\n<\/script>/,''):artifact.html;
+          await fallback.route(origin+'/',r=>r.fulfill({contentType:'text/html; charset=utf-8',body}));
+          const p=await fallback.newPage();await p.goto(origin+'/');
+          assert.equal(await p.locator('tr[data-segment-index]').count(),20);
+          assert(await p.locator('#data-ledger').isVisible());
+          if(!js)assert(await p.locator('#data-more').isHidden());
+          else { assert(await p.locator('#chart-status').isVisible());await p.locator('#data-more').click();assert.equal(await p.locator('tr[data-segment-index]').count(),40); }
+          await fallback.close();
+        }
+      }
       // Actual print invokes beforeprint/afterprint. Record state on both sides.
-      const state = () => page.evaluate(()=>['function-details','method-details'].map(id=>document.getElementById(id).open));
+      const state = () => page.evaluate(()=>[...['function-details','method-details'].map(id=>document.getElementById(id)),...document.querySelectorAll('#data-segments details')].map(el=>el.open));
       if(name==='example')await page.locator('#function-details > summary').click();
       const before=await state();
       const originalLabels=await page.evaluate(()=>echarts.getInstanceByDom(document.getElementById('modules')).getOption().series[0].data.map(r=>r.label.show));
@@ -135,6 +182,7 @@ if (process.argv.includes('--browser')) {
         window.__deliveryPrint=[];
         for(const type of ['beforeprint','afterprint'])addEventListener(type,()=>window.__deliveryPrint.push({type,
           open:['function-details','method-details'].map(id=>document.getElementById(id).open),
+          data_open:[...document.querySelectorAll('#data-segments details')].map(el=>el.open),data_rows:document.querySelectorAll('tr[data-segment-index]').length,
           charts:['sections','functions','modules','treemap'].map(id=>{const e=document.getElementById(id),c=echarts.getInstanceByDom(e);return {id,container:e.clientWidth,chart:c.getWidth()};})}));
       });
       const pdf = path.join(work,name+'.pdf');
@@ -180,6 +228,15 @@ if (process.argv.includes('--browser')) {
         pages.push({page:i,png,text:pageText});
       }
       const flattened=pdfTextKey(text);
+      if(name==='data-entries') {
+        for(const needle of ['Data segment encodings','Current input','Showing 40 of 45 entries','Printing includes only the displayed subset','not_evaluated','not_applicable','File offsets are not memory addresses'])assert(flattened.includes(pdfTextKey(needle)),needle+' missing in data PDF');
+        assert.equal(events[0].data_rows,40);assert.equal(events[1].data_rows,40);
+        assert(events[0].data_open.every(Boolean));
+        assert.equal(await page.locator('tr[data-segment-index]').count(),40);
+        // Last batch is appended only on demand, after printing the subset.
+        await page.locator('#data-more').click();assert.equal(await page.locator('tr[data-segment-index]').count(),45);
+        assert(await page.locator('#data-more').isHidden());
+      }
       for(const needle of ['File size','Whole-file gzip','Methods, measurement ranges','not guaranteed deletion savings','independent'])assert(flattened.includes(pdfTextKey(needle)),needle+' missing in PDF');
       for(const value of metrics)assert(flattened.includes(pdfTextKey(value)),value+' missing in PDF');
       // Chromium may preserve Canvas 2D as PDF vectors rather than images.

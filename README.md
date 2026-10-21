@@ -53,6 +53,7 @@ it builds with `--target native` as well.
 ```sh
 moonsize app.wasm --data-segments --top 20
 moonsize app.wasm --data-json new-data.json
+moonsize app.wasm --html new-report.html --data-json new-data.json
 ```
 
 This source-checkout feature is not yet published to Mooncakes. It accounts for
@@ -61,7 +62,11 @@ Active offset expressions are recorded without evaluation; no source attribution
 or deletion savings are inferred. Text Top does not truncate the JSON or totals.
 It supports ordinary text, strict, max-size and baseline (single-file details
 unless `--diff-data` is enabled),
-and rejects HTML, graph, experiment, path, budget and function-diff combinations.
+and rejects graph, experiment, path, budget and function-diff combinations.
+HTML accepts current-input details explicitly: a static first 20 rows remain
+readable without JavaScript, and the button appends 20 at a time. HTML and JSON
+share the same ledger. Printing includes the displayed subset; `--top` remains
+a text-only limit. HTML does not accept `--diff-data`.
 See [encoding ledger, real sample and API migration](docs/data-segments.md).
 
 With `--baseline before.wasm --diff-data`, the text report also compares exact
@@ -112,6 +117,7 @@ identify candidates for investigation.
                        instead of reporting it with a warning
   --call-graph <path>  write a new .dot or .json call graph; refuses existing paths
   --html <path>        write a new self-contained HTML report; refuses existing paths
+                       --data-segments or --data-json adds current-input data details
   --max-size <size>    fail with exit code 3 above this size, where size is
                        bytes or a KB/MB/GB count such as 10KB or 1.5MB
   --budget <path>      validated multi-metric byte budgets; growth needs --baseline

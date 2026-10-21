@@ -49,6 +49,7 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --strict             调用图不完整时拒绝输出报告，而不是带着警告输出
   --call-graph <path>  新建 .dot 或 .json 调用图，拒绝已有路径
   --html <path>        新建自包含 HTML 报告，拒绝已有路径
+                       可配合 --data-segments 或 --data-json 展示当前数据段明细
   --max-size <size>    超过这个大小就以退出码 3 失败，size 可以是字节数或
                        10KB、1.5MB 这种带 KB/MB/GB 后缀的写法
   --baseline <path>    与另一个模块对比并打印变化；此时 --max-size 限制的是
@@ -75,13 +76,17 @@ moonsize app.wasm --call-graph graph.dot        # 给 Graphviz
 ```sh
 moonsize app.wasm --data-segments --top 20
 moonsize app.wasm --data-json new-data.json
+moonsize app.wasm --html new-report.html --data-json new-data.json
 ```
 
 这是尚未发布到 Mooncakes 的源码更新，需从当前源码构建。逐条解释初始化 payload、
 条目元数据和段级开销，记录的是文件偏移，不是内存地址。active 表达式尚未求值，
 不推断源码归属或删除收益。Top 只影响文本展示，汇总和 JSON 保留全部条目。
 可与普通文本、strict、max-size、baseline 组合；未启用 diff-data 时只展示当前明细，
-暂不与 HTML、调用图、实验、路径、budget 和函数差异组合。
+暂不与调用图、实验、路径、budget 和函数差异组合。
+HTML 现可显式展示当前输入明细，与 JSON 复用同一账本；静态首屏20条，无脚本
+仍可读，按钮每次追加20条。打印只包含已展示子集，--top 仍只限制文本。
+HTML 不接受 --diff-data，不展示 baseline 条目比较。
 编码账本、真实结果和错误类型迁移见[数据段说明](docs/data-segments.md)。
 
 新增 `--baseline before.wasm --diff-data` 可追加内容组比较，按重复次数核算

@@ -473,6 +473,7 @@ pub fn usage() -> String {
   "                       instead of reporting it with a warning\n" +
   "  --call-graph <path>  write a new .dot or .json call graph; refuses existing paths\n" +
   "  --html <path>        write a new self-contained HTML report; refuses existing paths\n" +
+  "                       --data-segments or --data-json adds current-input data details\n" +
   "  --max-size <size>    fail with exit code 3 above this size, where size is\n" +
   "                       bytes or a KB/MB/GB count such as 10KB or 1.5MB\n" +
   "  --budget <path>      validated multi-metric byte budgets; growth needs --baseline\n" +

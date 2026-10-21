@@ -335,3 +335,15 @@ cmd/main/output.mbt集中预检与写入，全部目标在第一次写入前一�
 42项定向测试通过，覆盖自比/重排、重复减少、模式和合法非最短宽度变化、内容独有组、空段与空payload、两侧错误、实际字节比较及参数依赖。一次release构建后，原数据脚本扩展为8个CLI场景（只追加成功比较、坏baseline、已有目标三项），全部通过，两个合法输入由V8独立验证。实测data 22→15 B，payload仍6 B，元数据13→6 B，段级开销仍3 B：差值-7 = 0 - 7 + 0；组完整条目差值+2 + 0 - 9 = -7。Top1显示xyz组，完整JSON保留三组。已有目标原字节、两侧输入与旧单文件JSON不变；证据在_build/data-segments-verification/run-KnKfj2，详见[数据段比较](data-segments.md)。
 
 接口审查只增加比较类型/入口、两种渲染及Options.diff_data；现有完整回归和CI数据脚本步骤保留。未在本地重跑性能基准、HTML/PDF或四个源码演示，完整验证以目标提交Linux CI为准。不做字符串/模糊匹配、自动去重建议、offset求值、HTML和新预算指标。相同payload不证明语义等价，重复不证明可安全去重，文件差值不预测重编译或gzip收益。不发布Mooncakes，原图片、AGENTS、规划和构建产物排除。
+
+## 25. HTML 当前输入数据段明细（2026-10-21）
+
+基线eb70927。CLI允许HTML与单文件data选项显式组合，复用一份DataSegmentsReport写HTML和JSON，终端不重复数据表；html+diff-data仍为参数错误。旧render_html保持签名与默认解析成本，新增render_html_with_data_segments，共用模板及一次压缩测量，内嵌可选dataSegments元数据，不放payload内容，不新增分析结论、图表或外部资源。双目标仍统一预检、独占创建，strict和解析错误仍在正常输出前拒绝，不增加事务承诺。
+
+模块位于函数明细后、方法说明前，摘要展示完整data、payload、元数据、段级开销和条目数，datacount单列。静态首屏20条，按payload降序/序号升序；每批追加20条，不默认创建全部DOM。原生details可键盘展开文件范围和未求值表达式；空段、无段及空payload有不同状态。窄屏只在表格内部滚动。打印仅保留当前展示子集及数量，展开已展示详情，结束后恢复，未触发全部条目加载。
+
+71项相关定向测试通过，HTML契约11个CLI场景/7个合法样本通过；只补成功双输出、全部目标预检和解析失败三项进程流程。一次release构建，接口增量只新渲染入口。原fixture路径包含Windows禁用字符及验收脚本局部变量重名已修正，只补跑受影响脚本，不重跑无关回归或默认性能基准。
+
+按AGENTS先启动npm run dev并打开HTTP根入口。真实Edge156.0.4314.36中，45条样本20→40→45、键盘、390px内部滚动、无脚本、图表失败回退与新离线上下文全部通过，无阻断控制台错误。实际A4 PDF打印40/45条，10页经Poppler渲染；人工查看新模块第5–9页和方法续页10及桌面/窄屏截图，数字、文件范围和边界可读，打印后40行及展开状态恢复。证据_build/html-delivery-verification/run-d7HW85；不是对历史PDF全套重新人工验收。详见[HTML交付记录](html-delivery.md)。
+
+正式HTML从原fib输入用CLI生成至新暂存路径，核对输入SHA和全部旧分析字段不变后明确复制更新；新模块252=240+8+4 B、1条。原图片与README截图未动。未做data比较HTML、表达式求值、内容预览或新图表；完整回归与既有演示交给目标SHA Linux CI。本提交不发布Mooncakes，原图片、AGENTS、规划与构建产物排除。

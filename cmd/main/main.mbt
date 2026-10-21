@@ -432,11 +432,21 @@ fn main {
     None =>
       match options.html {
         Some(target) => {
-          let contents = @lib.render_html(
-            analysis,
-            options.path,
-            echarts=vendored_echarts(),
-          )
+          let contents = match data_details {
+            Some(report) =>
+              @lib.render_html_with_data_segments(
+                analysis,
+                options.path,
+                report,
+                echarts=vendored_echarts(),
+              )
+            None =>
+              @lib.render_html(
+                analysis,
+                options.path,
+                echarts=vendored_echarts(),
+              )
+          }
           write_output(target, contents)
           println("HTML report written to " + target)
         }
@@ -460,7 +470,7 @@ fn main {
     println("")
     println(@lib.render_function_diff(diff, options.top))
   }
-  if data_details is Some(report) {
+  if data_details is Some(report) && options.html is None {
     println("")
     println(@lib.render_data_segments(report, options.top))
   }

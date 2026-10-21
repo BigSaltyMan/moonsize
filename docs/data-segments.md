@@ -12,6 +12,8 @@ CLI=_build/native/release/build/cmd/main/main.exe
 "$CLI" app.wasm --data-segments
 "$CLI" app.wasm --data-segments --top 20
 "$CLI" app.wasm --data-json new-data.json
+"$CLI" app.wasm --html new-report.html --data-segments
+"$CLI" app.wasm --html new-report.html --data-json new-data.json
 ```
 
 `--data-json` 隐含启用文本明细，要求新的 `.json` 文件。未启用这两个选项时，
@@ -21,13 +23,35 @@ CLI=_build/native/release/build/cmd/main/main.exe
 可组合普通文本、`--retained`、`--dead-code`、`--compress`、`--strict`、
 `--max-size` 和 `--baseline`。未启用 `--diff-data` 时，baseline 仍只执行原有
 比较，不比较数据条目。
-暂不与 HTML、调用图导出、experiment、函数路径、budget 或 `--diff-functions`
+暂不与调用图导出、experiment、函数路径、budget 或 `--diff-functions`
 组合；参数阶段拒绝这些组合并返回2，在读取输入前报错。
 
 解析错误、输出保护或写入失败返回1。解析在正常输出前完成；strict 仍在目标
 预检查和写入前拒绝不完整图并返回3。原有 max-size 行为不变，超限仍可保存明细
 后返回3。新 JSON 使用统一预检查及原生独占创建，不删除已有目标。这不提供
 多文件事务；后续失败可能留下之前的新文件或本次新建的部分文件。
+
+## HTML 当前输入明细
+
+HTML 必须显式配合 `--data-segments` 或 `--data-json`，不改变默认 HTML 的数据解析
+成本。HTML 和单文件 JSON 复用同一份报告，先检查全部目标，再独占创建；不是
+多文件事务。HTML 模式不在终端重复输出数据表。即使传入 baseline，页面模块也
+只表示 current input，`--html --diff-data` 仍在读取输入前以2拒绝。
+
+摘要、闭合账本和按 payload 排序的前20条直接写入 HTML，无 JavaScript 或图表库
+仍可读。完整元数据内嵌在可选 `DATA.dataSegments`，不含原始 payload。更多条目
+从元数据每批追加20条；持续显示已展示数/总数，全部展示后按钮隐藏。`--top` 仍
+只影响文本，不是 HTML 分页参数。表格可在窄屏内部横向滚动；文件范围通过原生
+details/summary 展开，支持键盘，不依赖 hover。三种空态与单文件账本一致。
+
+打印保留摘要、已展示行和数量，明确这是子集；打印前不追加全部条目。只展开已
+展示行的初始化描述，结束后恢复原状态。文件偏移不是内存地址，文件字节不是
+运行时内存占用，表达式未求值，也没有源码归属或删除收益推断。
+
+新增库入口 `render_html_with_data_segments(analysis, file_path, report, echarts?)`，
+report 须来自同一 `analysis.data` 的 inspector。原 `render_html` 签名不变；共用
+模板和一次压缩测量，渲染时不再解析数据段。CLI 继续内嵌固定 ECharts，不新增
+外部请求。实测浏览器、打印和正式示例记录见[HTML 交付验收](html-delivery.md)。
 
 ## 按 payload 内容分组的基线比较
 
@@ -38,7 +62,7 @@ CLI=_build/native/release/build/cmd/main/main.exe
 ```
 
 `--diff-data` 必须提供 baseline，隐含启用当前数据明细，并追加两侧内容组比较。
-组合限制、strict、max-size 退出码和输出保护沿用单文件模式；坏 baseline/current
+除仍拒绝 HTML 外，组合限制、strict、max-size 退出码和输出保护沿用单文件模式；坏 baseline/current
 均在正常输出和创建目标前失败。主程序只读取 baseline 一次，直接复用比较结果的
 当前明细，不重复调用当前数据 inspector。原有模块段表检查和分析流程仍保留。
 
@@ -183,5 +207,5 @@ JSON 独立使用 `format: "moonsize-data-segments"`、`schema_version: 1`：
 `diff_data`；旧 DataSegmentsReport 和公开函数签名没有变化，没有新增依赖。
 
 本地只做新增及受影响测试、native 检查和一次 release 构建；完整回归由目标提交
-Linux CI 执行。HTML、跨构建稳定条目匹配、字符串/模糊分析、自动去重建议、
+Linux CI 执行。HTML 仅展示当前明细；跨构建稳定条目匹配、字符串/模糊分析、自动去重建议、
 offset 求值和新预算指标留到后续。

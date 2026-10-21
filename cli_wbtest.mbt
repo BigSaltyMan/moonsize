@@ -67,7 +67,6 @@ test "data details enable text and JSON while keeping ordinary options" {
 test "data details reject output and independent mode conflicts before input IO" {
   for
     flags in [
-      ["--html", "r.html"],
       ["--call-graph", "g.json"],
       ["--experiment", "e.json"],
       ["--experiment-context", "c.json"],
@@ -130,6 +129,29 @@ test "data diff needs baseline and implies details with existing text options" {
   assert_false(
     options_of(["moonsize", "after", "--baseline", "before", "--data-segments"]).diff_data,
   )
+}
+
+///|
+test "html accepts current data details but rejects data comparison" {
+  for flag in [["--data-segments"], ["--data-json", "data.json"]] {
+    let options = options_of(
+      [
+        "moonsize", "current", "--html", "new.html", "--baseline", "before", "--top",
+        "1",
+      ] +
+      flag,
+    )
+    assert_true(options.data_segments)
+    assert_eq(options.html, Some("new.html"))
+  }
+  match
+    parse_options([
+      "moonsize", "missing", "--html", "r.html", "--diff-data", "--baseline", "before",
+    ]) {
+    Err(message) =>
+      assert_true(message.contains("data segment details cannot be combined"))
+    Ok(_) => fail("HTML must not accept data comparison")
+  }
 }
 
 ///|

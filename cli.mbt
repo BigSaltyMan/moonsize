@@ -451,7 +451,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     }
   }
   if data_segments {
-    if html is Some(_) ||
+    if (html is Some(_) && diff_data) ||
       call_graph is Some(_) ||
       experiment is Some(_) ||
       experiment_context is Some(_) ||
@@ -463,7 +463,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_md is Some(_) ||
       diff_functions {
       return Err(
-        "moonsize: data segment details cannot be combined with --html, --call-graph, --experiment, function-path queries, --budget or --diff-functions\n\n" +
+        "moonsize: data segment details cannot be combined with --call-graph, --experiment, function-path queries, --budget or --diff-functions; --html only accepts current-input details, not --diff-data\n\n" +
         usage(),
       )
     }

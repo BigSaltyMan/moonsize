@@ -514,6 +514,24 @@ pub fn render_html(
 }
 
 ///|
+/// Opt-in current-input details from inspect_data_segments(analysis.data).
+/// No parsing or extra compression measurements are performed here.
+pub fn render_html_with_data_segments(
+  analysis : Analysis,
+  file_path : String,
+  report : DataSegmentsReport,
+  echarts? : String = "",
+) -> String {
+  render_html_measured(
+    analysis,
+    file_path,
+    measure_compression(analysis),
+    echarts,
+    data_segments=report,
+  )
+}
+
+///|
 fn html_data_field(row : Json, key : String) -> Json {
   match row {
     Object(fields) => fields.get(key).unwrap_or(Json::null())
@@ -626,12 +644,16 @@ fn render_html_measured(
   file_path : String,
   compression : CompressionMeasurements,
   echarts : String,
+  data_segments? : DataSegmentsReport,
 ) -> String {
   let parsed = analysis.parsed
   let file_size = parsed.file_size
   let code_size = section_size(parsed, Code)
   let dead = dead_size(analysis)
   let data = report_data(analysis, file_path, compression~)
+  if data_segments is Some(report) && data is Object(fields) {
+    fields.set("dataSegments", data_segments_json(report))
+  }
   let json = escape_for_script(data.stringify())
   let script = replace_all(HTML_SCRIPT, "__DATA__", json)
   let title = html_escape(file_path)
@@ -658,7 +680,13 @@ fn render_html_measured(
     " modeled references</p>\n",
   )
   out.write_string(
-    "<nav class=\"report-nav\" aria-label=\"Report sections\"><a href=\"#overview\">Overview</a><a href=\"#composition\">Composition</a><a href=\"#function-ranking\">Functions</a><a href=\"#module-map\">Module map</a><a href=\"#methodology\">Methods &amp; limits</a></nav></header>\n",
+    "<nav class=\"report-nav\" aria-label=\"Report sections\"><a href=\"#overview\">Overview</a><a href=\"#composition\">Composition</a><a href=\"#function-ranking\">Functions</a><a href=\"#module-map\">Module map</a>" +
+    (if data_segments is Some(_) {
+      "<a href=\"#data-segments\">Data entries</a>"
+    } else {
+      ""
+    }) +
+    "<a href=\"#methodology\">Methods &amp; limits</a></nav></header>\n",
   )
   out.write_string(
     "<section id=\"overview\" class=\"cards\" aria-label=\"Key measurements\" tabindex=\"-1\">\n",
@@ -769,6 +797,9 @@ fn render_html_measured(
   out.write_string(
     "</article></section>\n<section id=\"module-map\" aria-labelledby=\"map-title\"><div class=\"section-heading\"><h2 id=\"map-title\">Module map</h2><p>Module → function · raw encoded bytes</p></div><article class=\"panel\"><p class=\"panel-note\">Area is raw encoded bytes. Tooltip gzip values are independent function streams, not additive transfer shares. Modules keep their ring colors; outlined cells and text identify functions unreachable in the model.</p><div id=\"treemap\" class=\"chart map\" role=\"img\" aria-label=\"Module and function encodings; areas are raw bytes\"></div></article></section>\n",
   )
+  if data_segments is Some(report) {
+    out.write_string(html_data_segments_panel(report))
+  }
   out.write_string(
     "<section id=\"methodology\" class=\"methods\"><details id=\"method-details\"><summary>Methods, measurement ranges &amp; model limits</summary><h3>Reference model</h3><p>" +
     html_escape(graph_modeling_scope()) +

@@ -68,6 +68,12 @@ const HTML_STYLE : String =
   #|.module-name { margin-top:5px; font-size:11px; color:var(--muted); }
   #|.reachability { display:inline-block; padding:3px 6px; border-radius:5px; background:var(--soft); color:#20545b; font-size:11px; line-height:1.4; }
   #|.reachability.unreachable { background:#fff0dc; color:#854814; }
+  #|.data-segments { margin-top:26px; } .data-segments .section-heading { margin-top:0; }
+  #|.data-summary { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin:16px 0; }
+  #|.data-summary dt { color:var(--muted); font-size:12px; } .data-summary dd { margin:4px 0; font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  #|.data-table { min-width:650px; } .data-entry-details summary { font:12px/1.6 ui-monospace,monospace; overflow-wrap:anywhere; }
+  #|.data-entry-details p { font-size:11px; overflow-wrap:anywhere; margin:5px 0; } #data-more[hidden] { display:none; }
+  #|@media (max-width:600px) { .data-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   #|.methods { margin-top:26px; padding:16px 20px; background:#eeefea; border:1px solid var(--line); border-radius:10px; }
   #|.methods p { font-size:13px; color:var(--muted); overflow-wrap:anywhere; }
   #|.methods h3 { font-size:13px; margin:18px 0 4px; }
@@ -94,6 +100,8 @@ const HTML_STYLE : String =
   #|  .table-scroll { overflow:visible; } table { min-width:0; font-size:10px; }
   #|  th,td { padding:6px 4px; overflow-wrap:anywhere; } thead { display:table-header-group; } tr { break-inside:avoid; }
   #|  .methods,.function-details { break-inside:auto; } .methods { margin-top:14px; padding:12px; }
+  #|  .data-segments { break-before:page; } .data-table { min-width:0; } .data-entry-details summary { font-size:10px; }
+  #|  .data-summary { grid-template-columns:repeat(5,minmax(0,1fr)); } .data-summary dd { font-size:17px; }
   #|  .methods p { font-size:12px; line-height:1.5; } .methods h3 { margin-top:12px; }
   #|  .print-legend { display:grid; grid-template-columns:1fr 1fr; gap:3px 16px; margin:8px 0 0; padding:0; list-style:none; font-size:11px; overflow-wrap:anywhere; }
   #|  footer { padding-top:12px; break-before:avoid; } a { color:inherit; }
@@ -251,7 +259,9 @@ const HTML_SCRIPT : String =
   #|  let printState=null,printStyles=null;
   #|  window.addEventListener('beforeprint',()=>{
   #|    if(!printState){
-  #|      printState=['function-details','method-details'].map(id=>{const el=document.getElementById(id),open=el.open;el.open=true;return [el,open];});
+  #|      const disclosures=['function-details','method-details'].map(id=>document.getElementById(id));
+  #|      if(DATA.dataSegments)disclosures.push(...document.querySelectorAll('#data-segments details'));
+  #|      printState=disclosures.map(el=>{const open=el.open;el.open=true;return [el,open];});
   #|      const ids=['report','composition-panels','sections','functions','modules','treemap'];
   #|      printStyles=ids.map(id=>{const el=document.getElementById(id);return [el,el.style.cssText];});
   #|      // beforeprint can precede the browser's final paper layout. Establish
@@ -269,5 +279,28 @@ const HTML_SCRIPT : String =
   #|    if(printState){printState.forEach(([el,open])=>{el.open=open;});printStyles.forEach(([el,css])=>{el.style.cssText=css;});printState=null;printStyles=null;charts.filter(c=>c.id==='modules').forEach(({chart})=>chart.setOption({series:[{data:pieOption(DATA.pie).series[0].data}]}));}resize();
   #|  });
   #|}
+  #|// Pagination is independent of ECharts and never creates hidden batches.
+  #|function wireDataSegments() {
+  #|  if(!DATA.dataSegments)return;
+  #|  const entries=DATA.dataSegments.entries.slice().sort((a,b)=>b.payload.size-a.payload.size||a.index-b.index);
+  #|  const rows=document.getElementById('data-rows'),more=document.getElementById('data-more'),status=document.getElementById('data-shown');
+  #|  let shown=Math.min(20,entries.length);
+  #|  const update=()=>{status.textContent='Showing '+shown+' of '+entries.length+' entries. Printing includes only the displayed subset.';more.hidden=shown>=entries.length;};
+  #|  const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
+  #|  const range=r=>'['+r.file_offset+', '+(r.file_offset+r.size)+')';
+  #|  function appendDataEntry(e) {
+  #|    const row=node('tr');row.setAttribute('data-segment-index',String(e.index));
+  #|    const index=node('th',String(e.index),'number');index.setAttribute('scope','row');row.appendChild(index);
+  #|    row.appendChild(node('td',e.mode));row.appendChild(node('td',e.memory_index===null?'n/a':String(e.memory_index),'number'));
+  #|    row.appendChild(node('td',NUM(e.payload.size),'number'));row.appendChild(node('td',NUM(e.encoding.size),'number'));
+  #|    const cell=node('td'),details=node('details',undefined,'data-entry-details');details.appendChild(node('summary',range(e.encoding)));
+  #|    details.appendChild(node('p','Payload file range '+range(e.payload)));
+  #|    details.appendChild(node('p',e.offset_expression?'Offset expression file range '+range(e.offset_expression)+'; not_evaluated (includes end).':'Offset expression not_applicable.'));
+  #|    cell.appendChild(details);row.appendChild(cell);rows.appendChild(row);return row;
+  #|  }
+  #|  more.addEventListener('click',()=>{const end=Math.min(shown+20,entries.length);for(;shown<end;shown++)appendDataEntry(entries[shown]);update();});
+  #|  update();
+  #|}
+  #|wireDataSegments();
   #|main();
   #|wireReport();

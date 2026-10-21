@@ -125,3 +125,63 @@ Scope limits: this verifies the Chromium-family A4 settings above. Other browser
 engines, physical printers and OS file associations have not been tested. The
 local record contains source-parent SHA plus dirty-state/source-resource hashes;
 the final push's CI artifact supplies clean exact-commit evidence.
+
+## Opt-in current data entries, 2026-10-21
+
+`--html new-report.html --data-segments` adds the existing current-input ledger;
+`--data-json new-data.json` also enables it and shares one parsed report with the
+HTML. Old `render_html` stays compatible; the new library entry point is
+`render_html_with_data_segments(analysis, file_path, report, echarts?)`. It shares
+the template and compression measurements, without reparsing the data section.
+No data comparison, raw payload, expression evaluation or new chart is added.
+
+The HTML includes a static summary and first20 rows. A native button adds20 at a
+time using textContent; no-JavaScript readers keep the initial rows, and chart
+failure does not prevent pagination. The table scrolls within its panel on narrow
+screens. Printing keeps the displayed subset and its count, opens only those row
+details, then restores their previous states. It does not create the hidden rows.
+
+The existing delivery script now includes one shared45-entry fixture. For a local
+targeted run, after starting `npm run dev`, use:
+
+```sh
+node scripts/test-html-portability.mjs _build/native/release/build/cmd/main/main.exe --browser --data-only
+```
+
+Use the Windows browser override shown above where needed. CI keeps its existing
+full delivery step, including the data fixture, without a second job or new
+browser dependency. The targeted local run generates one report and one actual
+A4 PDF; it does not regenerate the two historical PDF acceptance cases.
+
+Local evidence: `_build/html-delivery-verification/run-d7HW85/`, Microsoft Edge
+156.0.4314.36 on Windows10.0.26300 x64, Playwright1.58.2 and Poppler26.07.0.
+The server was started with `npm run dev`; the live root was opened before a
+fresh offline context loaded the copied HTML via the main-document-only route
+at `http://127.0.0.1:5173/`. No file URL, warmed original context or subresource
+fulfilment was used. Actual requests and the failing offline control probe,
+console errors (none), layout and print events are in evidence.json.
+
+Fixture SHA-256: `ec51e960d520337777d0265895da284b5b0ab99e3c8f4370accd98c60414bc55`.
+The ledger is328 B =129 B payload +195 B entry metadata +4 B section overhead,
+with45 entries. Static20, keyboard-driven40, final45 and hidden-button states,
+no-script initial20, ECharts-failure pagination and390px internal scrolling pass.
+The PDF prints40/45 rows, not all45, with details expanded only during printing.
+`data-entries.pdf` SHA-256:
+`f7985acc0b1b0bcc55a1c1c8cd3657bf72e6f0f063ac4c4facc05c61845f95fb`.
+All10 pages were rendered and automatically checked for text and horizontal
+bounds. New-module pages5–9 and methods continuation10 were visually inspected,
+along with data-desktop.png and data-mobile.png; the ledger, ranges, zero payload
+and limits remain readable. Other pages use the existing automatic checks and
+are not labeled a new manual review. State restored after actual printing:
+40 rows, first detail open, remaining details closed, normal chart widths.
+
+The formal example still analyzes `examples/fib.wasm` with the original
+`0e6f10e56434b67adb162cdb56a46553ef38b8de1abd0d0deb1fe56d7173d10c` hash.
+It was regenerated with `examples/fib.wasm --html <new-staging-path> --data-segments`,
+then explicitly copied after checking every old embedded analysis field equal.
+The new optional data field describes one entry:252 B =240 B payload +8 B
+metadata +4 B overhead. Generation record: `_build/html-data-example-eAD7qG/`;
+formal HTML SHA-256 `9b4208c24d6bfc2397acef6d784896a79968053c05896bac05038501651c091c`.
+No README screenshot or user report.png was replaced. This is Chromium-family
+A4 evidence; other engines and physical printers remain untested. Final clean
+commit evidence comes from the target Linux CI, not this pre-commit Windows run.
