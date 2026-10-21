@@ -1,0 +1,6 @@
+import {
+  "moonbitlang/core/debug",
+  "BigSaltyMan/moonsize/internal/compression/checksum",
+  "BigSaltyMan/moonsize/internal/compression/flate",
+  "BigSaltyMan/moonsize/internal/compression/blit",
+}

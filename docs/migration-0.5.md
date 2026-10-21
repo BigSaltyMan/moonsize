@@ -95,3 +95,12 @@ deduplication, rebuilt savings or gzip gains. Datacount stays separate.
 The performance baseline has not measured 50k functions, peak memory or real
 large projects. Historical browser/PDF evidence is reused with its original
 environment and review scope; other engines and physical printers remain untested.
+
+## 0.5.1 documentation compatibility patch
+
+Public 0.4.0/0.5.0 depend on bikallem/compress@0.3.4, whose old
+moon.mod.json is rejected by the current Mooncakes documentation builder.
+0.5.1 removes that registry chain and ships the pinned synchronous runtime under
+internal/compression, with original/adapted hashes and Apache-2.0 attribution.
+No root library signature or report schema changes; gzip defaults are retained.
+See [toolchain checks and publication status](toolchain-compatibility.md).

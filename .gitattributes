@@ -9,3 +9,6 @@ scripts/test-size-comparison.sh text eol=lf
 # unchanged, including on Windows with core.autocrlf=true.
 assets/echarts.min.js -text
 docs/review-artifacts/** -text
+
+# Vendored runtime hashes describe exact bytes on every checkout platform.
+internal/compression/** -text

@@ -1,7 +1,7 @@
 # moonsize
 
 ```sh
-moon add BigSaltyMan/moonsize@0.5.0
+moon add BigSaltyMan/moonsize@0.5.1
 ```
 
 面向 MoonBit 产物的 WebAssembly 体积分析器。读取 `.wasm` 文件，测量每个段，把 code 段归因到具体函数，并根据引用图提供需要进一步调查的优化候选，不预测删除源码后的精确减量。
@@ -10,11 +10,13 @@ moon add BigSaltyMan/moonsize@0.5.0
 
 英文版见 [README.md](README.md)。
 
-当前源码准备 **0.5.0**，新增数据段明细、内容组比较和 HTML 当前输入明细，并将报告写入改为独占创建；行为与 API 变化见[0.5 迁移说明](docs/migration-0.5.md)。[0.4 迁移说明](docs/migration-0.4.md)保留历史身份。moon add 添加的是库依赖，不会安装独立 CLI；CLI 请克隆源码后按下方命令构建。
+当前源码准备 **0.5.1**，新增数据段明细、内容组比较和 HTML 当前输入明细，并将报告写入改为独占创建；行为与 API 变化见[0.5 迁移说明](docs/migration-0.5.md)。[0.4 迁移说明](docs/migration-0.4.md)保留历史身份。moon add 添加的是库依赖，不会安装独立 CLI；CLI 请克隆源码后按下方命令构建。
 
-0.5.0 的实际注册表发布、精确版本消费及目标 CI 状态统一记录在[0.5.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)，各步骤完成后分别记录；本文不是发布成功凭据。已发布的 0.4.0 包仍保留旧的 HTML/调用图写入行为。
+0.5.1 的实际注册表发布、精确版本消费、在线文档及目标 CI 状态统一记录在[0.5.1 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.1)，各步骤完成后分别记录；本文不是发布成功凭据。已发布的 0.4.0 包仍保留旧的 HTML/调用图写入行为。
 
 [公开复审证据](https://github.com/BigSaltyMan/moonsize/blob/main/docs/review-evidence.md)提供指标边界、真实源码重建、路径、预算与两份 PDF；[0.4.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)记录对应源码 SHA、目标 Linux CI、实际包摘要和独立消费验证。历史开发日志中的数量保持当时快照。
+
+0.5.1 修补 0.4.0/0.5.0 在线文档构建被旧 JSON 清单依赖阻断的问题。包内保留原同步 gzip 实现及默认参数，[来源、散列和 Apache-2.0 许可](internal/compression/README.md)随包提供；不再安装旧压缩依赖链。验证范围见[工具链兼容说明](docs/toolchain-compatibility.md)。
 
 ## 构建
 

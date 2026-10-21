@@ -10,4 +10,4 @@ moonsize 帮助 MoonBit 开发者定位 Wasm 体积来源、解释当前模型�
 
 交付包含公开库、原生 CLI、可复现源码案例和锁定工具链 CI；此前 0.4.0 的 336 项 native 测试、730 个 CLI 场景是历史快照，本轮数量以目标提交 CI 及发布记录为准，保留四个源码演示与预算检查。HTML 在记录的 Chromium 环境中完成复制件 HTTP 主文档映射的全新断网上下文验收，外部请求为零；两份历史 A4 PDF 共九页已经逐页检查。数据段新增 PDF 共十页，第 5–10 页有定向人工检查，其余沿用自动检查；本轮只复用证据，不重新宣称验收。50k 函数、峰值内存和真实大型项目未测量。file:// 双击、非 Chromium 浏览器和实体打印机尚未验证。
 
-[复审回复](october-review-response.md)逐项回应指标承诺；[公开证据索引](review-evidence.md)提供定义、源码、命令、哈希、测量快照与真实 PDF；[0.5 迁移说明](migration-0.5.md)列明与公开 0.4.0 的行为及接口差异，旧版迁移记录保留。报名初审通过不等于最终验收通过。模型参考 Twiggy（MIT/Apache-2.0），不是源码移植；gzip 依赖 bikallem/compress，图表使用固定 ECharts 5.6.0，来源与第三方许可见 [assets](../assets/README.md)。不承诺仅凭二进制精确预测源码删除或实际网络收益，也不承诺复审结果。
+[复审回复](october-review-response.md)逐项回应指标承诺；[公开证据索引](review-evidence.md)提供定义、源码、命令、哈希、测量快照与真实 PDF；[0.5 迁移说明](migration-0.5.md)列明与公开 0.4.0 的行为及接口差异，旧版迁移记录保留。报名初审通过不等于最终验收通过。模型参考 Twiggy（MIT/Apache-2.0），不是源码移植；gzip 保留 bikallem/compress 固定版本的同步实现，随包提供来源与许可，图表使用固定 ECharts 5.6.0，来源与第三方许可见 [assets](../assets/README.md)。不承诺仅凭二进制精确预测源码删除或实际网络收益，也不承诺复审结果。

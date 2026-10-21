@@ -1,5 +1,5 @@
 import {
-  "bikallem/compress/gzip",
+  "BigSaltyMan/moonsize/internal/compression/gzip",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/crypto",
   "moonbitlang/core/json",

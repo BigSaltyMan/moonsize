@@ -1,0 +1,253 @@
+{
+  "modifications": [
+    "package import paths",
+    "native C symbol namespace",
+    "equivalent deprecated Default/StringBuilder/BytesView and functional-loop syntax migrations",
+    "Debug derives with explicit Show error rendering",
+    "moon fmt formatting; compression algorithm/defaults unchanged"
+  ],
+  "archives": {
+    "bikallem/compress@0.3.4": "5ff3d353ec33356c22f889c737105c9f4a654067d49bdd52d1866768712bce00",
+    "bikallem/blit@0.2.2": "0d00cfab8650733b911e69dd5f4ec8e6e6f297470ae9a3ff2903653989b7eeb3"
+  },
+  "files": [
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/adler32.mbt",
+      "path": "internal/compression/checksum/adler32.mbt",
+      "original_sha256": "bd65321f257c319dac1247c6199e4ec15a3856ee633b9408a9372fb6a9e275c1",
+      "vendored_sha256": "290817980e6ea58d4cbcb7324ec3a6758b10bcdb26f25f031c4d35a51e08b1cd"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/adler32_dispatch.mbt",
+      "path": "internal/compression/checksum/adler32_dispatch.mbt",
+      "original_sha256": "93063efa982b461830a983300d7c67936e8f513e488ea368a6b4c2dd9627f396",
+      "vendored_sha256": "93063efa982b461830a983300d7c67936e8f513e488ea368a6b4c2dd9627f396"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/checksum_hw.c",
+      "path": "internal/compression/checksum/checksum_hw.c",
+      "original_sha256": "19ddece4483177dd9c85faf47825d454bbea27f3f0d67b9053b938ba456b1654",
+      "vendored_sha256": "26f455ef2a03135793a9f7d333e8619e7314f807e9083c89e4d4ca24d2ae23a7"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/checksum_hw.mbt",
+      "path": "internal/compression/checksum/checksum_hw.mbt",
+      "original_sha256": "6af34d2e56cbfa59202a81e9e561e6afdc2680d5b47115d0f6abcf2414d620fc",
+      "vendored_sha256": "268be92ddd240cb4f7edd823671ced34d473a518c63350277d9cf99fd23d2f10"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/crc32.mbt",
+      "path": "internal/compression/checksum/crc32.mbt",
+      "original_sha256": "443d771c7f8c5fb67290b877aab5f306cf2b2377bd69b5102da7a10eaff4f1be",
+      "vendored_sha256": "5377ca14cd53620a6db31724233ee1eef2bc532f75f0631d9132207bd63ed635"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/crc32_dispatch.mbt",
+      "path": "internal/compression/checksum/crc32_dispatch.mbt",
+      "original_sha256": "971a8d3236669f4d5cea3d3c42101942bbb4d3ceaacc1768d3e73c493fa65002",
+      "vendored_sha256": "971a8d3236669f4d5cea3d3c42101942bbb4d3ceaacc1768d3e73c493fa65002"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/hasher.mbt",
+      "path": "internal/compression/checksum/hasher.mbt",
+      "original_sha256": "6b7089b85d7b2c657bac78be7e7f51d51422d602412679faac4768fcb17874e0",
+      "vendored_sha256": "8d8c253a0f89ac21a0d833a04a6006b22c269ee774fbdf490e6bb1371be57829"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/moon.pkg",
+      "path": "internal/compression/checksum/moon.pkg",
+      "original_sha256": "2e2cf2bf5e2806cdb1b1c44687d7b4367662c52d9cba95dcdfa3fb847b82a733",
+      "vendored_sha256": "2e2cf2bf5e2806cdb1b1c44687d7b4367662c52d9cba95dcdfa3fb847b82a733"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/xxh32.mbt",
+      "path": "internal/compression/checksum/xxh32.mbt",
+      "original_sha256": "01f8267c2ba87ff4d146cf1e910a66579100d8a4e9601bb5e33efaaeae27f774",
+      "vendored_sha256": "223ea8aa7f3ad20b0ad346dfd095398c88cd2f8c4478fb4b845ed7cfb7cf59a0"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "checksum/xxh64.mbt",
+      "path": "internal/compression/checksum/xxh64.mbt",
+      "original_sha256": "f0ccf7019ecab34966461439159494f06537eb653ba640dd4640cc93858d0a51",
+      "vendored_sha256": "f0ccf7019ecab34966461439159494f06537eb653ba640dd4640cc93858d0a51"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/bit_writer.mbt",
+      "path": "internal/compression/flate/bit_writer.mbt",
+      "original_sha256": "810ad107e00d979d06e6345ca58385343c1c4f6ebef681b7bfc18cc659f3d3df",
+      "vendored_sha256": "32c2e3e0401b24f48eec2fa465276298cbfaa09a20f7fefc969c7a53dfdc7210"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/bitbuf.mbt",
+      "path": "internal/compression/flate/bitbuf.mbt",
+      "original_sha256": "2bdd30f68f4c921a121b6865e28d73f88be7a1fb5a60f7d1bb0967fcb583483c",
+      "vendored_sha256": "b1282aca0a7a6f93eaed2b8e106062d4c7b3f9bfec11106f5b5cd551afad1cfd"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/convenience.mbt",
+      "path": "internal/compression/flate/convenience.mbt",
+      "original_sha256": "b90d7f27dff3cbcda2c395d9b2bf30b81e6432575cc44b03305eaa1f6c4b5b8c",
+      "vendored_sha256": "01a4454e07b8d9894b77677f5ca005755e4bc8e9de489811ab3c8710e154bd15"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/deflater.mbt",
+      "path": "internal/compression/flate/deflater.mbt",
+      "original_sha256": "7df6ffdd6c6e9f17adcc606b2845e83e320c0cefa8ea7f8b731da4410e5f53c5",
+      "vendored_sha256": "7df6ffdd6c6e9f17adcc606b2845e83e320c0cefa8ea7f8b731da4410e5f53c5"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/dict_decoder.mbt",
+      "path": "internal/compression/flate/dict_decoder.mbt",
+      "original_sha256": "fbfbe2ae81c4a5e61212903d532a574ba883f12530b56afdaa6c94c7ec94ddca",
+      "vendored_sha256": "c7a68c2af1919ddd4f8aca12e3b81ae3863b1b57ee775c9ac08e37cb59ac7b38"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/encode_tables.mbt",
+      "path": "internal/compression/flate/encode_tables.mbt",
+      "original_sha256": "6a1c687306dca39994882a5d45618267a1f55df7c41461bd9eccaeec3230c4ad",
+      "vendored_sha256": "6a1c687306dca39994882a5d45618267a1f55df7c41461bd9eccaeec3230c4ad"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/fixed_huffman.mbt",
+      "path": "internal/compression/flate/fixed_huffman.mbt",
+      "original_sha256": "acb03bbe4526f9c600fa3703fe3080c185c2198a4f2b3e344e332677bf425d4b",
+      "vendored_sha256": "acb03bbe4526f9c600fa3703fe3080c185c2198a4f2b3e344e332677bf425d4b"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/huffman.mbt",
+      "path": "internal/compression/flate/huffman.mbt",
+      "original_sha256": "97d09900656b4f7bc11e4ba021f5ea1b2f14db8518ae89e1040b6f359f5d930f",
+      "vendored_sha256": "48cb9e6cc8989b1851c595dc3481a5e152d23445c2cc626bdafe3b8bc72cf70d"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/huffman_encoder.mbt",
+      "path": "internal/compression/flate/huffman_encoder.mbt",
+      "original_sha256": "7db72ba9f6c9fd9764692fe2fa8924236faf1e6e8e77a6c5ed267cbb0e3c0ce7",
+      "vendored_sha256": "be2de18a2d38494919098439735744369ad4e2b1f588f5e1550f4960ed5e1192"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/inflater.mbt",
+      "path": "internal/compression/flate/inflater.mbt",
+      "original_sha256": "626f85c14163527035e9e8487e4f134b3090d1171e836bf99ad0b9a5727dbe60",
+      "vendored_sha256": "626f85c14163527035e9e8487e4f134b3090d1171e836bf99ad0b9a5727dbe60"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/moon.pkg",
+      "path": "internal/compression/flate/moon.pkg",
+      "original_sha256": "7cdf451d31982772e79cae36de82dcc64f267002d7087b58a9772a9c2ff7b3f2",
+      "vendored_sha256": "138f1359efa7b12f4e299ba9a7570c2ffe03371781fbf220306a9f60a8e3ce4c"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "flate/types.mbt",
+      "path": "internal/compression/flate/types.mbt",
+      "original_sha256": "03eedb787dee554bf5fb82b2c5fc377fe9d0fcf6ec7dfed6bae7799272c00d73",
+      "vendored_sha256": "20fc01b592e6ca52866919a92e216147ed7cd0394bae636efb541011d7155175"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "gzip/compress.mbt",
+      "path": "internal/compression/gzip/compress.mbt",
+      "original_sha256": "c8a4b5d272e46c9139cf14801bdb7195ce27a040d6e62252c88007ed009e0ebf",
+      "vendored_sha256": "a5a3d70ada65c544d3d68d9a69227e5ec0b674ff30f3d2279827dc23bf0f3365"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "gzip/decompress.mbt",
+      "path": "internal/compression/gzip/decompress.mbt",
+      "original_sha256": "c4e2af0b8b069712cd5437ed62633639b9087e6adcf2aa955228a8564b0f4174",
+      "vendored_sha256": "6acf76391617f7b891dbee45ad29bb91ffb7d0374632c28eaf19b6b9074dbbe4"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "gzip/deflater.mbt",
+      "path": "internal/compression/gzip/deflater.mbt",
+      "original_sha256": "9b3109137abe68691d2196d171e1e2e7e2dbac298f76f569321e449781c2ef31",
+      "vendored_sha256": "4b25dd0e08f142b76f113bf93f6f296fd8ca4ee50e76799af50d0660d18936fc"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "gzip/inflater.mbt",
+      "path": "internal/compression/gzip/inflater.mbt",
+      "original_sha256": "fac68ecf0931527b3a9ff26c18c60c9cae3e50e97f2bc7435813c293f9f5c8a8",
+      "vendored_sha256": "f9113a67b4c09a0882cd5ae03d648f3d21ee094d5c7b684037c3bba04ec03701"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "gzip/moon.pkg",
+      "path": "internal/compression/gzip/moon.pkg",
+      "original_sha256": "95168697eff5bfb7a55e9b4fc7d8579fd353328f650a91a69ab366345b2bb522",
+      "vendored_sha256": "640b2fb0550b3c5cedad0be4b721099e7693bb7761f14e74727d844ec860a37d"
+    },
+    {
+      "upstream": "bikallem/compress@0.3.4",
+      "source": "gzip/types.mbt",
+      "path": "internal/compression/gzip/types.mbt",
+      "original_sha256": "f8d5b7d262328f0aac7898a1639acadf2db7bef76d2bc5598f197ef4fba89910",
+      "vendored_sha256": "01afbdbf4627c1e19d77e7f52bbe648b59a8cacb2580ef155afcd3980d6e4f4c"
+    },
+    {
+      "upstream": "bikallem/blit@0.2.2",
+      "source": "src/blit.mbt",
+      "path": "internal/compression/blit/blit.mbt",
+      "original_sha256": "bbea978228e173fef1f4b261b1e4969638161f778122242684223046129f5072",
+      "vendored_sha256": "bbea978228e173fef1f4b261b1e4969638161f778122242684223046129f5072"
+    },
+    {
+      "upstream": "bikallem/blit@0.2.2",
+      "source": "src/blit_native.mbt",
+      "path": "internal/compression/blit/blit_native.mbt",
+      "original_sha256": "99e86e17fdd40a2a20719f5bbad69969e4ac294c3476bf805a4187b0e8a373b9",
+      "vendored_sha256": "95ef522c25eb03fb59aaa64dd8d933387cb858ab5e027973e0d515b86202829e"
+    },
+    {
+      "upstream": "bikallem/blit@0.2.2",
+      "source": "src/blit_non_native.mbt",
+      "path": "internal/compression/blit/blit_non_native.mbt",
+      "original_sha256": "d72010a0945fbdee0bc9a790be39f42d0f6047dc48a71c0b57020fdd3c485f48",
+      "vendored_sha256": "d72010a0945fbdee0bc9a790be39f42d0f6047dc48a71c0b57020fdd3c485f48"
+    },
+    {
+      "upstream": "bikallem/blit@0.2.2",
+      "source": "src/blit_stub.c",
+      "path": "internal/compression/blit/blit_stub.c",
+      "original_sha256": "aee4d7b27c121525ea0603b744238486bf2989623c7156aadbb76009914b99b9",
+      "vendored_sha256": "689feea2743899d65a8e492a740a4317317fb725473ea593c5ee9e04070863e2"
+    },
+    {
+      "upstream": "bikallem/blit@0.2.2",
+      "source": "src/buffer.mbt",
+      "path": "internal/compression/blit/buffer.mbt",
+      "original_sha256": "2892ad04e4343c8130a90e5d69e3cb274e79d2052587d1aeecc7cbd0556eedbf",
+      "vendored_sha256": "acfe73b92551a5deb1a98ca68fd3a9447aba4d2fc6c1f2006a9354952574a07f"
+    },
+    {
+      "upstream": "bikallem/blit@0.2.2",
+      "source": "src/moon.pkg",
+      "path": "internal/compression/blit/moon.pkg",
+      "original_sha256": "277530b6425fe04b4b8946dd634ef8c07a41359d9c72dbeac781a04233716a6d",
+      "vendored_sha256": "277530b6425fe04b4b8946dd634ef8c07a41359d9c72dbeac781a04233716a6d"
+    }
+  ]
+}

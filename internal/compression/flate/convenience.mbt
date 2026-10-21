@@ -1,0 +1,62 @@
+///|
+/// Decompress DEFLATE-encoded data (RFC 1951).
+pub fn decompress(data : Bytes) -> Bytes raise CompressError {
+  let d = Inflater::new()
+  d.src(data[:])
+  let capacity = (data.length() * 2).max(32768)
+  d.enable_direct_output(capacity)
+  for state = d.decode() {
+    match state {
+      Await => raise CompressError::UnexpectedEOF
+      Data(_) => continue d.decode()
+      End => break d.take_output().data()
+      Error(e) => raise e
+    }
+  }
+}
+
+///|
+/// Decompress DEFLATE-encoded data with a preset dictionary.
+pub fn decompress_with_dict(
+  data : Bytes,
+  dict : Bytes,
+) -> Bytes raise CompressError {
+  let d = Inflater::new(dict~)
+  d.src(data[:])
+  let capacity = (data.length() * 2).max(32768)
+  d.enable_direct_output(capacity)
+  for state = d.decode() {
+    match state {
+      Await => raise CompressError::UnexpectedEOF
+      Data(_) => continue d.decode()
+      End => break d.take_output().data()
+      Error(e) => raise e
+    }
+  }
+}
+
+///|
+/// Compress data using DEFLATE (RFC 1951).
+pub fn compress(
+  data : Bytes,
+  level? : CompressionLevel = DefaultCompression,
+) -> Bytes raise CompressError {
+  let e = Deflater::new(level~)
+  let buf = @blit.Buffer::new()
+  drain(e, buf, Some(data[:]))
+  drain(e, buf, None)
+  buf.to_bytes()
+}
+
+///|
+fn drain(
+  e : Deflater,
+  buf : @blit.Buffer,
+  input : BytesView?,
+) -> Unit raise CompressError {
+  match e.encode(input) {
+    Ok | End => ()
+    Data(chunk) => buf.write_bytesview(chunk)
+    Error(e) => raise e
+  }
+}

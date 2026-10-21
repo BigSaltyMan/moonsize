@@ -26,6 +26,8 @@ jobs:
         run: moon fmt --check
       - name: Embedded chart resource matches pinned vendored source
         run: node scripts/embed-echarts.mjs --check
+      - name: Vendored compression integrity
+        run: node scripts/check-vendored-compression.mjs
       # Warnings are errors here, because the library is meant to build clean on
       # a toolchain that keeps finding new things to warn about.
       - name: Check
@@ -192,3 +194,23 @@ jobs:
             exit 1
           fi
           grep -Fq "over the budget" gate.log
+
+  current-toolchain-docs:
+    name: Current toolchain and documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-moonbit
+        with:
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Record current toolchain
+        run: moon version --all
+      - name: Check without legacy registry dependencies
+        run: moon check --target native
+      - name: Compression regression on current toolchain
+        run: moon test --target native compress_wbtest.mbt
+      - name: Generate public documentation
+        run: moon doc

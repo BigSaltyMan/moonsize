@@ -1,7 +1,7 @@
 # moonsize
 
 ```sh
-moon add BigSaltyMan/moonsize@0.5.0
+moon add BigSaltyMan/moonsize@0.5.1
 ```
 
 A size analyzer for WebAssembly, built for MoonBit's output. It reads a `.wasm`
@@ -30,11 +30,16 @@ links measured rebuild cases, real PDFs and explicit model boundaries. The
 records the exact source SHA, target Linux CI, registry checksum and clean consumer
 verification; historic devlog counts are snapshots.
 
-The source here prepares **0.5.0**. Publication, exact-version consumption and
+The source here prepares **0.5.1**. Publication, exact-version consumption and
 the target CI result are recorded separately in the
-[0.5.0 release record](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.0)
+[0.5.1 release record](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.1)
 when completed; this document is not a publication receipt. The published 0.4.0
 HTML/graph writer retains its old behavior.
+
+Patch 0.5.1 removes the obsolete JSON-manifest dependency chain that blocked
+Mooncakes documentation for 0.4.0/0.5.0. It ships the pinned synchronous gzip
+implementation with [source hashes and Apache-2.0 attribution](internal/compression/README.md),
+keeping its algorithm and defaults. See [toolchain compatibility](docs/toolchain-compatibility.md).
 
 ## Building
 
