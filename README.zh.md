@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
@@ -148,6 +149,21 @@ _build/native/release/build/cmd/main/main.exe _build/budget-demo/after.wasm \
 CI 保留既有回归，新增预算回归和源码/回退演示，保存 JSON/Markdown，并对本次
 新构建示例应用[文件、gzip、code 配置](examples/ci-budget.json)，将实际生成的
 Markdown 加入 CI step summary。
+
+## 查询函数反向引用
+
+这是公开 0.5.1 之后的源码增量，请重新构建 native CLI；本次不发布 Mooncakes。
+
+```sh
+moonsize app.wasm --callers 42 --top 20
+moonsize app.wasm --callers 42 --callers-json new-callers.json
+```
+
+`--why-index` 查根到目标的一条模型路径；`--callers` 列出全部已记录一跳
+函数体来源，不过滤不可达引用者。保留每个位置，区分直接调用、取引用和间接候选；
+Top 只限制文本中的引用者组数，计数和 JSON 完整。仅可搭配 Top、JSON、strict。
+空结果不证明可删除，strict 缺口先于文件检查返回3；JSON 沿用独占保护。
+[详细说明、实测位置及 API](docs/function-callers.md)。
 
 ## 查询函数引入路径
 

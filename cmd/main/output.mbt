@@ -33,6 +33,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
       options.call_graph,
       options.experiment,
       options.why_json,
+      options.callers_json,
       options.budget_json,
       options.budget_md,
       options.data_json,

@@ -107,6 +107,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
        moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
 Report the section table of a WebAssembly binary, rank its heaviest
@@ -138,6 +139,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --callers <n>        list recorded one-hop incoming instruction sources
+  --callers-json <path> write full callers JSON to a new .json file; requires --callers
   --why-index <n>      explain a shortest model reference path to function n
   --why-root <n>       search from one actual model root (requires --why-index)
   --why-json <path>    write path JSON; refuses existing paths
@@ -238,6 +241,24 @@ _build/native/release/build/cmd/main/main.exe _build/budget-demo/after.wasm \
 CI runs the budget regression and source/rollback demo, saves JSON/Markdown, and
 applies [file/gzip/code budgets](examples/ci-budget.json) to the freshly built
 example. Its generated Markdown is also appended to the CI step summary.
+
+## Incoming function references
+
+This is a source-checkout addition after public 0.5.1; rebuild the native CLI.
+No new Mooncakes version is published by this change.
+
+```sh
+moonsize app.wasm --callers 42 --top 20
+moonsize app.wasm --callers 42 --callers-json new-callers.json
+```
+
+`--why-index` finds one root-to-target model path; `--callers` lists all
+recorded one-hop body sources, including unreachable callers. Distinct positions
+are retained; direct calls, references taken and indirect candidates are labeled
+separately. Top limits text caller groups; JSON and counts remain complete.
+Only Top, callers JSON and strict may accompany this independent query. Empty
+results do not prove removability. Strict gaps return 3 before output checks;
+JSON uses exclusive creation. See [actual sample, API and scope](docs/function-callers.md).
 
 ## Explaining a function's reference path
 

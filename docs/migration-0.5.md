@@ -104,3 +104,18 @@ moon.mod.json is rejected by the current Mooncakes documentation builder.
 internal/compression, with original/adapted hashes and Apache-2.0 attribution.
 No root library signature or report schema changes; gzip defaults are retained.
 See [toolchain checks and publication status](toolchain-compatibility.md).
+
+## Source addition after public 0.5.1: incoming references
+
+This unreleased source increment keeps the module version unchanged. New public
+entry points are function_callers(Bytes, Int), render_function_callers(report, top),
+render_function_callers_json(report) and describe_function_callers_error(error).
+New types: FunctionCallersReport, FunctionCallerGroup, FunctionCallersError
+(CallersInputError / InvalidCallersTarget / InvalidCallersEvidence). Nodes and
+sources reuse FunctionPathNode and FunctionPathStep. Options adds callers_index
+and callers_json (both None by default); manual record constructors must include
+them. Existing path APIs, graph algorithms and report formats are unchanged.
+The new independent JSON format is moonsize-function-callers/schema_version 1.
+See [the callers contract](function-callers.md) for complete counts, model scope,
+mode constraints, strict behavior and the actual sample. No Mooncakes publication
+is claimed by this source commit.

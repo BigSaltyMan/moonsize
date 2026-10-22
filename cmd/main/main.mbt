@@ -272,6 +272,10 @@ fn main {
     }
   }
   let budget = read_budget(options)
+  if options.callers_index is Some(target) {
+    run_function_callers(options, target)
+    return
+  }
   if options.why_index is Some(target) {
     run_function_path(options, target)
     return

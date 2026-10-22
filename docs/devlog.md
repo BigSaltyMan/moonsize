@@ -361,3 +361,13 @@ cmd/main/output.mbt集中预检与写入，全部目标在第一次写入前一�
 0.4.0 与 0.5.0 在线 Build log 均在 bikallem/compress@0.3.4 的 moon.mod.json 处失败；此前锁定 0.10.13 的 CI 与消费检查不覆盖注册表当前文档构建。修补版 0.5.1 去除旧压缩/字节操作/async 依赖链，将固定版本同步 gzip、flate、checksum、blit 的 34 个运行时文件随包携带，记录原始与适配后散列及 Apache-2.0 许可。仅调整包路径、C 符号命名和等价弃用语法，不替换算法或默认参数。
 
 在隔离官方当前工具链 moon 0.1.20261020 / moonc 0.10.16+b1a0e846e 中检查和文档生成通过，仍有非阻断的隐式 trait 方法弃用警告；不为消除警告扩大接口改动。现有工具链 deny-warn 和 18 项压缩测试通过。CI 保留既有回归，增加当前工具链检查、定向压缩测试与 moon doc，另校验 vendored 文件完整性。实际目标 CI、压缩字节对照、公开消费及 Mooncakes 文档状态按完成情况写入 v0.5.1 Release，不以发布上传成功替代文档验收。
+
+## 28. 函数反向引用查询（2026-10-22）
+
+基线2b0db5a，版本仍0.5.1。本次新增 function_callers，复用 parse_module、path_inventory 和 build(data)，按 graph.edges 收集所有命中来源，不经过 analyze、不计算 retained/BFS、不按根可达性过滤。复用 FunctionPathNode/Step，实际解码命中指令并按偏移缓存；固定引用者/位置/kind 顺序，去重相同来源，保留多位置及模块级诊断。旧路径文件和图算法未改。
+
+新增独立文本与 moonsize-function-callers/schema_version1 JSON、Options 两个默认 None 字段。Top 只限制文本组数，JSON与完整计数不截断。CLI 独立分支及英文帮助；strict 在输出预检前拒绝，JSON 继承统一独占创建。新增参数和模式依赖在参数阶段拒绝。
+
+本地只运行 function_callers_test.mbt 的3项组合测试与4个新功能 CLI 场景，均通过；未运行任何旧测试、旧脚本、HTML/PDF、压缩、数据段、预算或源码演示验收。一次必要 release 构建与类型/格式/接口检查属于编译验证。一个136字节混合模块仅V8独立验证一次：导入目标0有3个引用者、7处来源，Top1保留该组4个位置，JSON完整；call_ref84保留为模块级缺口且不猜目标。strict3不创建报告，已有JSON1且字节不变，证据_build/function-callers-verification/run-xgOrRB。
+
+CI仅在既有native构建后追加同一个四场景脚本，完整旧回归继续由既有CI自动执行；成功后只核对目标SHA最终状态。没有新增版本、Mooncakes发布、HTML或递归功能，图片、AGENTS、规划和构建产物继续排除。

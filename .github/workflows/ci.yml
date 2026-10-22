@@ -37,6 +37,8 @@ jobs:
         run: moon test
       - name: Build native CLI
         run: moon build --target native --release
+      - name: Function-callers CLI regressions
+        run: node scripts/test-function-callers.mjs _build/native/release/build/cmd/main/main.exe
       - name: Data-segment encoding CLI regressions
         run: node scripts/test-data-segments.mjs _build/native/release/build/cmd/main/main.exe
       - name: Small large-module benchmark smoke (no timing gate)
