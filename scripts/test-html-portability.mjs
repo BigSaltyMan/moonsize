@@ -154,6 +154,9 @@ if (process.argv.includes('--browser')) {
         await page.locator('.data-entry-details > summary').first().focus();await page.keyboard.press('Enter');
         assert.equal(await page.locator('.data-entry-details').first().evaluate(el=>el.open),true);
         await page.setViewportSize({width:390,height:900});
+        // Viewport acknowledgement can precede the chart resize event. Match
+        // the existing desktop synchronization before checking real overflow.
+        await page.waitForFunction(()=>['sections','functions','modules','treemap'].every(id=>{const e=document.getElementById(id);return echarts.getInstanceByDom(e).getWidth()===e.clientWidth;}));
         assert((await page.evaluate(()=>document.documentElement.scrollWidth))<=390);
         const scroll=await page.locator('#data-segments .table-scroll').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));
         assert(scroll.scroll>scroll.client,'Narrow table must scroll internally');
