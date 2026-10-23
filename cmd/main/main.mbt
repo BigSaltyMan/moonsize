@@ -271,6 +271,10 @@ fn main {
       return
     }
   }
+  if options.duplicates {
+    run_duplicate_functions(options)
+    return
+  }
   if options.entrypoints {
     run_entrypoints(options)
     return

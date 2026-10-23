@@ -107,6 +107,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --duplicates [--top <n>] [--duplicates-json <new.json>]
        moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
        moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
        moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
@@ -141,6 +142,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --duplicates        group exact local body bytes, excluding length prefixes
+  --duplicates-json <path> write complete groups to a new .json file
   --entrypoints       show model-reachable, exclusive and shared function bytes
   --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
@@ -265,6 +268,26 @@ separately. Top limits text caller groups; JSON and counts remain complete.
 Only Top, callers JSON and strict may accompany this independent query. Empty
 results do not prove removability. Strict gaps return 3 before output checks;
 JSON uses exclusive creation. See [actual sample, API and scope](docs/function-callers.md).
+
+## Identical function bodies
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --duplicates --top 20
+moonsize app.wasm --duplicates-json new-duplicates.json
+```
+
+Only exact local body bytes (locals declarations plus instructions) determine
+membership. Length prefixes, names and declared type indices do not. SHA-256 and
+length select candidates; every match is confirmed against the actual bytes.
+The actual fixture groups functions #8/#9 despite different type indices and
+1/2-byte prefixes, retaining their measured 5/6-byte encodings separately.
+No names are required. Top limits text groups only; JSON keeps all members and
+refuses existing targets. This independent mode rejects strict and other modes.
+Identical bytes do not establish semantic equivalence, safe merging or savings;
+absence of identical bodies does not establish absence of semantic duplication.
+See [the byte ledger, actual sample and API](docs/duplicate-functions.md).
 
 ## Exported entrypoint dependencies
 

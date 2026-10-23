@@ -485,6 +485,9 @@ pub fn usage() -> String {
   "  --experiment <path>  write measured before/after results; requires --baseline\n" +
   "                       refuses to overwrite an existing path\n" +
   "  --experiment-context <path>  attach declared build settings and validation\n" +
+  "  --duplicates        group byte-identical local bodies (locals + instructions)\n" +
+  "  --duplicates-json <path> write complete groups to a new .json file\n" +
+  "                       only --top and --duplicates-json allowed; no savings estimate\n" +
   "  --entrypoints       analyze function-export reachable, exclusive and shared bytes\n" +
   "  --entrypoints-json <path> write complete entrypoint JSON to a new .json file\n" +
   "                       only --top, --entrypoints-json and --strict allowed\n" +

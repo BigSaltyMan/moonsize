@@ -42,6 +42,9 @@ pub struct Options {
   /// Independent function-export reachability and shared-byte analysis.
   entrypoints : Bool
   entrypoints_json : String?
+  /// Independent exact local function-body byte comparison.
+  duplicates : Bool
+  duplicates_json : String?
   /// Validated multi-metric budgets, with optional evidence outputs.
   budget : String?
   budget_json : String?
@@ -88,6 +91,8 @@ pub fn Options::default(path : String) -> Options {
     generics_json: None,
     entrypoints: false,
     entrypoints_json: None,
+    duplicates: false,
+    duplicates_json: None,
     budget: None,
     budget_json: None,
     budget_md: None,
@@ -306,6 +311,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut generics_json : String? = None
   let mut entrypoints = false
   let mut entrypoints_json : String? = None
+  let mut duplicates = false
+  let mut duplicates_json : String? = None
   let mut budget : String? = None
   let mut budget_json : String? = None
   let mut budget_md : String? = None
@@ -348,6 +355,20 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       } else {
         budget_md = Some(args[i + 1])
       }
+      i += 2
+    } else if arg == "--duplicates" {
+      duplicates = true
+      i += 1
+    } else if arg == "--duplicates-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --duplicates-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      duplicates = true
+      duplicates_json = Some(args[i + 1])
       i += 2
     } else if arg == "--entrypoints" {
       entrypoints = true
@@ -510,6 +531,39 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if duplicates {
+    if retained ||
+      dead_code ||
+      compress ||
+      strict ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      html is Some(_) ||
+      call_graph is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) {
+      return Err(
+        "moonsize: --duplicates is an independent mode; only --top and --duplicates-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if duplicates_json is Some(target) && !target.has_suffix(".json") {
+      return Err("moonsize: --duplicates-json wants a .json path\n\n" + usage())
+    }
   }
   if entrypoints {
     if retained ||
@@ -777,6 +831,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     generics_json,
     entrypoints,
     entrypoints_json,
+    duplicates,
+    duplicates_json,
     budget,
     budget_json,
     budget_md,

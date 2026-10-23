@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --duplicates [--top <n>] [--duplicates-json <new.json>]
 moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
 moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
 moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
@@ -166,6 +167,22 @@ moonsize app.wasm --callers 42 --callers-json new-callers.json
 Top 只限制文本中的引用者组数，计数和 JSON 完整。仅可搭配 Top、JSON、strict。
 空结果不证明可删除，strict 缺口先于文件检查返回3；JSON 沿用独占保护。
 [详细说明、实测位置及 API](docs/function-callers.md)。
+
+## 重复函数体字节检测
+
+这是公开0.5.1之后的源码增量，需从当前源码构建native CLI：
+
+```sh
+moonsize app.wasm --duplicates --top 20
+moonsize app.wasm --duplicates-json new-duplicates.json
+```
+
+只按本地函数body的原始字节（locals声明及指令）归组，长度前缀、名称及声明的
+类型索引不参与比较。先按SHA-256和长度分桶，再逐字节核对；无name段也可使用。
+实测#8/#9的body相同，类型索引及前缀宽度不同，仍保留各自5/6字节的完整编码。
+Top只限制文本组数，JSON完整且沿用独占创建；独立模式不接受strict或其他模式。
+字节相同不证明语义等价或可安全合并，没有字节重复也不证明没有语义重复；不估算
+删除、重编译或gzip收益。[实际样本、账本及API](docs/duplicate-functions.md)。
 
 ## 导出入口依赖体积
 

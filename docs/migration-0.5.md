@@ -148,3 +148,18 @@ moonsize-entrypoints/schema_version 1; references to groups/functions use full
 function indices. Strict refusals precede output checks; files use the existing
 exclusive creator. See [the entrypoint contract](entrypoints.md). The module
 version stays 0.5.1 and this increment is not published to Mooncakes.
+
+## Source addition after public 0.5.1: identical function bodies
+
+New APIs: inspect_duplicate_functions(Bytes) -> Result[DuplicateFunctionsReport,
+WasmError], render_duplicate_functions(report, top), and
+render_duplicate_functions_json(report). New read-only types:
+DuplicateFunctionMember, DuplicateFunctionGroup, DuplicateFunctionsSummary and
+DuplicateFunctionsReport. Options adds duplicates=false and duplicates_json=None;
+Options::default supplies these defaults. Old signatures, Sections, WasmError and
+existing report schemas remain unchanged. The independent format is
+moonsize-duplicate-function-bodies/schema_version 1. It stores exact ranges and
+metadata, not body content or estimated savings. Strict/other-mode combinations
+are rejected before I/O; new JSON paths use the existing exclusive creator.
+See [comparison scope and real byte ledger](duplicate-functions.md).
+Version remains 0.5.1; this source increment has not been published to Mooncakes.
