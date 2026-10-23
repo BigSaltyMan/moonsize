@@ -271,6 +271,10 @@ fn main {
       return
     }
   }
+  if options.entrypoints {
+    run_entrypoints(options)
+    return
+  }
   if options.generics {
     run_generic_instances(options)
     return

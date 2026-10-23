@@ -133,3 +133,18 @@ change. JSON uses the separate moonsize-generic-instances/schema_version 1 forma
 The independent CLI mode accepts only Top/JSON, rejects strict before input I/O,
 and inherits exclusive output creation. See [scope and real probe](generic-instances.md).
 Version stays 0.5.1; this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: exported entrypoints
+
+New APIs: inspect_entrypoints(Bytes) -> Result[EntrypointsReport, EntrypointsError],
+render_entrypoints(report, top), render_entrypoints_json(report), and
+describe_entrypoints_error(error). New types: EntrypointGroup,
+EntrypointFunction, EntrypointsLedger, EntrypointsReport and EntrypointsError.
+The error distinguishes wrapped input errors, invalid function exports, roots,
+edges and unassigned export kinds. Options adds entrypoints=false and
+entrypoints_json=None; use Options::default externally. No existing signature,
+WasmError branch or report schema changes. The independent JSON format is
+moonsize-entrypoints/schema_version 1; references to groups/functions use full
+function indices. Strict refusals precede output checks; files use the existing
+exclusive creator. See [the entrypoint contract](entrypoints.md). The module
+version stays 0.5.1 and this increment is not published to Mooncakes.

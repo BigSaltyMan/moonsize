@@ -107,6 +107,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
        moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
        moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
        moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
@@ -140,6 +141,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --entrypoints       show model-reachable, exclusive and shared function bytes
+  --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
   --generics-json <path> write full groups to a new .json file; implies --generics
   --callers <n>        list recorded one-hop incoming instruction sources
@@ -262,6 +265,27 @@ separately. Top limits text caller groups; JSON and counts remain complete.
 Only Top, callers JSON and strict may accompany this independent query. Empty
 results do not prove removability. Strict gaps return 3 before output checks;
 JSON uses exclusive creation. See [actual sample, API and scope](docs/function-callers.md).
+
+## Exported entrypoint dependencies
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --entrypoints --top 20
+moonsize app.wasm --entrypoints-json new-entrypoints.json
+moonsize app.wasm --entrypoints --strict
+```
+
+Aliases of the same function form one entry group. The report separates each
+entry's model-reachable local function bytes into exclusive and shared portions,
+including sharing with start/all conservative element roots. Imports retain null
+body sizes. One graph is built; each unique entry requires one reachability walk,
+and Top limits display, not analysis costs. JSON keeps complete membership and
+aliases and refuses existing targets. Strict gaps return 3 before file checks.
+The actual shared example has 34 local encoded bytes: 31 in the export union,
+3 outside it; the union is 18 exclusive + 13 shared bytes counted once. These
+are overlapping model sets, not deletion or gzip savings. See [the actual sample,
+ledger, API and limits](docs/entrypoints.md).
 
 ## MoonBit generic-instance sizes
 

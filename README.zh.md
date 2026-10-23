@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
 moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
 moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
@@ -165,6 +166,24 @@ moonsize app.wasm --callers 42 --callers-json new-callers.json
 Top 只限制文本中的引用者组数，计数和 JSON 完整。仅可搭配 Top、JSON、strict。
 空结果不证明可删除，strict 缺口先于文件检查返回3；JSON 沿用独占保护。
 [详细说明、实测位置及 API](docs/function-callers.md)。
+
+## 导出入口依赖体积
+
+这是公开0.5.1之后的源码增量，需从当前源码构建native CLI：
+
+```sh
+moonsize app.wasm --entrypoints --top 20
+moonsize app.wasm --entrypoints-json new-entrypoints.json
+moonsize app.wasm --entrypoints --strict
+```
+
+同一函数的多个导出名归为一个入口组。按当前引用模型统计各入口可达的本地函数
+编码量，区分独有与共享；start及全部保守element根仍参与共享判断，导入函数
+编码大小为null。仅构图一次，每个唯一入口各遍历一次；Top不是资源限制。
+JSON保留完整归属和别名，沿用独占保护；strict缺口先于文件检查返回3。实测共享
+样本的账本为34本地编码字节 = 31导出可达并集 + 3非导出可达；31 = 18独有 +
+13共享（只计一次）。各入口数值不可直接相加，也不预测删除入口或gzip收益。
+[实际输出、账本与API](docs/entrypoints.md)。
 
 ## MoonBit 泛型实例体积
 
