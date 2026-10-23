@@ -271,6 +271,10 @@ fn main {
       return
     }
   }
+  if options.generics {
+    run_generic_instances(options)
+    return
+  }
   let budget = read_budget(options)
   if options.callers_index is Some(target) {
     run_function_callers(options, target)

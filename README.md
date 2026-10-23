@@ -107,6 +107,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
        moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
        moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
@@ -139,6 +140,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --generics          group supported raw symbols by encoded function bytes
+  --generics-json <path> write full groups to a new .json file; implies --generics
   --callers <n>        list recorded one-hop incoming instruction sources
   --callers-json <path> write full callers JSON to a new .json file; requires --callers
   --why-index <n>      explain a shortest model reference path to function n
@@ -259,6 +262,27 @@ separately. Top limits text caller groups; JSON and counts remain complete.
 Only Top, callers JSON and strict may accompany this independent query. Empty
 results do not prove removability. Strict gaps return 3 before output checks;
 JSON uses exclusive creation. See [actual sample, API and scope](docs/function-callers.md).
+
+## MoonBit generic-instance sizes
+
+This source addition is not part of the published 0.5.1 package. Build the native
+CLI from source to use it:
+
+```sh
+moonsize app.wasm --generics --top 20
+moonsize app.wasm --generics-json new-generics.json
+```
+
+The independent mode accepts only Top and generics JSON; even strict is rejected
+because no call graph is built. Families use fully parsed **raw symbols**, never
+matching display names. The first supported shape is numeric-package free
+functions/methods with Int or Double type arguments. The real probe identifies
+four definitions in two families, totaling 26 encoded bytes. Counts distinguish
+function definitions from distinct raw type-argument encodings. Top limits text
+only; JSON preserves every family and instance and refuses existing targets.
+Missing/unreadable names and unsupported symbols are reported, not guessed.
+Family keys apply within one artifact; totals do not predict removable bytes.
+See [the observed encoding, size ledger and limits](docs/generic-instances.md).
 
 ## Explaining a function's reference path
 

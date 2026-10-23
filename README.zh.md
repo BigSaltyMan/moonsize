@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
 moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
@@ -164,6 +165,22 @@ moonsize app.wasm --callers 42 --callers-json new-callers.json
 Top 只限制文本中的引用者组数，计数和 JSON 完整。仅可搭配 Top、JSON、strict。
 空结果不证明可删除，strict 缺口先于文件检查返回3；JSON 沿用独占保护。
 [详细说明、实测位置及 API](docs/function-callers.md)。
+
+## MoonBit 泛型实例体积
+
+这是公开 0.5.1 之后的源码增量，需从当前源码构建 native CLI：
+
+```sh
+moonsize app.wasm --generics --top 20
+moonsize app.wasm --generics-json new-generics.json
+```
+
+独立模式只允许 Top 和泛型 JSON，不构图，因此也不接受 strict。按完整解析的
+原始符号分组，不按显示名称合并。首版支持数字包标识的函数、方法及 Int/Double
+类型参数；真实探针识别出两个家族、四个函数定义，共26编码字节。函数定义数与
+不同原始类型参数编码数分别统计；Top 仅限制文本，JSON完整且拒绝覆盖已有文件。
+名称缺失、读取不完整或编码不支持时明确说明，不猜测。family key仅用于当前产物，
+总量不是可删除字节。[实际符号、闭合账本与范围](docs/generic-instances.md)。
 
 ## 查询函数引入路径
 

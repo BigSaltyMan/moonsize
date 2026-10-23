@@ -119,3 +119,17 @@ The new independent JSON format is moonsize-function-callers/schema_version 1.
 See [the callers contract](function-callers.md) for complete counts, model scope,
 mode constraints, strict behavior and the actual sample. No Mooncakes publication
 is claimed by this source commit.
+
+## Source addition after public 0.5.1: generic-instance sizes
+
+New entry points: inspect_generic_instances(Bytes) returning
+Result[GenericInstancesReport, WasmError], render_generic_instances(report, top),
+and render_generic_instances_json(report). New read-only types are
+GenericInstance, GenericFamily, GenericCoverage and GenericInstancesReport.
+Options adds generics (false) and generics_json (None); callers constructing the
+record inside the package must account for these fields. Options::default remains
+the external default constructor. No old symbol, analysis or report signatures
+change. JSON uses the separate moonsize-generic-instances/schema_version 1 format.
+The independent CLI mode accepts only Top/JSON, rejects strict before input I/O,
+and inherits exclusive output creation. See [scope and real probe](generic-instances.md).
+Version stays 0.5.1; this source increment has not been published to Mooncakes.

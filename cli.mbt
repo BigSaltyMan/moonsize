@@ -36,6 +36,9 @@ pub struct Options {
   /// Independent one-hop incoming instruction-reference query.
   callers_index : Int?
   callers_json : String?
+  /// Independent raw-symbol generic-instance size inspection.
+  generics : Bool
+  generics_json : String?
   /// Validated multi-metric budgets, with optional evidence outputs.
   budget : String?
   budget_json : String?
@@ -78,6 +81,8 @@ pub fn Options::default(path : String) -> Options {
     why_json: None,
     callers_index: None,
     callers_json: None,
+    generics: false,
+    generics_json: None,
     budget: None,
     budget_json: None,
     budget_md: None,
@@ -292,6 +297,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut why_json : String? = None
   let mut callers_index : Int? = None
   let mut callers_json : String? = None
+  let mut generics = false
+  let mut generics_json : String? = None
   let mut budget : String? = None
   let mut budget_json : String? = None
   let mut budget_md : String? = None
@@ -334,6 +341,20 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       } else {
         budget_md = Some(args[i + 1])
       }
+      i += 2
+    } else if arg == "--generics" {
+      generics = true
+      i += 1
+    } else if arg == "--generics-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --generics-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      generics = true
+      generics_json = Some(args[i + 1])
       i += 2
     } else if arg == "--callers" {
       if i + 1 >= args.length() {
@@ -468,6 +489,37 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if generics {
+    if retained ||
+      dead_code ||
+      compress ||
+      strict ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      html is Some(_) ||
+      call_graph is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) {
+      return Err(
+        "moonsize: --generics is an independent mode; only --top and --generics-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if generics_json is Some(target) && !target.has_suffix(".json") {
+      return Err("moonsize: --generics-json wants a .json path\n\n" + usage())
+    }
   }
   if callers_json is Some(_) && callers_index is None {
     return Err("moonsize: --callers-json requires --callers\n\n" + usage())
@@ -667,6 +719,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     why_json,
     callers_index,
     callers_json,
+    generics,
+    generics_json,
     budget,
     budget_json,
     budget_md,
