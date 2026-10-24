@@ -163,3 +163,22 @@ metadata, not body content or estimated savings. Strict/other-mode combinations
 are rejected before I/O; new JSON paths use the existing exclusive creator.
 See [comparison scope and real byte ledger](duplicate-functions.md).
 Version remains 0.5.1; this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: metadata file bytes
+
+New APIs: inspect_metadata(Bytes) -> Result[MetadataReport, WasmError],
+render_metadata(report, top), and render_metadata_json(report). New read-only
+structures: MetadataRange, MetadataCustom, MetadataNameSubsection,
+MetadataFunctionName, MetadataDiagnostic, MetadataCategory, MetadataNameGroup,
+MetadataSummary and MetadataReport. Options adds metadata=false and
+metadata_json=None; Options::default supplies the defaults. No old signature,
+Sections, WasmError branch, effective-name selection or existing schema changes.
+Function-name declaration indices and subsection counts retain full UInt/u32
+values; they do not validate actual function existence. Ranges refer to original
+file bytes. New JSON uses moonsize-metadata/schema_version 1 and retains complete
+summaries, instances, physical records, remainders and diagnostics, without raw
+payloads. Optional name-content failures return partial reports rather than
+invalidating the outer module; outer parser errors remain errors. Strict and
+other modes are rejected before input I/O; output uses exclusive creation.
+See [the byte ledgers and coverage contract](metadata.md). Version remains 0.5.1;
+this source increment has not been published to Mooncakes.

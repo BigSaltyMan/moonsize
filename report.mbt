@@ -485,6 +485,9 @@ pub fn usage() -> String {
   "  --experiment <path>  write measured before/after results; requires --baseline\n" +
   "                       refuses to overwrite an existing path\n" +
   "  --experiment-context <path>  attach declared build settings and validation\n" +
+  "  --metadata          account for custom/name physical file bytes\n" +
+  "  --metadata-json <path> write complete metadata JSON to a new .json file\n" +
+  "                       only --top and --metadata-json allowed; partial details use exit 0\n" +
   "  --duplicates        group byte-identical local bodies (locals + instructions)\n" +
   "  --duplicates-json <path> write complete groups to a new .json file\n" +
   "                       only --top and --duplicates-json allowed; no savings estimate\n" +

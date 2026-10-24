@@ -271,6 +271,10 @@ fn main {
       return
     }
   }
+  if options.metadata {
+    run_metadata(options)
+    return
+  }
   if options.duplicates {
     run_duplicate_functions(options)
     return

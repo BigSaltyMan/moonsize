@@ -107,6 +107,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --metadata [--top <n>] [--metadata-json <new.json>]
        moonsize <file.wasm> --duplicates [--top <n>] [--duplicates-json <new.json>]
        moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
        moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
@@ -142,6 +143,9 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --metadata          account for custom/name physical file bytes
+  --metadata-json <path> write full metadata to a new .json file; implies --metadata
+                       partial optional name details still return 0 with diagnostics
   --duplicates        group exact local body bytes, excluding length prefixes
   --duplicates-json <path> write complete groups to a new .json file
   --entrypoints       show model-reachable, exclusive and shared function bytes
@@ -268,6 +272,32 @@ separately. Top limits text caller groups; JSON and counts remain complete.
 Only Top, callers JSON and strict may accompany this independent query. Empty
 results do not prove removability. Strict gaps return 3 before output checks;
 JSON uses exclusive creation. See [actual sample, API and scope](docs/function-callers.md).
+
+## Custom sections and symbol-name overhead
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --metadata --top 20
+moonsize app.wasm --metadata-json new-metadata.json
+```
+
+The report accounts for every physical custom section, including repeated names,
+actual length prefixes, name bytes and opaque content. Classification uses only
+reliably decoded full UTF-8 names: name, producers, the .debug_ prefix, or other;
+unavailable names retain their ranges and a separate accounting bucket. All
+recognized name sections retain physical subsections and function-name records.
+Indices are metadata declarations, not proof that those functions exist.
+
+Optional name-content errors produce partial details, diagnostics and remainder
+ranges while preserving the byte ledger; successful exit 0 does not certify
+complete interpretation. Outer parse errors still return 1. Top limits details
+only; summaries and JSON remain complete. This independent mode allows only Top
+and its own JSON, rejects strict, and inherits exclusive output creation.
+The measured fixture accounts for 115 custom bytes as 15 header + 48 custom-name
+encoding + 52 content bytes; these are decompositions, not additive parent/child
+totals. Metadata is not necessarily removable, and file bytes do not predict
+recompiled or transfer savings. See [the scope, actual ledgers and API](docs/metadata.md).
 
 ## Identical function bodies
 

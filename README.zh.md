@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --metadata [--top <n>] [--metadata-json <new.json>]
 moonsize <file.wasm> --duplicates [--top <n>] [--duplicates-json <new.json>]
 moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
 moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
@@ -45,6 +46,8 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --metadata          核算每个custom及name记录的实际文件字节
+  --metadata-json <path> 启用独立明细并写入新的.json；可选内容损坏仍返回0并附诊断
   --retained           当前图模型中受支配函数的编码字节总和
   --dead-code          从根不可达的函数
   --compress           整文件 gzip 与各段独立 gzip 大小
@@ -167,6 +170,26 @@ moonsize app.wasm --callers 42 --callers-json new-callers.json
 Top 只限制文本中的引用者组数，计数和 JSON 完整。仅可搭配 Top、JSON、strict。
 空结果不证明可删除，strict 缺口先于文件检查返回3；JSON 沿用独占保护。
 [详细说明、实测位置及 API](docs/function-callers.md)。
+
+## 自定义段与符号名称开销
+
+这是公开0.5.1之后的源码增量，需从当前源码构建native CLI：
+
+```sh
+moonsize app.wasm --metadata --top 20
+moonsize app.wasm --metadata-json new-metadata.json
+```
+
+逐个核算custom完整编码、实际长度前缀、名称与内容；同名段不覆盖。分类只依据
+可靠的完整UTF-8名称：name、producers、.debug_前缀或other；不可用名称保留范围，
+进入单独核算桶，不用有损显示名称猜测分类。遍历所有可靠name段，保留物理子段和
+函数名记录，重复索引也不丢失；声明索引不证明函数存在。
+
+可选name内容损坏时输出partial、诊断与未解析范围，字节账本仍完整；退出0不等于
+全部内容已被理解，外层解析错误仍返回1。Top仅限制详情，汇总和JSON完整。独立
+模式只允许Top和自身JSON，不接受strict；JSON沿用独占保护。实测custom账本为
+115=15段头+48名称编码+52内容字节；父项与子项不能再相加。元数据不一定可删除，
+不预测重编译或传输收益。[范围、实际账本和API](docs/metadata.md)。
 
 ## 重复函数体字节检测
 
