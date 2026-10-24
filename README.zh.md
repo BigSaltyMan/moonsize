@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --find-functions <query> [--top <n>] [--find-functions-json <new.json>]
 moonsize <file.wasm> --instructions <n> [--top <n>] [--instructions-json <new.json>]
 moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]
 moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
@@ -50,6 +51,8 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --find-functions <query> 本地raw/display名称的大小写敏感字面检索
+  --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --instructions <n> 查询完整函数索引中的本地函数编码
   --instructions-json <path> 完整opcode组及指令写入新的.json；需显式instructions
   --data-duplicates   检测当前文件内字节完全相同的data payload
@@ -114,6 +117,27 @@ payload 和编码开销；加 `--data-json new-diff.json` 输出独立比较格�
 未启用 diff-data 时，单文件 JSON 及原 baseline 行为不变。内容组不代表源码身份，
 相同内容不证明初始化语义等价，重复内容也不证明可安全去重；原始差值不预测
 重编译或 gzip 收益。
+
+## 本地函数名称检索
+
+这是公开0.5.1之后的源码增量，使用当前源码构建的native CLI：
+
+```sh
+moonsize app.wasm --find-functions 'demo::sample' --top 20
+moonsize app.wasm --find-functions 'classify' --find-functions-json new-search.json
+```
+
+只在当前可用的本地函数原始符号和显示名称中做大小写敏感的字面子串检索。
+保留query的合法空格，不使用正则、通配符或Unicode归一化。生成的(unnamed)
+占位符不参与匹配，真实原始名称恰为(unnamed)时仍可检索。同名不同index全部
+保留，index包含前置函数导入；导入声明和导出别名不在范围内，导入可用--imports。
+
+Top只限制文本，JSON、数量和字节汇总始终完整。无匹配、无可用名称、无本地函数
+都正常返回0，并分别说明。独立模式只允许Top及自身JSON，strict/其他模式读取前
+拒绝；新文件沿用独占创建。取得index后再显式运行--instructions、--callers或
+--why-index，不自动选择目标。名称不是唯一身份，无匹配不证明函数不存在。
+命中编码量不含段头、name或依赖闭包，也不代表删除收益。
+[实际检索、后续命令示例和API](docs/function-search.md)。
 
 ## 单函数指令编码明细
 

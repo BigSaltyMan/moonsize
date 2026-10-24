@@ -459,6 +459,7 @@ pub fn usage() -> String {
   "       moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]\n" +
   "       moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]\n" +
   "       moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]\n" +
+  "       moonsize <file.wasm> --find-functions <query> [--top <n>] [--find-functions-json <new.json>]\n" +
   "       moonsize <file.wasm> --instructions <n> [--top <n>] [--instructions-json <new.json>]\n" +
   "       moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
@@ -512,6 +513,8 @@ pub fn usage() -> String {
   "  --callers <n>        list recorded one-hop instruction references to function n\n" +
   "  --callers-json <path> write full callers JSON to a new .json file\n" +
   "                       only --top, --callers-json and --strict may accompany --callers\n" +
+  "  --find-functions <query>  search available local raw/display names (literal, case-sensitive)\n" +
+  "  --find-functions-json <path.json>  save all matches (requires --find-functions)\n" +
   "  --instructions <n>  inspect one local function encoding (only Top/own JSON)\n" +
   "  --instructions-json <path.json>  save full instruction encoding (requires --instructions)\n" +
   "  --why-index <n>      explain a shortest model reference path to function n\n" +

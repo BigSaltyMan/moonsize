@@ -85,6 +85,31 @@ format; without `--diff-data`, JSON keeps the original single-file format.
 Groups do not establish source identity, equivalent initialization or safe
 deduplication, and raw differences do not predict rebuild or gzip savings.
 
+## Local function name search
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --find-functions 'demo::sample' --top 20
+moonsize app.wasm --find-functions 'classify' --find-functions-json new-search.json
+```
+
+Searches available raw symbols and display names of local definitions using a
+case-sensitive literal substring, preserving the original query, including spaces.
+No regex, wildcards or Unicode normalization. Generated unnamed placeholders are
+excluded; a real raw name equal to (unnamed) remains searchable. Duplicate names
+keep their distinct full function indices, including preceding function imports.
+Imports and export aliases are outside this search; use --imports for declarations.
+
+Top limits text only; counts, byte totals and JSON remain complete. No match,
+no available names or no local functions all return 0, with distinct explanations.
+This independent mode accepts only Top and its own JSON, rejects strict and other
+modes before I/O, and uses exclusive output creation. Choose an index from the
+results and explicitly run --instructions, --callers or --why-index next. A name
+is not a unique identity; no match does not prove absence. Matched encoding bytes
+exclude section headers, names and dependency closures, and are not savings.
+See [measured results, examples, coverage and API](docs/function-search.md).
+
 ## Single-function instruction encoding
 
 This source addition follows public 0.5.1; build the native CLI from source.
@@ -151,6 +176,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --find-functions <query> [--top <n>] [--find-functions-json <new.json>]
        moonsize <file.wasm> --instructions <n> [--top <n>] [--instructions-json <new.json>]
        moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]
        moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
@@ -191,6 +217,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --find-functions <query> case-sensitive literal search of local raw/display names
+  --find-functions-json <path> save all matches to a new .json; requires a query
   --instructions <n> inspect a local function in the full function index space
   --instructions-json <path> save complete groups and instructions to a new .json
   --data-duplicates   group exact data payloads within the current input

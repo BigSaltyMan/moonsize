@@ -271,6 +271,10 @@ fn main {
       return
     }
   }
+  if options.find_functions is Some(query) {
+    run_function_search(options, query)
+    return
+  }
   if options.instructions_index is Some(index) {
     run_function_instructions(options, index)
     return

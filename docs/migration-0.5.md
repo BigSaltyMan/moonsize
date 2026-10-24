@@ -260,3 +260,23 @@ frequency, timing or savings. Strict and other modes are rejected before I/O;
 JSON requires an explicit target and uses the existing preflight/exclusive writer.
 See [ranges, measured ledger and scope](function-instructions.md). Version remains
 0.5.1; this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: local function name search
+
+New APIs: search_local_functions(Bytes, String), describe_function_search_error,
+render_function_search(report, top), and render_function_search_json(report).
+New types: FunctionSearchMatch, FunctionSearchReport and FunctionSearchError.
+The error is InvalidFunctionSearchQuery or FunctionSearchInputError(WasmError).
+Options adds find_functions=None and find_functions_json=None; default supplies
+both, and external struct literals need these fields. Old signatures, WasmError
+branches and report schemas are unchanged. Only available local raw/display
+names are searched once, using case-sensitive literal substrings and the original
+query. Imports and generated unnamed labels are excluded; real (unnamed) names
+and different indices with the same name remain searchable. There is no graph,
+analyze or instruction decoding. Top limits text only; the independent
+moonsize-function-search/schema_version 1 JSON retains all matches, original
+strings, coverage counts and byte totals. Empty results return 0, not absence or
+removability proof. Other modes, including strict, are rejected before I/O. JSON
+requires a query and uses the existing preflight/exclusive writer. See
+[measured results and scope](function-search.md). Version remains 0.5.1; this
+source increment has not been published to Mooncakes.

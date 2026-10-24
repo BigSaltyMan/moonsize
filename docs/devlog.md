@@ -585,3 +585,33 @@ _build/function-instructions-verification/run-zP6iDd，接口快照在review-ekr
 CI保留原回归，只追加同一轻量脚本；正常推送后核对最终SHA整体结论。
 不增加HTML、WAT、操作数展示、执行频率、完整语义或收益推断，不改版本和依赖，
 不发布Mooncakes。用户图片、AGENTS及规划继续排除。
+
+## 37. 本地函数名称检索（2026-10-24）
+
+基线09002f7，版本仍0.5.1。新增search_local_functions，parse_module及
+collect_function_stats各一次，复用可选name读取、显示和模块归属标签；不调用
+analyze、图、retained或指令解码。只搜索有真实名称的本地定义，使用原query的
+大小写敏感字面子串，raw/display分别标记且每个index最多输出一行。同名index
+不合并，不把前置导入重编号，不搜索导入或导出别名；占位符不参与，真实名称
+为(unnamed)仍可检索。沿用现有名称覆盖边界，不引入metadata补全。
+
+新增独立文本和moonsize-function-search/schema_version 1 JSON、四个入口、三种
+公开类型及Options两字段；旧API/WasmError不变。Top只截文本行，计数、字节和
+JSON完整。文本转义query、名称和模块中的C0/C1与行分隔符；JSON保持原始值。
+无本地函数、无名称、无匹配分别解释且返回0，不能当作不存在或可删除的证明。
+新输出接入统一preflight和独占创建；其他模式包括strict在读取前拒绝。
+
+180字节合法fixture由Node v24.18.0/V8独立验证一次，未实例化或执行。query为
+classify，匹配index顺序2、3、1；5本地=4有名+1无名，4有名=3匹配+1不匹配。
+匹配编码13=9body+4长度前缀字节，index2的前缀宽2，其余各1；offset37明确是
+前缀起点。Top1只显示index2，完整JSON仍有全部三个index及原始控制字符名称。
+[实测哈希、账本、后续命令和API](function-search.md)。证据目录
+_build/function-search-verification/run-9mkQ8G，接口快照在review-JA3JIT。
+
+本地3个新组合单测、四次新CLI全部通过：Top1文本、完整JSON、无匹配返回0、
+已有JSON返回1且原内容不变。单测覆盖raw/display、重复名称、字面特殊字符与
+Unicode、空白query和占位符、完整账本，以及未知opcode不触发解码。完成接口
+差异审查、格式、native检查及一次release构建；未运行本地旧套件、旧CLI、探针、
+演示、浏览器/PDF或性能基准。CI只追加同一轻量脚本，保留原回归并核对最终SHA。
+不增加正则、模糊匹配、源码/别名搜索、HTML或自动下游查询，不改依赖、版本，
+不发布Mooncakes；用户图片、AGENTS及规划继续排除。

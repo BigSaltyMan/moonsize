@@ -59,6 +59,9 @@ pub struct Options {
   /// Independent selected local-function instruction encoding.
   instructions_index : Int?
   instructions_json : String?
+  /// Independent literal search of available local raw/display names.
+  find_functions : String?
+  find_functions_json : String?
   /// Validated multi-metric budgets, with optional evidence outputs.
   budget : String?
   budget_json : String?
@@ -116,6 +119,8 @@ pub fn Options::default(path : String) -> Options {
     data_duplicates_json: None,
     instructions_index: None,
     instructions_json: None,
+    find_functions: None,
+    find_functions_json: None,
     budget: None,
     budget_json: None,
     budget_md: None,
@@ -345,6 +350,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut data_duplicates_json : String? = None
   let mut instructions_index : Int? = None
   let mut instructions_json : String? = None
+  let mut find_functions : String? = None
+  let mut find_functions_json : String? = None
   let mut budget : String? = None
   let mut budget_json : String? = None
   let mut budget_md : String? = None
@@ -387,6 +394,27 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       } else {
         budget_md = Some(args[i + 1])
       }
+      i += 2
+    } else if arg == "--find-functions" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --find-functions needs a non-empty, non-whitespace query\n\n" +
+          usage(),
+        )
+      }
+      find_functions = Some(args[i + 1])
+      i += 2
+    } else if arg == "--find-functions-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --find-functions-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      find_functions_json = Some(args[i + 1])
       i += 2
     } else if arg == "--instructions" {
       if i + 1 >= args.length() {
@@ -635,6 +663,54 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if find_functions_json is Some(_) && find_functions is None {
+    return Err(
+      "moonsize: --find-functions-json requires --find-functions\n\n" + usage(),
+    )
+  }
+  if find_functions is Some(_) {
+    if retained ||
+      dead_code ||
+      compress ||
+      strict ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      data_json is Some(_) ||
+      html is Some(_) ||
+      call_graph is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      instructions_index is Some(_) ||
+      instructions_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) {
+      return Err(
+        "moonsize: --find-functions is an independent mode; only --top and --find-functions-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if find_functions_json is Some(target) && !target.has_suffix(".json") {
+      return Err(
+        "moonsize: --find-functions-json wants a .json path\n\n" + usage(),
+      )
+    }
   }
   if instructions_json is Some(_) && instructions_index is None {
     return Err(
@@ -1112,6 +1188,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     data_duplicates_json,
     instructions_index,
     instructions_json,
+    find_functions,
+    find_functions_json,
     budget,
     budget_json,
     budget_md,
