@@ -529,3 +529,30 @@ baseline，复用ImportsLedger的Int字段，非文件范围；模块段头/coun
 完成格式、native及接口检查；未跑本地旧套件、旧CLI、探针、演示、HTML/PDF或
 性能基准。CI保留旧回归，只追加同一轻量脚本；推送后核对最终SHA整体结果。
 不扩展类型范围，不增加ABI判断、HTML、预算、自动门禁，不改依赖或发布Mooncakes。
+
+## 35. 数据段重复内容检测（2026-10-24）
+
+基线4966621，版本仍0.5.1。新增inspect_duplicate_data，只inspect_data_segments
+一次，保留完整报告和整文件大小/摘要，不调用analyze、图或自比较。每条payload
+一次SHA-256，以完整摘要/长度分桶，用data_payload_equal确认实际字节；通过有界
+Reader获取临时view，摘要接口所需的临时复制不进入报告，不改旧分组或解析路径。
+多个空payload正常成零字节组，单例只计入汇总；组id取最小原始index，排序不
+改身份。模式、memory、未求值表达式和实际前缀范围全部由原始明细回查。
+
+新增独立文本和moonsize-data-duplicates JSON、3种类型、3个入口、Options两字段；
+Top仅限制文本组，每组预览最多20成员并显示数量，JSON完整。固定组排序为全部
+成员payload字节/单份大小降序、最小index升序。新输出接入统一preflight和原生
+独占创建，其他模式读取前拒绝；结构错误透传旧WasmError，不扩展旧接口或格式。
+字节累计检查后才转Int，避免乘法溢出；不把重复成员总量解释为可删除或节省量。
+
+74字节合法fixture经Node v24.18.0/V8独立验证一次，不执行。三组id0/3/6包含
+7成员，另1单例；payload16=13+3，条目51=16+35，data56=3段头+2count+51条目。
+DataCount单列，空组仍保留成员6/7及8字节编码；index5与组0等长但内容不同。
+[实际哈希、成员范围和账本](data-segments.md)。本地3个新组合单测、四次新CLI均
+通过，含私有碰撞注入、21空成员预览、一个错误透传、无data及已有JSON保护。
+证据_build/data-duplicates-verification/run-cMyCZN。
+
+完成接口生成/差异审查、格式、native检查及一次release构建；未跑本地旧套件、
+旧CLI、演示、探针、HTML/PDF或性能基准。CI只追加同一轻量脚本，保留旧回归，
+提交后核对最终SHA整体结论。不做初始化求值、运行时用途分析、自动去重、HTML、
+比较或预算，不改依赖/版本，不发布Mooncakes。

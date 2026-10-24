@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]
 moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
 moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]
 moonsize <file.wasm> --metadata [--top <n>] [--metadata-json <new.json>]
@@ -48,6 +49,8 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --data-duplicates   检测当前文件内字节完全相同的data payload
+  --data-duplicates-json <path> 完整组和原始明细写入新的.json；每组文本预览最多20成员
   --imports           列出宿主导入声明及其文件编码字节
   --imports-json <path> 启用导入模式，全部声明写入新的.json；不支持编码返回1
   --diff-imports      需baseline，比较名称/种类/次数；未评估类型兼容性，发现差异仍返回0
@@ -108,6 +111,26 @@ payload 和编码开销；加 `--data-json new-diff.json` 输出独立比较格�
 未启用 diff-data 时，单文件 JSON 及原 baseline 行为不变。内容组不代表源码身份，
 相同内容不证明初始化语义等价，重复内容也不证明可安全去重；原始差值不预测
 重编译或 gzip 收益。
+
+## 数据段重复内容
+
+这是公开0.5.1之后的源码增量，使用当前源码构建的native CLI：
+
+```sh
+moonsize app.wasm --data-duplicates --top 20
+moonsize app.wasm --data-duplicates-json new-data-duplicates.json
+```
+
+只比较同一文件内的payload字节，不把模式、memory、表达式或长度前缀作为内容
+身份。摘要和长度只筛选候选，仍逐字节复核；成员索引回查完整原始明细，保留各自
+编码和未求值表达式。空payload正常归组，零字节组不丢失。它不同于函数body的
+--duplicates，也不同于两次构建的--diff-data，不自动去重或判断初始化等价。
+
+Top只限制文本组数，每组最多预览20成员并显示已展示/总数，JSON始终完整。
+74字节实测样本有3组、7个重复成员和1个单例，payload账本16=13重复组全部成员
++3单例字节，data段56=3段头+2数量前缀+51条目编码字节。重复成员量不是扣除
+一份后的余量或节省量。独立模式只允许Top及自身JSON，strict/其他模式读取前
+拒绝；输出沿用独占保护。[完整账本、碰撞复核和API](docs/data-segments.md)。
 
 ## 优化实验报告
 

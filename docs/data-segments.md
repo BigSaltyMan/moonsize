@@ -210,3 +210,118 @@ JSON 独立使用 `format: "moonsize-data-segments"`、`schema_version: 1`：
 本地只做新增及受影响测试、native 检查和一次 release 构建；完整回归由目标提交
 Linux CI 执行。HTML 仅展示当前明细；跨构建稳定条目匹配、字符串/模糊分析、自动去重建议、
 offset 求值和新预算指标留到后续。
+
+## 同一产物的数据段重复内容（0.5.1之后的源码增量）
+
+```sh
+moonsize app.wasm --data-duplicates --top 20
+moonsize app.wasm --data-duplicates-json new-data-duplicates.json
+```
+
+这是独立模式，JSON选项隐含启用；只允许Top和自身JSON。普通data-segments、
+data-json、diff-data、baseline、函数duplicates、strict、预算、HTML及其他分析
+模式在参数阶段返回2，读取前拒绝。成功（含无data/无重复）返回0，读取、结构、
+保护和写入失败返回1。新JSON目标沿用统一preflight及原生独占创建；解析失败
+不创建报告，不新增writer、覆盖开关或事务保证。
+
+### 比较范围和成员证据
+
+只比较DataSegment.payload原始字节，不含模式、memory索引、offset表达式或
+payload长度前缀。与--duplicates的函数body比较及--diff-data的双侧内容组比较
+分别独立，不扩展原有组合。相同payload在不同active/passive、memory、表达式
+及前缀下仍归组，但这些元数据不会丢失，也不因此推断初始化语义相同。
+
+每次只inspect_data_segments一次，保留原始DataSegmentsReport与整文件大小、
+SHA-256。每条payload计算一次摘要，完整摘要/长度筛选桶，再用现有
+data_payload_equal复核实际字节，不做全部条目两两比较。通过有界Reader取得
+临时view；SHA接口需要的一次临时Bytes复制不进入报告，桶view也不长期保留。
+摘要碰撞且字节不同会分别成桶，不把摘要当唯一身份。
+
+成员为当前文件的原始DataSegment.index，升序保存；组id取最小成员索引，只在
+本报告内有效，不承诺跨构建稳定。组按全部成员payload字节降序、单份payload
+大小降序、最小索引升序排列。至少两个成员才列组，单例参与完整统计；多个空
+payload构成零字节组，仍有编码元数据，不因payload大小为零而过滤。
+
+Top只限制文本组数，每组固定最多预览20成员，并显示已展示数/总数；JSON保留
+全部组、全部成员index及原始条目。预览和排序不改变组id。无data、空data和空
+payload分别保留原状态。文件offset是文件位置，不是内存地址；active表达式为
+not_evaluated，passive为not_applicable，不新增内存偏移求值。
+
+### 实测组和闭合账本
+
+scripts/test-data-duplicates.mjs生成74字节合法样本，SHA-256：
+d12f4870b8e467bfee1200e59d15c252fae90e39267f5b372df684d5ca309721。
+Node v24.18.0/V8仅验证这个混合fixture一次，不实例化或执行。样本有两张memory、
+DataCount8及三种data编码，包含非最短的段长度、数量、模式、memory索引和
+payload长度编码。原条目证据：
+
+| index | mode | memory | encoding file offset | encoded B | payload file offset | payload B |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| 0 | active | 0 | 23 | 8 | 28 | 3 |
+| 1 | passive | 不适用 | 31 | 7 | 35 | 3 |
+| 2 | active | 1 | 38 | 10 | 45 | 3 |
+| 3 | passive | 不适用 | 48 | 4 | 50 | 2 |
+| 4 | active | 0 | 52 | 9 | 59 | 2 |
+| 5 | passive | 不适用 | 61 | 5 | 63 | 3 |
+| 6 | passive | 不适用 | 66 | 2 | 68 | 0 |
+| 7 | active | 0 | 68 | 6 | 74 | 0 |
+
+完整JSON实际包含三组（表中payload仅用于解释夹具，不作为报告内容预览）：
+
+| id | payload | 单份B | 全部成员index | 成员payload B | 成员元数据B | 成员编码B |
+| ---: | --- | ---: | --- | ---: | ---: | ---: |
+| 0 | abc | 3 | 0, 1, 2 | 9 | 16 | 25 |
+| 3 | xy | 2 | 3, 4 | 4 | 9 | 13 |
+| 6 | 空 | 0 | 6, 7 | 0 | 8 | 8 |
+
+index5的xyz与abc等长但内容不同，是单例。组0含隐式memory0、passive和显式
+memory1；表达式分别从file offset24和41起占3字节，包含结束指令，立即数11
+中的0x0b不会被误作表达式结尾。元数据宽度和表达式范围全部在原始明细里保留。
+
+```text
+Duplicate groups: 3; segments: 8 = duplicate-group members 7 + singletons 1
+Payload bytes: 16 B = duplicate-group members 13 B + singletons 3 B
+Entry encoding bytes: 51 B = payload 16 B + metadata 35 B
+Duplicate-member encoding bytes: 46 B = payload 13 B + metadata 33 B
+Singleton encoding bytes: 5 B = payload 3 B + metadata 2 B
+Data section bytes: 56 B = section header 3 B + count prefix 2 B + entries 51 B
+```
+
+DataCount独立3字节，不计入56字节data段。每组核对成员payload字节=单份大小×
+成员数，以及成员编码=payload+元数据；生产代码用受检查的累计，转换回Int前
+核对范围，避免乘法溢出。duplicate_member_payload_bytes为所有重复组成员的
+payload总和13，不是去掉一份后的余量，更不是可节省量。相同内容可能有不同
+目标、时机和初始化操作，未证明用途等价，不推断安全合并、重编译或整文件gzip
+减量，也不分析字符串、子串、相似内容或运行时用途。
+
+### 新接口、JSON和定向验证
+
+```moonbit
+inspect_duplicate_data(Bytes) -> Result[DuplicateDataReport, WasmError]
+render_duplicate_data(DuplicateDataReport, Int) -> String
+render_duplicate_data_json(DuplicateDataReport) -> String
+```
+
+新增DuplicateDataGroup、DuplicateDataSummary、DuplicateDataReport，以及Options的
+data_duplicates=false、data_duplicates_json=None。旧inspect_data_segments、
+compare_data_segments、WasmError和既有JSON不变，不调用analyze、图或自比较。
+新JSON独立使用moonsize-data-duplicates/schema_version1：完整data_segments复用旧
+明细结构；groups通过member_indices回查所有条目、模式、memory、encoding、
+payload、offset_expression及前缀大小；summary含全部成员/单例统计和分层账本。
+无原始payload内容、优化收益或未经计算的graph_complete字段。
+
+本地仅3个data_duplicates_wbtest.mbt组合测试，含21个空成员的20/21预览和排序
+并列、私有插桶helper强制相同摘要的碰撞复核，以及一个DataCount错误透传。
+没有公开测试开关，不重跑旧parser/data-diff/函数duplicates。真实CLI仅四次：
+混合文本Top1、同产物完整JSON、合法无data模块、已有JSON拒绝且字节不变。
+
+```sh
+moon test --target native data_duplicates_wbtest.mbt
+node scripts/test-data-duplicates.mjs _build/native/release/build/cmd/main/main.exe
+```
+
+实际证据_build/data-duplicates-verification/run-cMyCZN/含两份输入、四次日志、
+完整JSON及results.json。完成必要接口/格式/native检查和一次release构建；未在
+本地运行旧套件、旧CLI、演示、探针、浏览器/PDF或性能基准。CI复用native构建
+仅追加同一轻量脚本，旧回归自动执行；提交后核对最终SHA整体结果。版本保持
+0.5.1，不改依赖、不发布Mooncakes。

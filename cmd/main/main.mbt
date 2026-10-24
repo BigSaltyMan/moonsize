@@ -271,6 +271,10 @@ fn main {
       return
     }
   }
+  if options.data_duplicates {
+    run_duplicate_data(options)
+    return
+  }
   if options.imports {
     run_imports(options)
     return

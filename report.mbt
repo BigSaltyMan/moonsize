@@ -456,6 +456,7 @@ pub fn usage() -> String {
   "                 [--data-segments] [--diff-data] [--data-json <new-path.json>]\n" +
   "                 [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]\n" +
   "                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]\n" +
+  "       moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]\n" +
   "       moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]\n" +
   "       moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]\n" +
   "       moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]\n\n" +
@@ -487,6 +488,9 @@ pub fn usage() -> String {
   "  --experiment <path>  write measured before/after results; requires --baseline\n" +
   "                       refuses to overwrite an existing path\n" +
   "  --experiment-context <path>  attach declared build settings and validation\n" +
+  "  --data-duplicates   group exact current-input data payload bytes\n" +
+  "  --data-duplicates-json <path> write all groups and source entries to a new .json file\n" +
+  "                       only --top and own JSON; text previews 20 members per group\n" +
   "  --imports           list host import declarations and their file encoding bytes\n" +
   "  --imports-json <path> write complete imports JSON to a new .json file\n" +
   "                       only --top and own JSON; --baseline allowed with --diff-imports\n" +

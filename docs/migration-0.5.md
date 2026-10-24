@@ -221,3 +221,21 @@ strict/other modes before I/O, reports side-specific errors and uses the existin
 output slot and exclusive creator. Successful inventory differences return 0;
 same_count is not a compatibility claim. See [scope and actual ledgers](imports.md).
 Version remains 0.5.1; this increment is not published to Mooncakes.
+
+## Source addition after public 0.5.1: duplicate data payloads
+
+New APIs: inspect_duplicate_data(Bytes) -> Result[DuplicateDataReport, WasmError],
+render_duplicate_data(report, top), and render_duplicate_data_json(report). New
+read-only types: DuplicateDataGroup, DuplicateDataSummary and DuplicateDataReport.
+Options adds data_duplicates=false and data_duplicates_json=None; Options::default
+supplies both. Old signatures, WasmError and existing JSON contracts are unchanged.
+The inspector calls inspect_data_segments once, retains the original report, and
+hashes each payload once; no graph, analyze or self-comparison. Digest/length
+buckets confirm actual bytes, including collisions. Group ids are minimum input
+indices, not cross-build identities. Byte totals count all duplicate-group members,
+not inferred savings. The independent moonsize-data-duplicates/schema_version 1
+JSON retains all groups and original entries; text previews at most 20 members
+per displayed group. Only Top/own JSON are allowed; other modes (including strict,
+baseline, data details/diff and function duplicates) fail before I/O. The existing
+output preflight and exclusive creator are reused. See [scope and actual ledgers](data-segments.md).
+Version remains 0.5.1; this source increment has not been published to Mooncakes.

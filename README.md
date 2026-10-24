@@ -85,6 +85,31 @@ format; without `--diff-data`, JSON keeps the original single-file format.
 Groups do not establish source identity, equivalent initialization or safe
 deduplication, and raw differences do not predict rebuild or gzip savings.
 
+## Duplicate data payloads
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --data-duplicates --top 20
+moonsize app.wasm --data-duplicates-json new-data-duplicates.json
+```
+
+Groups exact payload bytes within one input, excluding modes, memory indices,
+offset expressions and length prefixes. SHA-256 and length select candidate
+buckets; every match is confirmed against the bytes. Member indices refer to the
+complete original data report, retaining each encoding and unevaluated expression.
+Empty payloads participate, including zero-byte groups. This differs from function
+--duplicates and cross-build --diff-data; it does not infer safe deduplication.
+
+Top limits text groups and each group previews at most 20 members, with displayed
+and total counts. JSON retains all groups and entries. The measured 74 B fixture
+has 3 duplicate groups, 7 members and 1 singleton: payload 16 = all duplicate-group
+members 13 + singletons 3 B; data section 56 = header 3 + count 2 + entries 51 B.
+These are file-byte facts, not estimated savings or runtime memory usage. The
+independent mode accepts only Top and its own JSON, rejects strict/other modes
+before input I/O, and inherits exclusive output creation. See
+[full ledgers, collision checks, scope and API](docs/data-segments.md).
+
 ## Visual report development
 
 Start the local HTTP server before visual acceptance, screenshots, printing, or
@@ -107,6 +132,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]
        moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
        moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]
        moonsize <file.wasm> --metadata [--top <n>] [--metadata-json <new.json>]
@@ -145,6 +171,9 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --data-duplicates   group exact data payloads within the current input
+  --data-duplicates-json <path> write full groups and source entries to a new .json
+                       only Top and own JSON; text previews 20 members per group
   --imports           list host import declarations and their encoding bytes
   --imports-json <path> write all declarations to a new .json file; implies --imports
                        unsupported descriptors fail; baseline requires --diff-imports
