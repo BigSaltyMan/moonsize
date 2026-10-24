@@ -201,3 +201,23 @@ The CLI allows only Top and its own JSON; unsupported descriptors fail with exit
 not partial success, and new files use the existing exclusive creator. See
 [the import support and byte-ledger contract](imports.md). Version remains 0.5.1;
 this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: import inventory comparison
+
+New APIs: compare_imports(Bytes, Bytes) -> Result[ImportsComparison,
+ImportsComparisonError], render_imports_diff(report, top),
+render_imports_diff_json(report), and describe_imports_comparison_error(error).
+New types: ImportInventoryGroup, ImportInventoryCounts, ImportsComparison and
+ImportsComparisonError (ImportsBaselineError / ImportsCurrentError wrapping the
+original WasmError). No old signatures, WasmError branches or parser support
+changes. Options adds diff_imports=false; Options::default supplies it. Each side
+is inspected once, retaining the full ImportsReport; delta reuses ImportsLedger
+for signed current-minus-baseline byte quantities, never ranges. JSON has the
+independent moonsize-imports-diff/schema_version 1 format. Single-file imports
+JSON retains its fields and meanings; private JSON constructors are shared.
+Plain --imports still rejects baseline; --diff-imports requires a nonempty
+baseline and allows Top, own JSON and an explicit --imports flag. It rejects
+strict/other modes before I/O, reports side-specific errors and uses the existing
+output slot and exclusive creator. Successful inventory differences return 0;
+same_count is not a compatibility claim. See [scope and actual ledgers](imports.md).
+Version remains 0.5.1; this increment is not published to Mooncakes.

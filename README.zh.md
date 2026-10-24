@@ -39,6 +39,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
 moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
+moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]
 moonsize <file.wasm> --metadata [--top <n>] [--metadata-json <new.json>]
 moonsize <file.wasm> --duplicates [--top <n>] [--duplicates-json <new.json>]
 moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
@@ -48,7 +49,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
 
   --top <n>            排名显示多少个函数（默认 10）
   --imports           列出宿主导入声明及其文件编码字节
-  --imports-json <path> 启用独立模式，全部声明写入新的.json；不支持编码返回1
+  --imports-json <path> 启用导入模式，全部声明写入新的.json；不支持编码返回1
+  --diff-imports      需baseline，比较名称/种类/次数；未评估类型兼容性，发现差异仍返回0
   --metadata          核算每个custom及name记录的实际文件字节
   --metadata-json <path> 启用独立明细并写入新的.json；可选内容损坏仍返回0并附诊断
   --retained           当前图模型中受支配函数的编码字节总和
@@ -191,9 +193,21 @@ moonsize app.wasm --imports-json new-imports.json
 首版支持短编码funcref/externref表、32位limits（含有maximum的shared memory）、
 指定global类型与tag attribute 0；typed reference、其他GC编码、memory64/table64
 及其他flags明确拒绝。核心import错误不作partial成功处理。Top仅限制文本条目，
-模块汇总和声明顺序JSON完整；独立模式只允许Top和自身JSON，strict及其他模式
-在读取前拒绝，输出沿用独占保护。不推断实际调用、权限、环境兼容性或删除收益。
-[支持矩阵、索引、实际账本和API](docs/imports.md)。
+模块汇总和声明顺序JSON完整；单文件模式只允许Top和自身JSON，baseline需搭配
+--diff-imports。strict及其他分析模式在读取前拒绝，输出沿用独占保护。
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-imports --top 20
+moonsize after.wasm --baseline before.wasm --diff-imports --imports-json new-imports-diff.json
+```
+
+比较按完整(module_name, field, kind)分组，重复声明按次数核算，保留两侧完整详情。
+数量交集不代表物理成员匹配；same_count不叫“未变化”或“兼容”，type_index、
+limits和mutability仍可能不同。Top只限文本组，JSON完整；比较格式为独立的
+moonsize-imports-diff/schema_version 1，单文件格式不变。实测两侧各9条：交集6、
+移除3、新增3；段差11=1段头+1数量前缀+9声明字节，均为current减baseline。
+重排不制造数量变化，成功发现差异仍返回0，错误保留侧别、路径和原原因。
+不推断实际调用、权限、宿主兼容性或删除收益。[支持矩阵、比较与账本](docs/imports.md)。
 
 ## 自定义段与符号名称开销
 

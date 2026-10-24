@@ -108,6 +108,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
        moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
+       moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]
        moonsize <file.wasm> --metadata [--top <n>] [--metadata-json <new.json>]
        moonsize <file.wasm> --duplicates [--top <n>] [--duplicates-json <new.json>]
        moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
@@ -146,7 +147,9 @@ identify candidates for investigation.
   --experiment-context <path>  attach declared build settings and validation
   --imports           list host import declarations and their encoding bytes
   --imports-json <path> write all declarations to a new .json file; implies --imports
-                       unsupported descriptors fail; only Top and own JSON allowed
+                       unsupported descriptors fail; baseline requires --diff-imports
+  --diff-imports      compare import names/kinds/counts; requires --baseline
+                       type compatibility not evaluated; differences still return 0
   --metadata          account for custom/name physical file bytes
   --metadata-json <path> write full metadata to a new .json file; implies --metadata
                        partial optional name details still return 0 with diagnostics
@@ -298,10 +301,26 @@ The supported subset covers short funcref/externref table types, 32-bit limits
 types, and tag attribute 0. Typed references, other GC forms, memory64/table64 and
 unsupported flags fail explicitly. Core import errors never become partial success.
 Top limits text entries only; summaries and declaration-order JSON remain complete.
-This independent mode accepts only Top and its own JSON, rejects strict/other
-modes before input I/O, and inherits exclusive output creation. Declarations do not
+Single-file mode allows Top and its own JSON; baseline requires --diff-imports.
+Strict and other report modes are rejected before input I/O. Output inherits
+exclusive creation. To compare two builds:
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-imports --top 20
+moonsize after.wasm --baseline before.wasm --diff-imports --imports-json new-imports-diff.json
+```
+
+Exact (module_name, field, kind) groups compare multiplicities, retaining both
+complete inventories. Overlap is a quantity intersection, not physical member
+matching. same_count does not mean unchanged or type-compatible; type indices,
+limits and mutability can differ. Top limits text groups only; comparison JSON is
+moonsize-imports-diff/schema_version 1, while single-file JSON remains unchanged.
+The measured pair has 9 declarations on each side: overlap 6, removed 3, added 3.
+Its import section delta is 11 B = 1 header + 1 count prefix + 9 declaration bytes,
+all current minus baseline. Reordering creates no quantity change. Differences
+still return 0; parse errors retain side, path and reason. Declarations do not
 prove runtime use, permissions, host compatibility or removal savings. See
-[the support matrix, indices, actual ledger and API](docs/imports.md).
+[the support matrix, comparison contract and actual ledgers](docs/imports.md).
 
 ## Custom sections and symbol-name overhead
 

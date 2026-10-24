@@ -1,4 +1,30 @@
 ///|
+fn imports_ledger_json(s : ImportsLedger) -> Json {
+  let ledger : Map[String, Json] = Map([])
+  ledger.set(
+    "import_section_total_bytes",
+    int_json(s.import_section_total_bytes),
+  )
+  ledger.set("section_header_bytes", int_json(s.section_header_bytes))
+  ledger.set("count_prefix_bytes", int_json(s.count_prefix_bytes))
+  ledger.set("entry_bytes", int_json(s.entry_bytes))
+  ledger.set(
+    "module_name_encoding_bytes",
+    int_json(s.module_name_encoding_bytes),
+  )
+  ledger.set(
+    "module_length_prefix_bytes",
+    int_json(s.module_length_prefix_bytes),
+  )
+  ledger.set("module_utf8_bytes", int_json(s.module_utf8_bytes))
+  ledger.set("field_name_encoding_bytes", int_json(s.field_name_encoding_bytes))
+  ledger.set("field_length_prefix_bytes", int_json(s.field_length_prefix_bytes))
+  ledger.set("field_utf8_bytes", int_json(s.field_utf8_bytes))
+  ledger.set("descriptor_bytes", int_json(s.descriptor_bytes))
+  Json::object(ledger)
+}
+
+///|
 fn imports_range_json(range : ImportByteRange) -> Json {
   let row : Map[String, Json] = Map([])
   row.set("offset", int_json(range.offset))
@@ -53,7 +79,7 @@ fn imports_limits_json(limits : ImportLimits?) -> Json {
 }
 
 ///|
-pub fn render_imports_json(report : ImportsReport) -> String {
+fn imports_json(report : ImportsReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-imports"))
   root.set("schema_version", int_json(1))
@@ -64,29 +90,7 @@ pub fn render_imports_json(report : ImportsReport) -> String {
   root.set("count_encoding", imports_optional_range_json(report.count_encoding))
   root.set("entry_count", int_json(report.entry_count))
   root.set("kind_counts", imports_counts_json(report.kind_counts))
-  let s = report.ledger
-  let ledger : Map[String, Json] = Map([])
-  ledger.set(
-    "import_section_total_bytes",
-    int_json(s.import_section_total_bytes),
-  )
-  ledger.set("section_header_bytes", int_json(s.section_header_bytes))
-  ledger.set("count_prefix_bytes", int_json(s.count_prefix_bytes))
-  ledger.set("entry_bytes", int_json(s.entry_bytes))
-  ledger.set(
-    "module_name_encoding_bytes",
-    int_json(s.module_name_encoding_bytes),
-  )
-  ledger.set(
-    "module_length_prefix_bytes",
-    int_json(s.module_length_prefix_bytes),
-  )
-  ledger.set("module_utf8_bytes", int_json(s.module_utf8_bytes))
-  ledger.set("field_name_encoding_bytes", int_json(s.field_name_encoding_bytes))
-  ledger.set("field_length_prefix_bytes", int_json(s.field_length_prefix_bytes))
-  ledger.set("field_utf8_bytes", int_json(s.field_utf8_bytes))
-  ledger.set("descriptor_bytes", int_json(s.descriptor_bytes))
-  root.set("ledger", Json::object(ledger))
+  root.set("ledger", imports_ledger_json(report.ledger))
   root.set(
     "modules",
     Json::array(
@@ -133,7 +137,12 @@ pub fn render_imports_json(report : ImportsReport) -> String {
       }),
     ),
   )
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+pub fn render_imports_json(report : ImportsReport) -> String {
+  imports_json(report).stringify(indent=2) + "\n"
 }
 
 ///|

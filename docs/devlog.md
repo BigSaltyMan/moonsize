@@ -500,3 +500,32 @@ _build/imports-verification/run-OXjhpk，含输入、四次日志、完整JSON�
 旧CLI、探针、演示、HTML/PDF或性能基准。CI复用native构建只追加同一轻量脚本，
 旧回归继续自动执行；提交推送后核对最终SHA整体状态。本次不改依赖或版本、
 不发布Mooncakes，不增加HTML、比较、预算或宿主探测，不预测实际调用或优化收益。
+
+## 34. 宿主导入依赖基线比较（2026-10-24）
+
+基线bc049ce，版本仍0.5.1。新增compare_imports，每侧仅inspect_imports一次并保留
+完整清单，不调用analyze、图或函数统计。结构化(module_name, field, kind)键保证
+合法名称含分隔符时不碰撞，不以ordinal/kind_index/offset/type_index配对。重复
+成员全部计数和保留原序号；交集为数量min，不判定某个重复成员保留或删除。
+同名换kind分别移除/新增，same_count不叫未变化或兼容，inventory_changed只看
+各键count_delta。类型索引、limits、value_type、mutability及范围留在两侧详情。
+
+新增独立文本和moonsize-imports-diff JSON，Top只限文本组。差值统一current减
+baseline，复用ImportsLedger的Int字段，非文件范围；模块段头/count不分摊到组。
+--diff-imports要求非空baseline，隐含imports，显式同用允许；单文件imports仍
+拒绝baseline，strict及其他模式读取前拒绝。文件复用imports_json槽及独占创建。
+两分支比较错误保留原WasmError和侧别，CLI附真实路径、原位置及原因。
+
+接口审查为4种比较类型（含错误包装）、4个入口、Options一字段；旧解析支持、
+错误分支及公开签名不变。仅提取私有JSON构造复用完整清单/账本，不改旧格式含义。
+实测两侧118/129字节，各9条声明，交集6、新增3、移除3，总数量0但清单变化。
+段差11=1段头+1count+9条目，条目差9=1模块名+2字段名+6描述符；重排数量变化0。
+[实际哈希、分组和账本](imports.md)。
+
+本地只运行3个新组合测试；首轮其中1个夹具手算期望多计10字节，核对实际条目
+后修正，并仅重跑该失败项，三个用例均通过。一次release构建后四次新CLI均通过；
+三份合法fixture分别V8验证一次，不实例化/执行。已有JSON返回1且字节不变，非法
+侧由API测试覆盖，不新增进程矩阵。证据_build/imports-diff-verification/run-KKoige。
+完成格式、native及接口检查；未跑本地旧套件、旧CLI、探针、演示、HTML/PDF或
+性能基准。CI保留旧回归，只追加同一轻量脚本；推送后核对最终SHA整体结果。
+不扩展类型范围，不增加ABI判断、HTML、预算、自动门禁，不改依赖或发布Mooncakes。

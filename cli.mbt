@@ -51,6 +51,8 @@ pub struct Options {
   /// Independent host-import declaration byte accounting.
   imports : Bool
   imports_json : String?
+  /// Compare exact host-import key multiplicities against baseline.
+  diff_imports : Bool
   /// Validated multi-metric budgets, with optional evidence outputs.
   budget : String?
   budget_json : String?
@@ -103,6 +105,7 @@ pub fn Options::default(path : String) -> Options {
     metadata_json: None,
     imports: false,
     imports_json: None,
+    diff_imports: false,
     budget: None,
     budget_json: None,
     budget_md: None,
@@ -327,6 +330,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut metadata_json : String? = None
   let mut imports = false
   let mut imports_json : String? = None
+  let mut diff_imports = false
   let mut budget : String? = None
   let mut budget_json : String? = None
   let mut budget_md : String? = None
@@ -370,6 +374,10 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         budget_md = Some(args[i + 1])
       }
       i += 2
+    } else if arg == "--diff-imports" {
+      diff_imports = true
+      imports = true
+      i += 1
     } else if arg == "--imports" {
       imports = true
       i += 1
@@ -574,6 +582,17 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     Some(path) => path
     None => return Err(usage())
   }
+  if diff_imports {
+    match baseline {
+      Some(target) if !target.trim().is_empty() && !target.has_prefix("--") =>
+        ()
+      _ =>
+        return Err(
+          "moonsize: --diff-imports requires --baseline with a non-empty path\n\n" +
+          usage(),
+        )
+    }
+  }
   if imports {
     if retained ||
       dead_code ||
@@ -588,7 +607,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       metadata ||
       html is Some(_) ||
       call_graph is Some(_) ||
-      baseline is Some(_) ||
+      (baseline is Some(_) && !diff_imports) ||
       max_size is Some(_) ||
       experiment is Some(_) ||
       experiment_context is Some(_) ||
@@ -601,7 +620,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_json is Some(_) ||
       budget_md is Some(_) {
       return Err(
-        "moonsize: --imports is an independent mode; only --top and --imports-json may be combined with it\n\n" +
+        "moonsize: --imports is an independent mode; only --top, --imports-json and --baseline with --diff-imports may be combined with it\n\n" +
         usage(),
       )
     }
@@ -948,6 +967,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     metadata_json,
     imports,
     imports_json,
+    diff_imports,
     budget,
     budget_json,
     budget_md,

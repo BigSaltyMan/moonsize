@@ -457,6 +457,7 @@ pub fn usage() -> String {
   "                 [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]\n" +
   "                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]\n" +
   "       moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]\n" +
+  "       moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]\n" +
   "       moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]\n\n" +
   "Report the section table of a WebAssembly binary, rank its heaviest\n" +
   "functions, roll the bytes up by module, and follow the call graph to\n" +
@@ -488,7 +489,9 @@ pub fn usage() -> String {
   "  --experiment-context <path>  attach declared build settings and validation\n" +
   "  --imports           list host import declarations and their file encoding bytes\n" +
   "  --imports-json <path> write complete imports JSON to a new .json file\n" +
-  "                       only --top and --imports-json allowed; unsupported encodings fail\n" +
+  "                       only --top and own JSON; --baseline allowed with --diff-imports\n" +
+  "  --diff-imports      compare exact import names/kinds/counts; requires --baseline\n" +
+  "                       type compatibility not evaluated; successful differences return 0\n" +
   "  --metadata          account for custom/name physical file bytes\n" +
   "  --metadata-json <path> write complete metadata JSON to a new .json file\n" +
   "                       only --top and --metadata-json allowed; partial details use exit 0\n" +

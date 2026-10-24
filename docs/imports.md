@@ -8,8 +8,8 @@ moonsize app.wasm --imports --top 20
 moonsize app.wasm --imports-json new-imports.json
 ```
 
-JSON隐含启用。独立模式只允许Top和自身JSON，strict、baseline、预算及其他模式
-在参数阶段拒绝（返回2、读取输入之前）。目标要求新的`.json`文件，接入既有
+JSON隐含启用。单文件模式只允许Top和自身JSON；baseline必须搭配--diff-imports，
+见下文比较模式。strict、预算及其他模式在参数阶段拒绝（返回2、读取输入之前）。目标要求新的`.json`文件，接入既有
 统一预检和原生独占创建。已有文件不覆盖；不增加多文件事务或其他并发保证。
 0表示报告成功，包括空结果；1表示读取、结构、暂不支持编码或输出/保护失败。
 核心import段没有metadata可选内容的partial成功规则，解析失败不输出半份清单，
@@ -139,3 +139,108 @@ CI复用native构建只追加同一脚本，原有回归不变；提交后核对
 
 导入声明不等于运行时实际调用，不证明权限使用或环境兼容性；声明编码字节
 不是宿主实现、依赖包或下载体积，也不预测删除、重编译或gzip收益。
+
+## 宿主导入基线比较（0.5.1之后的源码增量）
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-imports --top 20
+moonsize after.wasm --baseline before.wasm --diff-imports --imports-json new-imports-diff.json
+```
+
+--diff-imports隐含imports模式，要求非空baseline；显式--imports也可同用。
+只允许baseline、Top和自身JSON，strict/其他分析模式在读取前返回2。普通
+--imports配baseline而未给diff标志仍返回2，不静默改变单文件模式。比较成功
+返回0，包括有新增/移除；没有依赖门禁或退出3。读取、任一侧解析/不支持编码、
+保护或写入失败返回1，不能输出半份成功结果。错误附baseline/current、文件路径
+及原始位置/原因；读取失败没有可用的解析位置，不虚构偏移。
+
+### 精确键、重复次数与类型边界
+
+键为结构化(module_name, field, kind)，不拼接分隔符；名称精确比较，不trim、
+忽略大小写或做Unicode归一化。ordinal、kind_index、offset、type_index不参与
+跨构建身份。重排、插入或类型段重编号可能改变它们，原值保留在两侧详情供回查。
+同名字段换kind分别表现为旧kind减少和新kind增加。
+
+每组保留两侧全部ordinal升序列表、数量和条目字节。overlap_count是两侧数量的
+较小值，removed/added分别是各侧数量减overlap。这是多重集合交集，不选择哪个
+重复成员“保留”或“删除”。状态为added、removed、count_increased、count_decreased
+或same_count；same_count不证明描述符、编码或类型相同。
+
+清单相同不证明宿主兼容。type_index相同不证明签名相同，不同也不证明签名变化；
+相同键/次数下limits、value_type、mutability仍可能不同。本入口不比较完整类型，
+也不生成ABI兼容/不兼容或签名变化结论。inventory_changed仅表示某组count_delta
+非零；即使总声明数不变，也可能为true。数量未变时明确显示：
+
+```text
+No changes to names, kinds or declaration counts; type compatibility is not evaluated.
+```
+
+### 实测差值账本
+
+新脚本scripts/test-imports-diff.mjs的两个合法样本含两份可引用的() -> ()类型。
+Node v24.18.0/V8对baseline/current/重排三份产物分别仅验证一次，不执行。输入：
+
+| 产物 | 文件B | SHA-256 |
+| --- | ---: | --- |
+| baseline | 118 | 84378cd9a5c5efa94a67d65fcf982b6d05511856d85562a071c7c7d87d80d57a |
+| current | 129 | b9ff54b7bc41154f50110aa8c184e766e06e4f7225a62b46413ff23f38365c00 |
+| baseline重排 | 118 | ef72de03ca0478d8beb6becaf2f503a1209ad3fe9c0b7e9d638b343ee0c7a034 |
+
+真实CLI的数量账本为baseline 9=6交集+3移除，current 9=6交集+3新增，净数量0。
+键集合仍变化，inventory_changed为true。全部10组的实际声明字节差：
+
+| module / field / kind | before次数 | after次数 | 条目字节差 |
+| --- | ---: | ---: | ---: |
+| env / grow / table | 1 | 2 | +14 |
+| env / fresh / tag | 0 | 1 | +13 |
+| env / flip / global | 0 | 1 | +12 |
+| env / gone / global | 1 | 0 | -12 |
+| env / flip / function | 1 | 0 | -11 |
+| env / same / function | 2 | 1 | -8 |
+| env / stable / memory | 1 | 1 | +1 |
+| 空模块名 / 换行、引号、雪 / global | 1 | 1 | 0 |
+| a / b\|c / function | 1 | 1 | 0 |
+| a\|b / c / function | 1 | 1 | 0 |
+
+末尾两个键不会因分隔符名称而碰撞。env/grow只保留baseline ordinal[2]和current
+[2,5]，没有将具体成员相互配对。相同global键数量为1，但mutability由0变1，
+报告保留两侧值并声明未评估兼容性。文本Top1只显示第一组，JSON包含全部10组，
+两侧各9条声明及全部type_index/limits/value_type/mutability和描述符范围。
+
+```text
+Baseline import section bytes: 101 B = header 2 B + count prefix 1 B + declarations 98 B
+Current import section bytes: 112 B = header 3 B + count prefix 2 B + declarations 107 B
+Delta import section bytes: 11 B = header 1 B + count prefix 1 B + declarations 9 B
+Delta declaration bytes: 9 B = module names 1 B + field names 2 B + descriptors 6 B
+```
+
+每个delta都是current减baseline，可为负数；组的baseline/current条目字节分别
+合计98/107，组差合计9。段头和数量前缀差不分摊到组，不是文件范围。合法
+非最短编码也参与实际大小：current的段长度、数量、某条名称和类型索引前缀更宽。
+缺省import与显式空段可有相同清单但段差3字节；零字节差也不证明内容相同。
+字节差不是宿主实现、依赖包、网络成本、删除或重编译收益。
+
+### 比较接口、JSON与验证
+
+```moonbit
+compare_imports(Bytes, Bytes) -> Result[ImportsComparison, ImportsComparisonError]
+render_imports_diff(ImportsComparison, Int) -> String
+render_imports_diff_json(ImportsComparison) -> String
+describe_imports_comparison_error(ImportsComparisonError) -> String
+```
+
+每侧只调用一次inspect_imports，保留完整ImportsReport；不调用analyze、图或
+函数统计。新ImportInventoryGroup、ImportInventoryCounts、ImportsComparison及
+两分支ImportsComparisonError包装旧WasmError，旧错误类型/解析器未扩展。
+Options新增diff_imports=false。差值复用ImportsLedger的Int字段，仅用于有符号
+字节量，不冒充物理范围。单文件JSON构造只提取私有公共部分，旧公开签名及格式
+含义不变；比较独立使用moonsize-imports-diff/schema_version 1，含比较键说明、
+完整两侧报告、全部组、数量统计、delta和type_compatibility=not_evaluated。
+输出继续使用imports_json槽、既有preflight与独占创建，没有新writer。
+
+本地仅运行imports_diff_wbtest.mbt的3个新组合用例（一个夹具手算期望修正后仅
+重跑该失败项），及脚本四次CLI：成功文本Top1、完整JSON、重排数量无变化、已有
+JSON拒绝且原字节不变。非法侧仅由API单测覆盖，没有第五次CLI。原始证据位于
+_build/imports-diff-verification/run-KKoige/，含三份输入、四次日志、完整JSON、
+results.json。没有本地旧套件、探针、演示、浏览器/PDF或性能基准；CI复用native
+构建仅追加此脚本，提交后核对确切SHA整体状态。版本仍0.5.1，不发布Mooncakes。
