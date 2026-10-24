@@ -470,3 +470,33 @@ custom实例按原文件范围核算段头、名称编码和内容；分类只�
 计划中的Metadata类型/入口与Options字段。证据_build/metadata-verification/run-SWLCRC。
 未跑旧套件、编译探针、HTML/PDF、源码演示或性能基准。CI只追加同一四场景脚本，
 旧检查由既有CI自动运行；提交推送后核对目标SHA最终状态，不提前宣称远程成功。
+
+## 33. 宿主导入依赖与编码开销（2026-10-24）
+
+基线6809bd9，版本仍0.5.1。新增inspect_imports及独立文本/JSON，不调用analyze、
+图、函数统计或路径；旧count_imported_functions/skip_import_desc未改。复用外层
+parse_module与有界Reader，按数量增量读取，恰好耗尽import payload，不按不可信
+数量预分配。五种kind分别编号，重复声明不覆盖；module/field严格UTF-8，保留
+空名、空白、Unicode及控制字符，文本和JSON正确转义，不解释包、权限或环境。
+
+limits先核对flags再读取UInt数值，支持32位0/1以及memory的有maximum shared3，
+检查minimum不超过maximum；typed reference、其他GC、64位和其他flags明确暂不
+支持。global mutability和tag attribute具体报错；新增单一InvalidImportEncoding
+分支带位置与原因，复用截断、LEB和尾随错误。核心import不采用metadata的partial
+成功；解析失败不输出半份清单，不创建报告。
+
+新增7种类型、3个入口、Options两字段及1个错误分支；已审查公开接口增量。
+各名称和描述符保留实际范围/前缀，type_index仅声明值，JSON完整u32不变负数。
+模块按完整名汇总，段头和count不分摊。Top只截断文本条目，JSON按声明顺序完整
+保存，文件复用统一预检与独占创建。[支持范围、迁移与实际输出](imports.md)。
+
+本地仅3个新组合单测及4次新CLI调用，全部通过；152字节五kind混合样本含必要
+类型段，Node v24.18.0/V8独立验证一次，不执行。实测import段138=3+2+133，
+声明133=64模块名+39字段名+30描述符；模块汇总51+43+24+15=133。memory64在
+offset14拒绝、退出1且不创建JSON；已有JSON退出1且原字节不变。证据目录
+_build/imports-verification/run-OXjhpk，含输入、四次日志、完整JSON和结果记录。
+
+完成接口生成/差异审查、格式、native检查及一次release构建；本地未跑旧套件、
+旧CLI、探针、演示、HTML/PDF或性能基准。CI复用native构建只追加同一轻量脚本，
+旧回归继续自动执行；提交推送后核对最终SHA整体状态。本次不改依赖或版本、
+不发布Mooncakes，不增加HTML、比较、预算或宿主探测，不预测实际调用或优化收益。

@@ -38,6 +38,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
       options.entrypoints_json,
       options.duplicates_json,
       options.metadata_json,
+      options.imports_json,
       options.budget_json,
       options.budget_md,
       options.data_json,

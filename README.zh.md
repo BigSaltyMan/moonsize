@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
 moonsize <file.wasm> --metadata [--top <n>] [--metadata-json <new.json>]
 moonsize <file.wasm> --duplicates [--top <n>] [--duplicates-json <new.json>]
 moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
@@ -46,6 +47,8 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --imports           列出宿主导入声明及其文件编码字节
+  --imports-json <path> 启用独立模式，全部声明写入新的.json；不支持编码返回1
   --metadata          核算每个custom及name记录的实际文件字节
   --metadata-json <path> 启用独立明细并写入新的.json；可选内容损坏仍返回0并附诊断
   --retained           当前图模型中受支配函数的编码字节总和
@@ -170,6 +173,27 @@ moonsize app.wasm --callers 42 --callers-json new-callers.json
 Top 只限制文本中的引用者组数，计数和 JSON 完整。仅可搭配 Top、JSON、strict。
 空结果不证明可删除，strict 缺口先于文件检查返回3；JSON 沿用独占保护。
 [详细说明、实测位置及 API](docs/function-callers.md)。
+
+## 宿主导入依赖与编码开销
+
+这是公开0.5.1之后的源码增量，需从当前源码构建native CLI：
+
+```sh
+moonsize app.wasm --imports --top 20
+moonsize app.wasm --imports-json new-imports.json
+```
+
+列出function/table/memory/global/tag五类声明，保留精确module/field、各kind独立
+索引和原文件范围，重复名称不覆盖。实测import段账本138=3段头+2数量前缀+133
+声明字节，声明133=64模块名+39字段名+30描述符；段级开销不分摊到模块。这是
+导入声明编码字节，不是宿主实现或依赖包大小。
+
+首版支持短编码funcref/externref表、32位limits（含有maximum的shared memory）、
+指定global类型与tag attribute 0；typed reference、其他GC编码、memory64/table64
+及其他flags明确拒绝。核心import错误不作partial成功处理。Top仅限制文本条目，
+模块汇总和声明顺序JSON完整；独立模式只允许Top和自身JSON，strict及其他模式
+在读取前拒绝，输出沿用独占保护。不推断实际调用、权限、环境兼容性或删除收益。
+[支持矩阵、索引、实际账本和API](docs/imports.md)。
 
 ## 自定义段与符号名称开销
 

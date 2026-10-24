@@ -182,3 +182,22 @@ invalidating the outer module; outer parser errors remain errors. Strict and
 other modes are rejected before input I/O; output uses exclusive creation.
 See [the byte ledgers and coverage contract](metadata.md). Version remains 0.5.1;
 this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: host import declarations
+
+New APIs: inspect_imports(Bytes) -> Result[ImportsReport, WasmError],
+render_imports(report, top), and render_imports_json(report). New read-only types:
+ImportByteRange, ImportLimits, ImportDeclaration, ImportKindCounts, ImportModule,
+ImportsLedger and ImportsReport. Options adds imports=false and imports_json=None;
+Options::default supplies both. WasmError adds InvalidImportEncoding(Int, String),
+carrying a file offset and malformed/unsupported reason: external exhaustive
+matches must handle this branch. Existing truncation, LEB and trailing-byte
+errors are reused. No old signature, default analysis, imported-function counting
+behavior or existing report schema changes. The library uses module_name to avoid
+the toolchain's reserved word; the independent moonsize-imports/schema_version 1
+JSON uses module and keeps every declaration in physical order. UInt type indices
+and limits retain their unsigned range; they are not complete semantic validation.
+The CLI allows only Top and its own JSON; unsupported descriptors fail with exit 1,
+not partial success, and new files use the existing exclusive creator. See
+[the import support and byte-ledger contract](imports.md). Version remains 0.5.1;
+this source increment has not been published to Mooncakes.

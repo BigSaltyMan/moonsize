@@ -29,6 +29,8 @@ pub enum WasmError {
   InvalidDataEncoding(Int, String)
   /// An import descriptor whose kind byte is outside the assigned range.
   InvalidImportKind(Int)
+  /// Import field offset and a malformed or explicitly unsupported encoding.
+  InvalidImportEncoding(Int, String)
   /// A byte where an opcode was expected that no instruction uses.
   UnknownOpcode(Int, Int)
   /// A prefixed opcode whose sub-opcode is unassigned: the prefix byte, the

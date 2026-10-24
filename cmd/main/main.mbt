@@ -271,6 +271,10 @@ fn main {
       return
     }
   }
+  if options.imports {
+    run_imports(options)
+    return
+  }
   if options.metadata {
     run_metadata(options)
     return

@@ -37,6 +37,8 @@ jobs:
         run: moon test
       - name: Build native CLI
         run: moon build --target native --release
+      - name: Imports CLI regressions (four cases)
+        run: node scripts/test-imports.mjs _build/native/release/build/cmd/main/main.exe
       - name: Metadata CLI regressions (four cases)
         run: node scripts/test-metadata.mjs _build/native/release/build/cmd/main/main.exe
       - name: Duplicate-function CLI regressions (four cases)

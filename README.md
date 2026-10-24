@@ -107,6 +107,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
        moonsize <file.wasm> --metadata [--top <n>] [--metadata-json <new.json>]
        moonsize <file.wasm> --duplicates [--top <n>] [--duplicates-json <new.json>]
        moonsize <file.wasm> --entrypoints [--top <n>] [--entrypoints-json <new.json>] [--strict]
@@ -143,6 +144,9 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --imports           list host import declarations and their encoding bytes
+  --imports-json <path> write all declarations to a new .json file; implies --imports
+                       unsupported descriptors fail; only Top and own JSON allowed
   --metadata          account for custom/name physical file bytes
   --metadata-json <path> write full metadata to a new .json file; implies --metadata
                        partial optional name details still return 0 with diagnostics
@@ -272,6 +276,32 @@ separately. Top limits text caller groups; JSON and counts remain complete.
 Only Top, callers JSON and strict may accompany this independent query. Empty
 results do not prove removability. Strict gaps return 3 before output checks;
 JSON uses exclusive creation. See [actual sample, API and scope](docs/function-callers.md).
+
+## Host import declarations
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --imports --top 20
+moonsize app.wasm --imports-json new-imports.json
+```
+
+Lists physical function, table, memory, global and tag import declarations, with
+exact module/field names, per-kind indices and original file ranges. Repeated
+names remain separate. The measured fixture's import section is 138 B = 3 B
+header + 2 B count prefix + 133 B declarations; declaration bytes decompose into
+64 B module names + 39 B field names + 30 B descriptors. Module summaries exclude
+section overhead. These are declaration encoding bytes, not host/package sizes.
+
+The supported subset covers short funcref/externref table types, 32-bit limits
+(including shared memory with a maximum), the listed global scalar/vector/reference
+types, and tag attribute 0. Typed references, other GC forms, memory64/table64 and
+unsupported flags fail explicitly. Core import errors never become partial success.
+Top limits text entries only; summaries and declaration-order JSON remain complete.
+This independent mode accepts only Top and its own JSON, rejects strict/other
+modes before input I/O, and inherits exclusive output creation. Declarations do not
+prove runtime use, permissions, host compatibility or removal savings. See
+[the support matrix, indices, actual ledger and API](docs/imports.md).
 
 ## Custom sections and symbol-name overhead
 
