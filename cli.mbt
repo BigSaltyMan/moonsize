@@ -56,6 +56,9 @@ pub struct Options {
   /// Independent exact data payload groups within the current input.
   data_duplicates : Bool
   data_duplicates_json : String?
+  /// Independent selected local-function instruction encoding.
+  instructions_index : Int?
+  instructions_json : String?
   /// Validated multi-metric budgets, with optional evidence outputs.
   budget : String?
   budget_json : String?
@@ -111,6 +114,8 @@ pub fn Options::default(path : String) -> Options {
     diff_imports: false,
     data_duplicates: false,
     data_duplicates_json: None,
+    instructions_index: None,
+    instructions_json: None,
     budget: None,
     budget_json: None,
     budget_md: None,
@@ -338,6 +343,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut diff_imports = false
   let mut data_duplicates = false
   let mut data_duplicates_json : String? = None
+  let mut instructions_index : Int? = None
+  let mut instructions_json : String? = None
   let mut budget : String? = None
   let mut budget_json : String? = None
   let mut budget_md : String? = None
@@ -380,6 +387,31 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       } else {
         budget_md = Some(args[i + 1])
       }
+      i += 2
+    } else if arg == "--instructions" {
+      if i + 1 >= args.length() {
+        return Err(
+          "moonsize: --instructions needs a function index\n\n" + usage(),
+        )
+      }
+      instructions_index = match parse_path_index(args[i + 1]) {
+        Some(index) => Some(index)
+        None =>
+          return Err(
+            "moonsize: --instructions wants a nonnegative function index\n\n" +
+            usage(),
+          )
+      }
+      i += 2
+    } else if arg == "--instructions-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --instructions-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      instructions_json = Some(args[i + 1])
       i += 2
     } else if arg == "--data-duplicates" {
       data_duplicates = true
@@ -603,6 +635,52 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if instructions_json is Some(_) && instructions_index is None {
+    return Err(
+      "moonsize: --instructions-json requires --instructions\n\n" + usage(),
+    )
+  }
+  if instructions_index is Some(_) {
+    if retained ||
+      dead_code ||
+      compress ||
+      strict ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      data_json is Some(_) ||
+      html is Some(_) ||
+      call_graph is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) {
+      return Err(
+        "moonsize: --instructions is an independent mode; only --top and --instructions-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if instructions_json is Some(target) && !target.has_suffix(".json") {
+      return Err(
+        "moonsize: --instructions-json wants a .json path\n\n" + usage(),
+      )
+    }
   }
   if data_duplicates {
     if retained ||
@@ -1032,6 +1110,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     diff_imports,
     data_duplicates,
     data_duplicates_json,
+    instructions_index,
+    instructions_json,
     budget,
     budget_json,
     budget_md,

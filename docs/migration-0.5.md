@@ -239,3 +239,24 @@ per displayed group. Only Top/own JSON are allowed; other modes (including stric
 baseline, data details/diff and function duplicates) fail before I/O. The existing
 output preflight and exclusive creator are reused. See [scope and actual ledgers](data-segments.md).
 Version remains 0.5.1; this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: selected-function instruction encoding
+
+New APIs: inspect_function_instructions(Bytes, Int),
+describe_function_instructions_error(error), render_function_instructions(report,
+top), and render_function_instructions_json(report). New types:
+FunctionInstructionRange, FunctionInstructionRecord, FunctionOpcodeGroup,
+FunctionInstructionsReport and FunctionInstructionsError. Errors wrap the original
+WasmError or distinguish invalid targets, imported targets and range consistency.
+Options adds instructions_index=None and instructions_json=None; default supplies
+both, and external struct literals must include the new fields. Old signatures,
+WasmError branches and report schemas are unchanged. The independent
+moonsize-function-instructions/schema_version 1 JSON retains complete groups and
+file-order instructions; Top limits both text tables only. Full function indices
+include imports; imported targets fail because no local body exists. Only the
+selected local body is instruction-decoded once, using the existing bounded
+decoder and mnemonic table. No analyze/graph/retained, operands, WAT, execution
+frequency, timing or savings. Strict and other modes are rejected before I/O;
+JSON requires an explicit target and uses the existing preflight/exclusive writer.
+See [ranges, measured ledger and scope](function-instructions.md). Version remains
+0.5.1; this source increment has not been published to Mooncakes.

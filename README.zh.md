@@ -38,6 +38,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
+moonsize <file.wasm> --instructions <n> [--top <n>] [--instructions-json <new.json>]
 moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]
 moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
 moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]
@@ -49,6 +50,8 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --instructions <n> 查询完整函数索引中的本地函数编码
+  --instructions-json <path> 完整opcode组及指令写入新的.json；需显式instructions
   --data-duplicates   检测当前文件内字节完全相同的data payload
   --data-duplicates-json <path> 完整组和原始明细写入新的.json；每组文本预览最多20成员
   --imports           列出宿主导入声明及其文件编码字节
@@ -111,6 +114,22 @@ payload 和编码开销；加 `--data-json new-diff.json` 输出独立比较格�
 未启用 diff-data 时，单文件 JSON 及原 baseline 行为不变。内容组不代表源码身份，
 相同内容不证明初始化语义等价，重复内容也不证明可安全去重；原始差值不预测
 重编译或 gzip 收益。
+
+## 单函数指令编码明细
+
+这是公开0.5.1之后的源码增量，使用当前源码构建的native CLI：
+
+```sh
+moonsize app.wasm --instructions 3 --top 20
+moonsize app.wasm --instructions 3 --instructions-json new-instructions.json
+```
+
+index使用包含前置导入的完整函数索引，不是体积排名或本地编号。导入目标没有
+本地函数体，返回输入错误。只解码选中的函数，分别核算长度前缀、locals编码和
+指令字节，展示opcode次数、编码量及原文件指令范围。Top限制两张文本表，JSON
+保留所有组和指令。独立模式只允许Top和自身JSON，strict/其他模式在读取前拒绝，
+新输出沿用独占保护。静态次数不是执行频率，编码字节不预测耗时或删除收益。
+[测量账本、范围及API说明](docs/function-instructions.md)。
 
 ## 数据段重复内容
 

@@ -85,6 +85,25 @@ format; without `--diff-data`, JSON keeps the original single-file format.
 Groups do not establish source identity, equivalent initialization or safe
 deduplication, and raw differences do not predict rebuild or gzip savings.
 
+## Single-function instruction encoding
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --instructions 3 --top 20
+moonsize app.wasm --instructions 3 --instructions-json new-instructions.json
+```
+
+Uses the full function index space, with imports first; an imported target has
+no local body and returns an input error. Only the selected body is decoded.
+The report separates its length prefix, locals encoding and instructions, and
+lists opcode counts, encoded bytes and original-file instruction ranges.
+Top limits both text tables; JSON contains every group and instruction.
+This independent mode accepts only Top and its own JSON, rejects strict and
+other modes before I/O, and refuses to overwrite existing output. Counts and
+bytes describe static encoding, not execution frequency, timing or savings.
+See [scope, measured ledger and API](docs/function-instructions.md).
+
 ## Duplicate data payloads
 
 This source addition follows public 0.5.1; build the native CLI from source.
@@ -132,6 +151,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
+       moonsize <file.wasm> --instructions <n> [--top <n>] [--instructions-json <new.json>]
        moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]
        moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
        moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]
@@ -171,6 +191,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --instructions <n> inspect a local function in the full function index space
+  --instructions-json <path> save complete groups and instructions to a new .json
   --data-duplicates   group exact data payloads within the current input
   --data-duplicates-json <path> write full groups and source entries to a new .json
                        only Top and own JSON; text previews 20 members per group

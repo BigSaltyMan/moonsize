@@ -271,6 +271,10 @@ fn main {
       return
     }
   }
+  if options.instructions_index is Some(index) {
+    run_function_instructions(options, index)
+    return
+  }
   if options.data_duplicates {
     run_duplicate_data(options)
     return

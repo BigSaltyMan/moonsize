@@ -556,3 +556,32 @@ DataCount单列，空组仍保留成员6/7及8字节编码；index5与组0等长
 旧CLI、演示、探针、HTML/PDF或性能基准。CI只追加同一轻量脚本，保留旧回归，
 提交后核对最终SHA整体结论。不做初始化求值、运行时用途分析、自动去重、HTML、
 比较或预算，不改依赖/版本，不发布Mooncakes。
+
+## 36. 单函数指令编码明细（2026-10-24）
+
+基线3c29681，版本仍0.5.1。新增inspect_function_instructions，复用parse_module、
+collect_function_stats及名称处理，按完整函数索引定位；导入目标明确无本地body。
+其他函数仅检查范围，只对目标调用一次有界decode_instructions，不调用analyze、
+图、retained或路径。locals范围取第一条解码指令之前的编码，不重复解析locals；
+无指令时仍核算已消费范围，不冒充完整语义验证。未知或截断指令透传旧错误。
+
+新增独立文本与moonsize-function-instructions/schema_version 1 JSON，四个入口、
+五种公开类型、Options两字段；旧API和WasmError不变。每条保留ordinal、mnemonic、
+file/body相对offset及完整编码长度，不保留操作数。组按字节、次数降序及mnemonic
+字典序排列；这里显式用lexical_compare，避免默认String.compare的短字优先顺序。
+Top限制两张文本表，JSON与汇总完整。其他模式包括strict读取前拒绝，新JSON
+接入统一preflight和独占创建，不新增文件写入通道。
+
+90字节fixture经Node v24.18.0/V8独立验证一次，未执行。目标index1在前置导入
+之后：entry35=2前缀+33body，body33=3locals+30指令；15条指令、8组覆盖文件
+[36,66)，首条block在offset36、相对body3、长度2。两种trunc_sat分别成组。
+[实际账本、哈希和范围](function-instructions.md)。原始CLI证据位于
+_build/function-instructions-verification/run-zP6iDd，接口快照在review-ekrAGF。
+
+本地仅运行3个新组合单测；初轮2通过/1排序失败，修正字典序后只重跑失败用例
+并通过。四次新CLI通过：Top1文本、完整JSON、导入目标拒绝且无文件、已有JSON
+保护。完成接口审查、格式和native检查、release构建；补齐usage后增量构建了
+最终CLI。未运行本地旧套件、旧CLI、编译探针、演示、浏览器/PDF或性能基准。
+CI保留原回归，只追加同一轻量脚本；正常推送后核对最终SHA整体结论。
+不增加HTML、WAT、操作数展示、执行频率、完整语义或收益推断，不改版本和依赖，
+不发布Mooncakes。用户图片、AGENTS及规划继续排除。
