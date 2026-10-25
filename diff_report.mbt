@@ -40,7 +40,8 @@ fn coverage_line(
 }
 
 ///|
-/// Text-only first release. Ranking uses absolute delta then exact symbol/package
+/// Text view of the shared comparison; full JSON is rendered separately.
+/// Ranking uses absolute delta then exact symbol/package
 /// identity; indices locate records within a build and never establish a match.
 /// top=0 hides both detail rankings while retaining all totals and coverage.
 pub fn render_function_diff(diff : ModuleSizeDiff, top : Int) -> String {

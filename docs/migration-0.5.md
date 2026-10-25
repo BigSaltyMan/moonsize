@@ -324,3 +324,26 @@ compression, baselines, budget results, full call edges, graph internals or
 analysis reruns are included; hash and serialization have their own cost. See
 [field types, ledgers and observed exits](summary-json.md). Version remains
 0.5.1; this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: function/package comparison JSON
+
+New API: render_function_diff_json(ModuleSizeDiff, baseline_sha256, current_sha256)
+-> String. Callers must supply hashes corresponding to exactly the bytes used to
+create diff; the renderer receives no input bytes and cannot verify that relation.
+The CLI hashes the retained bytes once per side using the existing x/crypto
+dependency (a command-package import, no new dependency/version in moon.mod).
+Options adds diff_functions_json=None; default supplies it, and external struct
+literals need the field. The option implies diff_functions, requires nonempty
+baseline and uses the existing comparison, preflight and exclusive writer after
+current-input analysis/strict refusal and before text/growth gating. JSON-only
+combination restrictions do not tighten old text mode. Strict checks only the
+current graph; baseline max-size still gates whole-file growth, saving JSON before
+exit 3 when possible. Bad baseline parsing is explicitly labelled for this mode.
+The independent moonsize-function-diff/schema_version 1 format preserves full
+code totals, function/package rows, five existing statuses, coverage, null sides
+and signed deltas. No matching, attribution or graph algorithm changes, new
+public types, old signature/schema changes, retained, graph_complete or gzip
+metrics. Top limits text only. Ambiguous/missing names remain unresolved even in
+self comparison; symbol states and package labels do not establish source changes,
+semantic identity or dependency ownership. See [fields and actual ledgers](function-diff-json.md).
+Version remains 0.5.1; this source increment has not been published to Mooncakes.

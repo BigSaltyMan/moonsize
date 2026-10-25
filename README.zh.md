@@ -35,6 +35,7 @@ moon build --target native --release
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--diff-functions-json <new-path.json>]
                  [--summary-json <new-path.json>]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
@@ -55,6 +56,7 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --top <n>            排名显示多少个函数（默认 10）
   --find-functions <query> 本地raw/display名称的大小写敏感字面检索
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
+  --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline
   --summary-json <path> 普通Analysis全量导出到新的.json，Top不截断
   --instructions <n> 查询完整函数索引中的本地函数编码
   --instructions-json <path> 完整单函数或显式比较写入新的.json；需显式instructions
@@ -121,6 +123,28 @@ payload 和编码开销；加 `--data-json new-diff.json` 输出独立比较格�
 未启用 diff-data 时，单文件 JSON 及原 baseline 行为不变。内容组不代表源码身份，
 相同内容不证明初始化语义等价，重复内容也不证明可安全去重；原始差值不预测
 重编译或 gzip 收益。
+
+## 函数与模块基线比较JSON
+
+这是公开0.5.1之后的源码增量，使用当前源码构建的native CLI：
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-functions-json new-function-diff.json --top 20
+moonsize after.wasm --baseline before.wasm --diff-functions --diff-functions-json new-growth.json --max-size 5KB
+```
+
+JSON选项隐含diff-functions，直接导出已有同一次比较，不重复匹配。独立格式
+moonsize-function-diff/schema_version 1保留两侧SHA、code/函数/开销、完整函数和
+符号包标签汇总、五种状态及覆盖率；缺失侧为null，重名或无名仍逐侧逐函数保留。
+自比也可能保留相互抵消的单侧正负记录。唯一原始符号匹配不证明语义身份，符号
+单侧出现不证明源码增删；模块归属标签不证明精确源码或依赖身份。Top不截JSON。
+
+新JSON只允许baseline、Top、retained、dead-code、strict、旧max-size及显式文本
+开关，其他报告、压缩、独立查询、预算配置和data明细在读取前拒绝，旧纯文本
+组合不收紧。strict只检查当前输入图，写入前拒绝；baseline配max-size仍按文件
+增长判定，超限也可保存解释后返回3。已有目标返回1且不覆盖。不额外计算retained、
+graph_complete或gzip，不预测源码修改收益。
+[字段、真实覆盖与差值账本、JSON.parse示例](docs/function-diff-json.md)。
 
 ## 普通分析的完整JSON导出
 

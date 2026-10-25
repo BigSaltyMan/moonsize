@@ -31,6 +31,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
     target in [
       options.html,
       options.summary_json,
+      options.diff_functions_json,
       options.call_graph,
       options.experiment,
       options.why_json,

@@ -14,6 +14,16 @@ fn read_input(path : String) -> Bytes {
 }
 
 ///|
+/// Hash bytes already read for the comparison, using the existing crypto dependency.
+fn diff_input_sha256(data : Bytes) -> String {
+  let out = StringBuilder()
+  for byte in @crypto.sha256(data) {
+    out.write_string(byte.to_hex())
+  }
+  out.to_string()
+}
+
+///|
 /// The module to compare against, or `None` when the invocation named none.
 fn read_baseline(options : @lib.Options) -> (Bytes, @lib.WasmModule)? {
   match options.baseline {
@@ -23,7 +33,12 @@ fn read_baseline(options : @lib.Options) -> (Bytes, @lib.WasmModule)? {
       match @lib.parse_module(bytes) {
         Ok(parsed) => Some((bytes, parsed))
         Err(error) => {
-          println("moonsize: \{target}: \{@lib.describe_error(error)}")
+          let role = if options.diff_functions_json is Some(_) {
+            "baseline: "
+          } else {
+            ""
+          }
+          println("moonsize: \{role}\{target}: \{@lib.describe_error(error)}")
           @sys.exit(1)
           None
         }
@@ -427,6 +442,19 @@ fn main {
     return
   }
   check_outputs(options)
+  if options.diff_functions_json is Some(target) &&
+    function_diff is Some(diff) &&
+    baseline is Some((before_bytes, _)) {
+    write_output(
+      target,
+      @lib.render_function_diff_json(
+        diff,
+        diff_input_sha256(before_bytes),
+        diff_input_sha256(bytes),
+      ),
+    )
+    println("Function and package comparison written to " + target)
+  }
   if options.summary_json is Some(target) {
     write_output(target, @lib.render_summary_json(analysis))
     println("Analysis summary written to " + target)

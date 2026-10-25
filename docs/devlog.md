@@ -682,3 +682,40 @@ CLI只允许Top、retained、dead-code、strict、max-size；其他模式读取�
 演示、浏览器/PDF或性能基准。CI只追加轻量脚本，旧回归保留，核对最终SHA整体
 结果。不新增分析、预算门禁或报告合并框架，不改版本和依赖，不发布Mooncakes；
 用户图片、AGENTS及规划继续排除。
+
+## 40. 函数与模块基线比较JSON（2026-10-25）
+
+基线6b30b58，版本仍0.5.1。新增render_function_diff_json，直接渲染既有
+ModuleSizeDiff，不重新解析、统计、compare_modules、建图或读文件。摘要参数
+约定对应同一对输入；CLI用保留的bytes各SHA-256一次，命令包import既有x/crypto，
+moon.mod依赖和版本不变。公开API只renderer及Options.diff_functions_json；旧
+结构/签名/WasmError不变，接口快照review-ytzt6t。diff_report只更新过时注释，
+匹配、包归属和图算法未改。
+
+新moonsize-function-diff/schema_version 1明确输出两侧SHA/file/code、delta、
+matching、完整functions/packages和scope。复用change_status_text，五种状态及
+重名/无名逐侧记录保留；一侧缺失为null，不造index0。code、函数编码、overhead、
+non-code各有账本，matched_delta只解释成功匹配部分；没有新增retained、图完整、
+gzip或收益指标，Top不截JSON，自比不按相同摘要强制matched。
+
+JSON选项隐含diff_functions，baseline必填，范围限制只针对新选项，不收紧旧文本
+组合。沿用比较→当前分析→strict→统一预检→独占保存→原文本/增长预算顺序，
+复用原writer；strict仍仅检查当前图，未新建基线图检查。坏baseline在新模式下
+明确加baseline侧别，旧纯文本错误文案不变。max-size配baseline仍按文件增长判断。
+
+本地3个新组合单测通过；类型检查修正了新增变量使用保留字及测试集合方法，
+未更改旧实现。两个合法fixture各Node v24.18.0/V8验证一次，未实例化或执行。
+baseline112→current128（+16）；code22→29（+7），函数19→24（+5），开销3→5
+（+2），非code90→99（+9）。code7=函数5+开销2，文件16=code7+非code9。
+匹配覆盖before19=3matched+4removed+8ambiguous+4missing，after24=5matched+
+5added+7ambiguous+7missing；matched_delta2不冒充全部函数差5。10条函数变化、
+5包标签，唯一匹配index1→3，同名/缺失不合并，自比仍保留不确定单侧记录。
+[实际哈希、JSON字段、覆盖与差值账本](function-diff-json.md)。
+
+真实CLI共四次，精确0/3/1/1：Top1完整导出、增长超限仍保存、坏baseline不生成、
+已有目标字节保护。初轮第二次已返回3并保存，但脚本文案断言误用绝对预算文本；
+改为既有增长提示后只复核前两份记录、继续后两次，没有重跑前两次或V8验证。
+证据_build/function-diff-json-verification/run-nq6I4p。完成接口/格式/native检查及一次release构建；
+本地未跑旧套件、旧CLI/演示、浏览器/PDF或性能基准，未重复strict进程，只核对
+写入前代码位置。CI只追加轻量脚本，保留旧回归并确认最终SHA。用户图片、AGENTS
+和规划排除；不改版本、不发布Mooncakes，不新增分析工具或Schema框架。

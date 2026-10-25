@@ -85,6 +85,33 @@ format; without `--diff-data`, JSON keeps the original single-file format.
 Groups do not establish source identity, equivalent initialization or safe
 deduplication, and raw differences do not predict rebuild or gzip savings.
 
+## Function and package comparison JSON
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-functions-json new-function-diff.json --top 20
+moonsize after.wasm --baseline before.wasm --diff-functions --diff-functions-json new-growth.json --max-size 5KB
+```
+
+The JSON flag implies --diff-functions and exports that same existing comparison.
+Top never truncates the complete functions, packages or matching coverage. The
+independent moonsize-function-diff/schema_version 1 format records both input
+hashes, code/function/overhead totals, signed current-minus-baseline deltas and
+all five symbol states. Absent sides remain null; ambiguous and missing names
+retain one row per function per side. Even self comparison can have nonzero
+one-sided uncertain rows whose deltas cancel. A unique raw-symbol match is not
+semantic identity, and added/removed symbols do not prove source changes.
+
+This JSON option allows baseline, Top, retained, dead-code, strict, max-size and
+the explicit text flag. Other reports, compression, independent queries, budget
+configuration and data details are rejected before I/O. Old text-only combinations
+stay unchanged. Strict checks the current input graph only and refuses before
+writing. With baseline, max-size gates file growth; a failure can still save the
+comparison before exit 3. Existing targets are refused with exit 1. No retained,
+graph completeness, gzip or future source-edit savings are inferred. See
+[fields, coverage ledgers and JSON.parse example](docs/function-diff-json.md).
+
 ## Complete analysis JSON
 
 This source addition follows public 0.5.1; build the native CLI from source.
@@ -217,6 +244,7 @@ than opening the report with `file://`.
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--diff-functions-json <new-path.json>]
                  [--summary-json <new-path.json>]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
@@ -265,6 +293,7 @@ identify candidates for investigation.
   --experiment-context <path>  attach declared build settings and validation
   --find-functions <query> case-sensitive literal search of local raw/display names
   --find-functions-json <path> save all matches to a new .json; requires a query
+  --diff-functions-json <path> save full function/package comparison; implies diff-functions and requires baseline
   --summary-json <path> save full ordinary analysis to a new .json; Top never truncates it
   --instructions <n> inspect a local function in the full function index space
   --instructions-json <path> save complete groups/instructions or explicit comparison to a new .json
