@@ -427,6 +427,10 @@ fn main {
     return
   }
   check_outputs(options)
+  if options.summary_json is Some(target) {
+    write_output(target, @lib.render_summary_json(analysis))
+    println("Analysis summary written to " + target)
+  }
   if data_details is Some(report) && options.data_json is Some(target) {
     let contents = match data_diff {
       Some(diff) =>

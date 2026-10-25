@@ -453,6 +453,7 @@ pub fn usage() -> String {
   "usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]\n" +
   "                 [--compress] [--strict] [--call-graph <path>] [--html <path>]\n" +
   "                 [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]\n" +
+  "                 [--summary-json <new-path.json>]\n" +
   "                 [--data-segments] [--diff-data] [--data-json <new-path.json>]\n" +
   "                 [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]\n" +
   "                 [--experiment <report.html|report.json>] [--experiment-context <context.json>]\n" +
@@ -471,6 +472,7 @@ pub fn usage() -> String {
   "  --dead-code          functions no root can reach\n" +
   "  --compress           whole-file gzip and independent section gzip sizes\n" +
   "  --data-segments      append data-entry file bytes (payload-ranked by --top)\n" +
+  "  --summary-json <path> save full ordinary analysis to a new .json (Top does not truncate it)\n" +
   "  --data-json <path>   enable details and write all entries to a new .json file\n" +
   "                       offset expressions are recorded, not evaluated\n" +
   "  --diff-data          compare exact payload content groups; requires --baseline\n" +

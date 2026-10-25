@@ -35,6 +35,7 @@ moon build --target native --release
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--summary-json <new-path.json>]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
@@ -54,6 +55,7 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --top <n>            排名显示多少个函数（默认 10）
   --find-functions <query> 本地raw/display名称的大小写敏感字面检索
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
+  --summary-json <path> 普通Analysis全量导出到新的.json，Top不截断
   --instructions <n> 查询完整函数索引中的本地函数编码
   --instructions-json <path> 完整单函数或显式比较写入新的.json；需显式instructions
   --baseline-instructions <n> 基线完整函数index，需instructions/baseline
@@ -119,6 +121,28 @@ payload 和编码开销；加 `--data-json new-diff.json` 输出独立比较格�
 未启用 diff-data 时，单文件 JSON 及原 baseline 行为不变。内容组不代表源码身份，
 相同内容不证明初始化语义等价，重复内容也不证明可安全去重；原始差值不预测
 重编译或 gzip 收益。
+
+## 普通分析的完整JSON导出
+
+这是公开0.5.1之后的源码增量，使用当前源码构建的native CLI：
+
+```sh
+moonsize app.wasm --summary-json new-summary.json --top 1 --retained --dead-code
+moonsize app.wasm --summary-json new-strict-summary.json --strict --max-size 100KB
+```
+
+这是同一次普通Analysis的附加导出，包含全部物理段、本地函数、符号模块汇总、
+模型根和诊断，Top只影响文本。独立格式moonsize-summary/schema_version 1保留
+原始字节数、布尔、原始名称/retained缺项null及诊断来源。模块名沿用符号归属
+标签，不证明源码或依赖归属。retained支配字节包含自身，其他被支配函数数不含
+自身；支配集合可能重叠，不能相加。模型不可达不等于可安全删除，函数/模块量
+已经包含于段体积，不能把两种视图重复累计。
+
+只允许配合Top、retained、dead-code、strict和max-size。strict拒绝返回3且不写
+文件，非strict不完整模型保留全部诊断；max-size超限仍先保存解释报告再返回3，
+JSON不虚构预算结论。已有目标返回1且不覆盖。不含压缩、baseline、独立查询、
+预算配置、data明细、HTML或完整调用边，完整边继续用--call-graph导出。
+[字段、真实账本和JSON.parse示例](docs/summary-json.md)。
 
 ## 本地函数名称检索
 

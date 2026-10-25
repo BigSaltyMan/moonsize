@@ -649,3 +649,36 @@ _build/function-instructions-diff-verification/run-NVyOL3，未为文档另跑�
 演示、浏览器/PDF或性能基准。CI保留原回归，只追加轻量脚本并核对最终SHA。
 不新增HTML、预算、自动匹配、指令对齐、立即数比较或语义判断，不改依赖和版本，
 不发布Mooncakes。用户图片、AGENTS及规划继续排除。
+
+## 39. 普通分析的完整JSON导出（2026-10-25）
+
+基线5af51fd，版本仍0.5.1。新增render_summary_json直接读取普通流程同一次
+Analysis，不重复解析、analyze、建图、解码、压缩、retained或其他inspector；
+整文件SHA-256一次。公开API仅renderer及Options.summary_json，旧类型/签名/
+WasmError不变。新moonsize-summary/schema_version 1显式输出input、summary、
+全部物理sections、本地functions、符号modules和model，不暴露data、Map/Set、
+完整边、未测gzip或预算结论。函数/根按index、模块按完整名称字典序，数组副本
+排序不影响Analysis；重复渲染逐字节一致，Top只影响原文本。
+
+retained使用已有值：dominated包含自身、other count不含自身，缺项null；根保留
+导入index但不制造导入函数体。复用既有诊断排序和序列化，再以共享说明逻辑给
+新格式补reason；caller/opcode/type/table/source及null不丢，原报告格式不变。
+诊断数不改写unresolved_count；模型不可达和retained不解释为删除收益，模块是
+符号归属标签，函数/模块包含于段，不重复相加。
+
+CLI只允许Top、retained、dead-code、strict、max-size；其他模式读取前拒绝。
+写入在原strict拒绝和统一preflight之后、max-size门禁之前，使用原独占writer。
+四次真实CLI精确返回3/0/3/1：超限但保存完整JSON、非strict保存动态诊断、strict
+不创建报告、已有JSON拒绝且字节不变。合法fixture各Node v24.18.0/V8验证一次，
+未实例化/执行。完整样本124=8+116；本地编码16=11body+5前缀，4定义=2可达+2
+不可达，编码16=9+7；3模块编码3+4+9=16，根[0,1]含导入。Top1仍有4函数、3
+模块、8段。动态样本69字节，静态候选非空、unresolved0、诊断2，table.set及表
+导出来源明确区分调用点位置。[实际字段、SHA、JSON账本和退出结果](summary-json.md)。
+原始证据_build/summary-json-verification/run-697SsH，接口快照review-JLLIW6。
+
+本地3个新组合单测均通过；初轮2通过，另1因测试误把边界说明中的gzip词视为
+测量字段而失败，改为检查实际JSON键后只重跑该用例并通过，未改快照或图结果。
+完成接口审查、格式/native检查及一次release构建；未跑旧套件、旧CLI、探针、
+演示、浏览器/PDF或性能基准。CI只追加轻量脚本，旧回归保留，核对最终SHA整体
+结果。不新增分析、预算门禁或报告合并框架，不改版本和依赖，不发布Mooncakes；
+用户图片、AGENTS及规划继续排除。

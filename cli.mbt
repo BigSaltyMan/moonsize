@@ -18,6 +18,8 @@ pub struct Options {
   call_graph : String?
   /// Write the HTML report to this path instead of printing the text report.
   html : String?
+  /// Append a complete machine-readable export of the same ordinary analysis.
+  summary_json : String?
   /// The size budget: a ceiling on the file, or — when `baseline` is set — the
   /// growth the file may show over the baseline.
   max_size : Int?
@@ -96,6 +98,7 @@ pub fn Options::default(path : String) -> Options {
     dead_code: false,
     call_graph: None,
     html: None,
+    summary_json: None,
     max_size: None,
     baseline: None,
     diff_functions: false,
@@ -328,6 +331,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut dead_code = false
   let mut call_graph : String? = None
   let mut html : String? = None
+  let mut summary_json : String? = None
   let mut max_size : Int? = None
   let mut baseline : String? = None
   let mut diff_functions = false
@@ -398,6 +402,16 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       } else {
         budget_md = Some(args[i + 1])
       }
+      i += 2
+    } else if arg == "--summary-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --summary-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      summary_json = Some(args[i + 1])
       i += 2
     } else if arg == "--find-functions" {
       if i + 1 >= args.length() ||
@@ -672,6 +686,46 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if summary_json is Some(target) {
+    if !target.has_suffix(".json") {
+      return Err("moonsize: --summary-json wants a .json path\n\n" + usage())
+    }
+    if compress ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      data_json is Some(_) ||
+      html is Some(_) ||
+      call_graph is Some(_) ||
+      baseline is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      instructions_index is Some(_) ||
+      instructions_json is Some(_) ||
+      baseline_instructions_index is Some(_) ||
+      find_functions is Some(_) ||
+      find_functions_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) {
+      return Err(
+        "moonsize: --summary-json only supports ordinary text with --top, --retained, --dead-code, --strict and --max-size\n\n" +
+        usage(),
+      )
+    }
   }
   if baseline_instructions_index is Some(_) {
     if instructions_index is None {
@@ -1195,6 +1249,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     dead_code,
     call_graph,
     html,
+    summary_json,
     max_size,
     baseline,
     diff_functions,

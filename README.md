@@ -85,6 +85,33 @@ format; without `--diff-data`, JSON keeps the original single-file format.
 Groups do not establish source identity, equivalent initialization or safe
 deduplication, and raw differences do not predict rebuild or gzip savings.
 
+## Complete analysis JSON
+
+This source addition follows public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --summary-json new-summary.json --top 1 --retained --dead-code
+moonsize app.wasm --summary-json new-strict-summary.json --strict --max-size 100KB
+```
+
+An additional export of the same ordinary Analysis, with every physical section,
+local function, symbol module group, model root and diagnostic. Top affects text
+only. The versioned moonsize-summary/schema_version 1 format keeps numeric byte
+ledgers, nullable raw names/retained results, booleans and complete provenance.
+Module names are existing symbol attribution labels, not verified source ownership.
+Retained dominated bytes include the function itself; other dominated function
+counts exclude it. Missing results stay null. Model-unreachable is not safe removal;
+retained sets can overlap and must not be summed. Function/module bytes are already
+contained in section bytes, so those views must not be added together.
+
+Only Top, retained, dead-code, strict and max-size may accompany this export.
+Strict refusal returns 3 before creating a file. Non-strict incomplete models keep
+all diagnostics. A max-size violation still saves the report before returning 3;
+JSON contains analysis, not a budget conclusion. Existing destinations are refused
+with exit 1. No compression, baseline, independent queries, budget configuration,
+data details, HTML or complete call edges; use --call-graph for edges. See
+[field definitions, real evidence and JSON.parse example](docs/summary-json.md).
+
 ## Local function name search
 
 This source addition follows public 0.5.1; build the native CLI from source.
@@ -190,6 +217,7 @@ than opening the report with `file://`.
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
                  [--max-size <size>] [--baseline <path.wasm>] [--diff-functions]
+                 [--summary-json <new-path.json>]
                  [--data-segments] [--diff-data] [--data-json <new-path.json>]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
@@ -237,6 +265,7 @@ identify candidates for investigation.
   --experiment-context <path>  attach declared build settings and validation
   --find-functions <query> case-sensitive literal search of local raw/display names
   --find-functions-json <path> save all matches to a new .json; requires a query
+  --summary-json <path> save full ordinary analysis to a new .json; Top never truncates it
   --instructions <n> inspect a local function in the full function index space
   --instructions-json <path> save complete groups/instructions or explicit comparison to a new .json
   --baseline-instructions <n> explicit baseline function index; requires instructions/baseline

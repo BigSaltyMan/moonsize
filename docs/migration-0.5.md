@@ -303,3 +303,24 @@ mnemonic rows retain zero deltas; Top limits text only. Aggregates do not compar
 sequences or immediate values and do not establish identity, equivalence,
 compatibility or savings. See [actual ledgers and errors](function-instructions.md).
 Version remains 0.5.1; this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: complete ordinary-analysis JSON
+
+New API: render_summary_json(Analysis) -> String. Options adds summary_json=None;
+default supplies it, and external struct literals need the field. No new public
+analysis types, changed old signatures, WasmError branches, dependencies or old
+JSON schemas. The CLI exports the same already-computed ordinary Analysis after
+strict refusal and unified output preflight, using the existing exclusive writer.
+Only Top, retained, dead-code, strict and max-size may accompany this option.
+Max-size failure can still save the explanation before exit 3; strict refusal
+writes nothing. The moonsize-summary/schema_version 1 object retains every
+physical section, local definition, symbol module group, sorted model root and
+existing diagnostic/source fields, adding readable reasons in this new format.
+Top never truncates machine data. Retained dominated bytes include self, other
+function counts exclude self, and missing results stay null without recalculation.
+Imported indices may be roots but are not zero-byte local definitions. Module
+labels are existing symbol attribution, not verified ownership. No raw bytes,
+compression, baselines, budget results, full call edges, graph internals or
+analysis reruns are included; hash and serialization have their own cost. See
+[field types, ledgers and observed exits](summary-json.md). Version remains
+0.5.1; this source increment has not been published to Mooncakes.
