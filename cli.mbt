@@ -51,6 +51,7 @@ pub struct Options {
   duplicates_json : String?
   /// Independent strict export declarations and declared-target aliases.
   exports : Bool
+  diff_exports : Bool
   exports_json : String?
   /// Independent custom/name physical byte accounting.
   metadata : Bool
@@ -123,6 +124,7 @@ pub fn Options::default(path : String) -> Options {
     duplicates: false,
     duplicates_json: None,
     exports: false,
+    diff_exports: false,
     exports_json: None,
     metadata: false,
     diff_metadata: false,
@@ -360,6 +362,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut duplicates = false
   let mut duplicates_json : String? = None
   let mut exports = false
+  let mut diff_exports = false
   let mut exports_json : String? = None
   let mut metadata = false
   let mut diff_metadata = false
@@ -525,6 +528,10 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     } else if arg == "--diff-metadata" {
       metadata = true
       diff_metadata = true
+      i += 1
+    } else if arg == "--diff-exports" {
+      exports = true
+      diff_exports = true
       i += 1
     } else if arg == "--exports" {
       exports = true
@@ -730,6 +737,16 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     Some(path) => path
     None => return Err(usage())
   }
+  if diff_exports {
+    match baseline {
+      Some(path) if !path.trim().is_empty() && !path.has_prefix("--") => ()
+      _ =>
+        return Err(
+          "moonsize: --diff-exports requires a non-empty --baseline path\n\n" +
+          usage(),
+        )
+    }
+  }
   if exports {
     if retained ||
       dead_code ||
@@ -750,7 +767,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       html is Some(_) ||
       summary_json is Some(_) ||
       max_size is Some(_) ||
-      baseline is Some(_) ||
+      (baseline is Some(_) && !diff_exports) ||
       diff_functions_json is Some(_) ||
       experiment is Some(_) ||
       experiment_context is Some(_) ||
@@ -775,7 +792,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_md is Some(_) ||
       data_json is Some(_) {
       return Err(
-        "moonsize: --exports is an independent mode; only --top and --exports-json may be combined with it\n\n" +
+        "moonsize: exports modes allow only --top, --exports-json and (--diff-exports only) --baseline\n\n" +
         usage(),
       )
     }
@@ -1423,6 +1440,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     duplicates,
     duplicates_json,
     exports,
+    diff_exports,
     exports_json,
     metadata,
     diff_metadata,

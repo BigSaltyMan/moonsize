@@ -15,7 +15,48 @@ fn exports_optional_range_json(range : ExportByteRange?) -> Json {
 }
 
 ///|
-pub fn render_exports_json(report : ExportsReport) -> String {
+fn exports_ledger_json(l : ExportsLedger) -> Json {
+  let ledger : Map[String, Json] = Map([])
+  for
+    (key, value) in [
+      ("export_section_bytes", l.export_section_bytes),
+      ("section_header_bytes", l.section_header_bytes),
+      ("count_prefix_bytes", l.count_prefix_bytes),
+      ("declaration_bytes", l.declaration_bytes),
+      ("name_encoding_bytes", l.name_encoding_bytes),
+      ("name_length_prefix_bytes", l.name_length_prefix_bytes),
+      ("name_utf8_bytes", l.name_utf8_bytes),
+      ("descriptor_bytes", l.descriptor_bytes),
+      ("kind_bytes", l.kind_bytes),
+      ("target_index_prefix_bytes", l.target_index_prefix_bytes),
+    ] {
+    ledger.set(key, int_json(value))
+  }
+  Json::object(ledger)
+}
+
+///|
+fn exports_declaration_json(entry : ExportDeclaration) -> Json {
+  let row : Map[String, Json] = Map([])
+  row.set("ordinal", int_json(entry.ordinal))
+  row.set("name", Json::string(entry.name))
+  row.set("kind", Json::string(entry.kind))
+  row.set("kind_code", int_json(entry.kind_code))
+  row.set("target_index", metadata_uint_json(entry.target_index))
+  row.set("encoding", exports_range_json(entry.encoding))
+  row.set("name_encoding", exports_range_json(entry.name_encoding))
+  row.set("name_length_prefix_bytes", int_json(entry.name_length_prefix_bytes))
+  row.set("name_utf8_bytes", int_json(entry.name_utf8_bytes))
+  row.set("descriptor", exports_range_json(entry.descriptor))
+  row.set(
+    "target_index_prefix_bytes",
+    int_json(entry.target_index_prefix_bytes),
+  )
+  Json::object(row)
+}
+
+///|
+fn exports_json_value(report : ExportsReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-exports"))
   root.set("schema_version", int_json(1))
@@ -43,50 +84,8 @@ pub fn render_exports_json(report : ExportsReport) -> String {
   }
   summary.set("kind_counts", Json::object(counts))
   root.set("summary", Json::object(summary))
-  let ledger : Map[String, Json] = Map([])
-  let l = report.ledger
-  for
-    (key, value) in [
-      ("export_section_bytes", l.export_section_bytes),
-      ("section_header_bytes", l.section_header_bytes),
-      ("count_prefix_bytes", l.count_prefix_bytes),
-      ("declaration_bytes", l.declaration_bytes),
-      ("name_encoding_bytes", l.name_encoding_bytes),
-      ("name_length_prefix_bytes", l.name_length_prefix_bytes),
-      ("name_utf8_bytes", l.name_utf8_bytes),
-      ("descriptor_bytes", l.descriptor_bytes),
-      ("kind_bytes", l.kind_bytes),
-      ("target_index_prefix_bytes", l.target_index_prefix_bytes),
-    ] {
-    ledger.set(key, int_json(value))
-  }
-  root.set("ledger", Json::object(ledger))
-  root.set(
-    "entries",
-    Json::array(
-      report.entries.map(fn(entry) {
-        let row : Map[String, Json] = Map([])
-        row.set("ordinal", int_json(entry.ordinal))
-        row.set("name", Json::string(entry.name))
-        row.set("kind", Json::string(entry.kind))
-        row.set("kind_code", int_json(entry.kind_code))
-        row.set("target_index", metadata_uint_json(entry.target_index))
-        row.set("encoding", exports_range_json(entry.encoding))
-        row.set("name_encoding", exports_range_json(entry.name_encoding))
-        row.set(
-          "name_length_prefix_bytes",
-          int_json(entry.name_length_prefix_bytes),
-        )
-        row.set("name_utf8_bytes", int_json(entry.name_utf8_bytes))
-        row.set("descriptor", exports_range_json(entry.descriptor))
-        row.set(
-          "target_index_prefix_bytes",
-          int_json(entry.target_index_prefix_bytes),
-        )
-        Json::object(row)
-      }),
-    ),
-  )
+  root.set("ledger", exports_ledger_json(report.ledger))
+  root.set("entries", Json::array(report.entries.map(exports_declaration_json)))
   root.set(
     "targets",
     Json::array(
@@ -107,7 +106,12 @@ pub fn render_exports_json(report : ExportsReport) -> String {
     ),
   )
   root.set("supported_scope", Json::string(report.supported_scope))
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+pub fn render_exports_json(report : ExportsReport) -> String {
+  exports_json_value(report).stringify(indent=2) + "\n"
 }
 
 ///|

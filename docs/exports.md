@@ -141,3 +141,135 @@ node scripts/test-exports.mjs _build/native/release/build/cmd/main/main.exe
 exports.json及results.json。本地未跑旧套件、旧CLI、探针、演示、浏览器/PDF或
 性能基准。CI保留旧回归，只追加轻量exports脚本；最终SHA整体结果推送后独立
 核对。版本保持0.5.1，依赖不变，本次未发布Mooncakes。
+
+## 导出接口清单基线比较
+
+这是公开0.5.1后的源码增量，版本与依赖不变，未发布新包。
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-exports --top 20
+moonsize after.wasm --baseline before.wasm --diff-exports --exports-json new-exports-diff.json
+```
+
+compare_exports每侧只调用一次inspect_exports，复用严格清单、完整报告和既有
+SHA-256，不重新解析/哈希，不建图、不匹配函数或读取签名。重复名、UTF-8、kind
+及范围错误均沿用单侧入口，整体失败；ComparisonError保留Baseline/Current，
+CLI保留侧别、文件及原原因，不创建报告。没有新增WasmError分支。
+
+### 完整名称和四种状态
+
+唯一匹配键是完整导出名，保留空名、空白、大小写、Unicode和控制字符，不trim、
+归一化或demangle。不能把kind、index、ordinal或别名成员位置加入匹配键。
+
+| 状态 | 声明关系 | target_index_changed |
+| --- | --- | --- |
+| added | 仅current有该名称 | null |
+| removed | 仅baseline有该名称 | null |
+| kind_changed | 双侧有名称，kind不同 | null |
+| same_kind | 双侧有名称，kind相同 | UInt数字不同为true，相同为false |
+
+缺失侧声明是null，仅计算字节差时贡献零，不伪造index0。跨kind即使索引数字
+相同，target_index_changed仍为null。同名同kind也可能存在不同签名、目标来源
+或别名关系，本次不判断这些事项。重命名表现为removed和added，不推断源码身份。
+
+固定边界：仅比较导出名称与种类声明，不评估完整ABI、目标存在性、签名、可达性
+或运行行为。index、ordinal和offset只定位各自输入，不能充当跨构建源码身份。
+双侧entries、targets、全部别名成员和范围保留，但不跨构建配对(kind,index)组，
+不输出别名组增删或风险等级。same_kind不表示“未变化”或“兼容”。
+
+### 实测状态与账本
+
+scripts/test-exports-diff.mjs生成三份合法夹具，各经Node v24.18.0/V8验证一次，
+不实例化、不执行。混合比较baseline125 B、current148 B，SHA-256分别为：
+
+```text
+bd1aace02a4a11f0b0289d417bc66188b4e265f7f2bc52b880b22e7e31599bf8
+6133741122e57000a22b9d741a8820bd5b03cf27975710455a9bb24f0ea4f9fd
+```
+
+实际CLI结果：
+
+```text
+Names: removed 1; kind_changed 1; added 1; same_kind 5; rows 8
+Baseline declarations: 7; current declarations: 7
+Baseline export: 56 B = headers 2 B + count 1 B + declarations 53 B
+Current export: 64 B = headers 3 B + count 2 B + declarations 59 B
+Export delta: 8 B = headers 1 B + count 1 B + declarations 6 B
+Declaration delta: 6 B = name encodings 5 B + descriptors 1 B
+Name encoding delta: 5 B = length prefixes 1 B + UTF-8 4 B
+Descriptor delta: 1 B = kind 0 B + index prefixes 1 B
+Non-export: 69 -> 84 B
+File delta: 23 B = export 8 B + non-export 15 B
+```
+
+removed名称的声明差-10 B，new-feature的added声明差+16 B，其余行差0；行差合计
++6 B。switch从function #0变global #0，只有kind_changed，不拆成两个名称，
+其target_index_changed为null。当前段头、count及第一条声明的前缀使用实际
+两字节编码。Top1只展示removed行，完整JSON保留8行及双侧各7条声明。
+
+基线function #0的别名成员ordinal为[0,1,2,3,5,6]，当前function #1为
+[0,2,3,5,6]；基线有2个声明目标，当前3个。这是双侧保留事实，不是跨构建
+目标组匹配或别名组增删判断。
+
+计数满足before7=removed1+kind_changed1+same_kind5，after7=added1+1+5；
+rows8=1+1+1+5。所有大小差值为current-baseline，可以为负、零、正。
+无export与显式空段可以名称清单相同而相差3 B；same_kind也能因前缀宽度而有
+字节差。non_export_bytes=file_size-export_section_bytes，包含文件头、code、
+custom及其他段，不是优化空间。声明差不解释函数body、源码修改或gzip收益。
+
+仅重编号样本为140 B，SHA-256：
+
+```text
+eaf937ccbd7990ca5ab179333ac690b0f6573b2766b4dc822171242bce47410e
+```
+
+通过增加一个前置函数导入构造，导出名称和kind保持不变；6个函数目标索引
+由0变1，table #0仍是0。相对原125 B基线，实际为same_kind7，其余三类0，
+导出段差0、文件差+15 B（均在non-export）。文本中的实际两行：
+
+```text
+"same"  same_kind  function #0  function #1  0  true
+"table"  same_kind  table #0  table #0  0  false
+```
+
+这验证数字变化不会变成种类变化；它仍不证明跨构建目标身份或完整ABI兼容。
+
+### 输出与使用边界
+
+--diff-exports隐含exports，必须有非空baseline；重复--exports不增加解析。
+普通exports配baseline仍返回2。只允许baseline、Top、自身JSON及exports标志，
+strict、max-size、预算、HTML、压缩及其他模式在读取前返回2。成功比较（包括
+removed和kind_changed）返回0；读取、解析或输出错误1；参数错误2。没有兼容性
+门禁。JSON沿用统一目标预检和原生独占创建，不新增writer或事务承诺。
+
+文本行固定按removed、kind_changed、added、same_kind，再按字节差绝对值降序、
+完整名称字典序。排序只是展示次序，不是风险分级；Top不截计数、账本、双侧
+报告或JSON。文本名称安全转义，JSON保留原值。
+
+JSON独立格式为moonsize-exports-diff/schema_version 1，含baseline/current完整
+报告对象、counts、delta（复用ExportsLedger字段表示有符号差值）、文件背景
+差值、全部rows及comparison_scope。每行保留name、status、可空baseline/current
+完整声明、declaration_bytes_delta和可空target_index_changed。双侧报告不是
+序列化字符串，原单文件moonsize-exports格式及字段类型和值保持不变。
+
+```moonbit
+compare_exports(Bytes, Bytes) -> Result[ExportsComparison, ComparisonError]
+render_exports_diff(ExportsComparison, Int) -> String
+render_exports_diff_json(ExportsComparison) -> String
+```
+
+新增ExportComparisonRow、ExportsComparisonCounts、ExportsComparison及
+Options.diff_exports；见[API迁移](migration-0.5.md)。本地仅3个新组合单测及
+4次真实CLI，状态0/0/0/1：混合Top1、完整JSON、仅重编号、已有JSON拒绝且原
+字节不变。坏输入侧别在单测验证，未增加第五次CLI。完整u32边界只验证结构
+读取，不宣称其目标索引语义有效，也未重测整个exports或LEB错误矩阵。
+
+```sh
+moon test --target native exports_diff_wbtest.mbt
+node scripts/test-exports-diff.mjs _build/native/release/build/cmd/main/main.exe
+```
+
+证据在_build/exports-diff-verification/run-adSfVv/，含三份输入、四份进程日志、
+完整exports-diff.json及results.json。本地未运行旧套件、旧CLI、演示、浏览器/
+PDF、编译探针或性能基准。CI只追加轻量脚本，旧回归保留，最终SHA整体状态在
+推送后核对。版本0.5.1未变，本次未发布Mooncakes。

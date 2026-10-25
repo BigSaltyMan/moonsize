@@ -384,3 +384,23 @@ full UInt target indices as JSON numbers and all physical declarations/targets.
 Target/type existence, imported/local provenance and semantic validity remain
 unverified. Version stays 0.5.1; this increment is not published to Mooncakes.
 See [the export contract and measured fixture](exports.md).
+
+## Source addition after public 0.5.1: export inventory comparison
+
+New APIs: compare_exports(Bytes, Bytes) -> Result[ExportsComparison, ComparisonError],
+render_exports_diff(report, top), render_exports_diff_json(report). New structures:
+ExportComparisonRow, ExportsComparisonCounts and ExportsComparison. Options adds
+diff_exports=false; --diff-exports implies exports and requires a non-empty
+baseline. Single-file exports with baseline remains invalid without the diff flag.
+
+ComparisonError Baseline/Current is reused; no WasmError case is added and no old
+signature changes. ExportsLedger is reused for signed current-minus-baseline
+comparison deltas; the original single-file totals and schema remain unchanged.
+Private JSON helpers retain the old fields, types and values while allowing nested
+report objects in moonsize-exports-diff/schema_version 1.
+
+Exact full-name matches produce added/removed/kind_changed/same_kind, not ABI
+verdicts. target_index_changed is boolean only for same-kind matches, otherwise
+null. Full declarations and per-input alias groups are retained without cross-build
+target pairing. Version stays 0.5.1; no Mooncakes publication. See [measured
+ledgers, renumbering and scope](exports.md#导出接口清单基线比较).

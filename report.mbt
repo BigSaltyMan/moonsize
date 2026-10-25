@@ -505,8 +505,9 @@ pub fn usage() -> String {
   "  --diff-imports      compare exact import names/kinds/counts; requires --baseline\n" +
   "                       type compatibility not evaluated; successful differences return 0\n" +
   "  --exports           list exact export declarations and declared-target aliases\n" +
+  "  --diff-exports      compare exact export names/kinds; requires --baseline\n" +
   "  --exports-json <path> write complete exports JSON to a new .json file\n" +
-  "                       only --top and own JSON; targets and types are not validated\n" +
+  "                       --top, own JSON; --baseline only with --diff-exports; no ABI verdict\n" +
   "  --metadata          account for custom/name physical file bytes\n" +
   "  --diff-metadata     compare outer custom encodings; requires --baseline\n" +
   "  --metadata-json <path> write complete metadata JSON to a new .json file\n" +

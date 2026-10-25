@@ -770,3 +770,29 @@ Top1文本不截JSON的8条目/5目标；控制字符转义，UInt保留42949672
 _build/exports-verification/run-8yg23B/。CI只追加一次轻量脚本，最终SHA整体状态
 在推送后另行核对。版本与依赖不变，未发布Mooncakes；图片、AGENTS、规划及
 构建产物不暂存。
+
+## 43. 导出接口清单基线比较（2026-10-25）
+
+基线049c59e，版本仍0.5.1。compare_exports每侧仅inspect_exports一次，保留
+原SHA与完整报告，不再解析、哈希、建图或读取类型。按完整名称匹配，不将
+kind/index/ordinal混入键；复用ComparisonError侧别，无新增WasmError分支。
+新增3种比较结构、3个入口/渲染函数及Options.diff_exports；接口差异review-yeBXtl，
+旧签名不变。私有JSON helper提取仅复用对象构造，原单文件字段、类型、值不变。
+
+四类为added/removed/kind_changed/same_kind。同kind索引数字变化是可空布尔值，
+跨kind即使同数字也null；缺失侧为null，不伪造声明。双侧别名和范围完整保留，
+不做目标组跨构建匹配。报告不评估完整ABI、目标签名、可达性或运行行为，
+same_kind不叫“未变化”或“兼容”。
+
+实测文件125→148（+23），export56→64（+8），non-export69→84（+15）；段差
+8=1段头+1数量+6声明，声明差6=5名称+1描述符。before7=removed1+kind_changed1+
+same_kind5，after7=added1+1+5，完整8行合计声明差6。仅重编号140 B样本相对
+125 B基线新增一个前置函数导入，6个函数0→1；same_kind7，其余三类0，export
+差0，文件+15全在non-export，不输出ABI结论。[实测账本及JSON契约](exports.md)。
+
+3个新组合单测一次通过；真实CLI恰好4次、状态0/0/0/1，覆盖Top1、完整JSON、
+仅重编号及已有目标保护。三份合法fixture各V8验证一次，未实例化/执行；错误
+侧别只在单测核对。完成接口/格式/native检查及一次release构建，证据
+_build/exports-diff-verification/run-adSfVv/。旧套件/CLI、演示、探针、浏览器/PDF
+及性能基准均未本地运行。CI只追加轻量脚本，最终SHA整体状态推送后另行核对；
+不改版本和依赖、不发布Mooncakes，图片、AGENTS、规划和构建产物不暂存。

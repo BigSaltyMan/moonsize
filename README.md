@@ -307,6 +307,7 @@ identify candidates for investigation.
   --diff-imports      compare import names/kinds/counts; requires --baseline
                        type compatibility not evaluated; differences still return 0
   --exports           list exact host-visible declarations and declared-target aliases
+  --diff-exports      compare exact export names/kinds; requires --baseline
   --exports-json <path> write complete exports to a new .json file; implies --exports
   --metadata          account for custom/name physical file bytes
   --diff-metadata     compare outer custom encodings; requires --baseline
@@ -506,6 +507,24 @@ own JSON may be combined; invalid combinations return 2 before input I/O, input/
 output failures return 1 and successful empty results return 0. New JSON paths
 use the existing exclusive-create protection. Use --entrypoints separately for
 model reachability. See [scope, actual ledgers and API migration](docs/exports.md).
+
+Compare two export inventories by exact full name:
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-exports --top 20
+moonsize after.wasm --baseline before.wasm --diff-exports --exports-json new-exports-diff.json
+```
+
+The four states are added, removed, kind_changed and same_kind. Same-kind targets
+expose a boolean target_index_changed; other rows use null. This compares index
+numbers, not cross-build identities or ABI compatibility. Renumbering stays
+same_kind; alias groups remain complete on each side and are not matched across
+builds. Top limits text rows only; moonsize-exports-diff/schema_version 1 retains
+complete nested inventories, all rows and signed ledgers. The measured pair has
+removed 1, kind_changed 1, added 1, same_kind 5; file +23 B = export +8 B +
+non-export +15 B. Only baseline, Top, exports and own JSON are allowed. Changes
+still return 0; input/output failures return 1, invalid combinations return 2.
+This is a source increment after public 0.5.1, not a new Mooncakes release.
 
 ## Custom sections and symbol-name overhead
 

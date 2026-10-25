@@ -67,6 +67,7 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --imports-json <path> 启用导入模式，全部声明写入新的.json；不支持编码返回1
   --diff-imports      需baseline，比较名称/种类/次数；未评估类型兼容性，发现差异仍返回0
   --exports           列出严格UTF-8导出声明，按kind及完整u32索引分组别名
+  --diff-exports      按完整导出名比较声明，必须有baseline；不评估ABI兼容
   --exports-json <path> 隐含导出清单，完整结果写入新的.json
   --metadata          核算每个custom及name记录的实际文件字节
   --diff-metadata     按类别和完整名称比较custom外层编码；必须有baseline
@@ -362,6 +363,22 @@ moonsize app.wasm --exports-json new-exports.json
 独立模式只允许Top与自身JSON；参数冲突在读取前返回2，输入/输出错误返回1，
 成功（包括无导出）返回0。JSON沿用独占保护。可达性查询使用另一个独立入口
 --entrypoints；[范围、实测账本及API迁移](docs/exports.md)。
+
+按完整导出名称比较两侧清单：
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-exports --top 20
+moonsize after.wasm --baseline before.wasm --diff-exports --exports-json new-exports-diff.json
+```
+
+四种状态为added、removed、kind_changed、same_kind。同名同kind的
+target_index_changed为布尔值，其他情况为null；只表示完整UInt数字变化，
+不判断目标身份或ABI兼容。重编号仍为same_kind，两侧别名完整保留但不跨构建
+匹配。Top只限文本行，JSON完整嵌入双侧清单、全部行及有符号账本，独立使用
+moonsize-exports-diff/schema_version 1。实测removed1、kind_changed1、added1、
+same_kind5；文件差+23=导出段+8+非导出+15 B。只允许baseline、Top、exports与
+自身JSON；发现移除或kind变化仍返回0，输入/输出错误1，参数冲突2。这是公开
+0.5.1之后的源码增量，不代表发布新包。
 
 ## 自定义段与符号名称开销
 
