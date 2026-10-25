@@ -363,3 +363,24 @@ Category and exact-name views account for the same physical instances; unavailab
 names form an accounting bucket only. Optional partial name details remain normal
 success and are retained, not compared. No content matching or deletion estimate.
 Version stays 0.5.1, with no Mooncakes publication; see [metadata](metadata.md).
+
+## Source addition after public 0.5.1: export declarations
+
+New APIs: inspect_exports(Bytes) -> Result[ExportsReport, WasmError],
+render_exports(report, top), render_exports_json(report). Seven new read-only
+structures: ExportByteRange, ExportDeclaration, ExportTarget, ExportKindCounts,
+ExportsSummary, ExportsLedger and ExportsReport. Options adds exports=false and
+exports_json=None; Options::default supplies both defaults.
+
+WasmError adds InvalidExportEncoding(offset, reason). External exhaustive matches
+must add this case (or an appropriate fallback); describe_error supports it.
+Strict UTF-8, duplicate-name and unknown-kind failures use this new case; existing
+range/LEB/trailing errors are reused. The new inspector rejects duplicate names
+across all export kinds, retaining both declaration locations in the diagnostic.
+
+Old Export, parse_export_section, entrypoints and all old public signatures/JSON
+formats remain unchanged. The separate moonsize-exports/schema_version 1 retains
+full UInt target indices as JSON numbers and all physical declarations/targets.
+Target/type existence, imported/local provenance and semantic validity remain
+unverified. Version stays 0.5.1; this increment is not published to Mooncakes.
+See [the export contract and measured fixture](exports.md).

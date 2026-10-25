@@ -31,6 +31,8 @@ pub enum WasmError {
   InvalidImportKind(Int)
   /// Import field offset and a malformed or explicitly unsupported encoding.
   InvalidImportEncoding(Int, String)
+  /// Strict export name/kind failure or duplicate name, with field file offset.
+  InvalidExportEncoding(Int, String)
   /// A byte where an opcode was expected that no instruction uses.
   UnknownOpcode(Int, Int)
   /// A prefixed opcode whose sub-opcode is unassigned: the prefix byte, the

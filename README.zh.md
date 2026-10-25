@@ -66,6 +66,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --imports           列出宿主导入声明及其文件编码字节
   --imports-json <path> 启用导入模式，全部声明写入新的.json；不支持编码返回1
   --diff-imports      需baseline，比较名称/种类/次数；未评估类型兼容性，发现差异仍返回0
+  --exports           列出严格UTF-8导出声明，按kind及完整u32索引分组别名
+  --exports-json <path> 隐含导出清单，完整结果写入新的.json
   --metadata          核算每个custom及name记录的实际文件字节
   --diff-metadata     按类别和完整名称比较custom外层编码；必须有baseline
   --metadata-json <path> 启用独立明细并写入新的.json；可选内容损坏仍返回0并附诊断
@@ -338,6 +340,28 @@ moonsize-imports-diff/schema_version 1，单文件格式不变。实测两侧各
 移除3、新增3；段差11=1段头+1数量前缀+9声明字节，均为current减baseline。
 重排不制造数量变化，成功发现差异仍返回0，错误保留侧别、路径和原原因。
 不推断实际调用、权限、宿主兼容性或删除收益。[支持矩阵、比较与账本](docs/imports.md)。
+
+## 导出接口清单与别名分组
+
+这是公开0.5.1之后的源码增量，需从当前源码构建native CLI：
+
+```sh
+moonsize app.wasm --exports --top 20
+moonsize app.wasm --exports-json new-exports.json
+```
+
+列出function、table、memory、global、tag五类声明的宿主可见名称、完整u32索引
+及文件编码范围。名称严格按UTF-8读取，不trim、不demangle；跨kind重复名称
+也会报错。同一(kind,index)归为声明目标，function #0与table #0分开；别名组及
+单成员目标都保留。不验证目标、签名、导入/本地来源或可达性，重导出的函数
+可能没有本地body。ordinal是声明物理序号，不是目标索引。
+
+实测8条声明、5个目标、2个别名组、5个别名成员；导出段57=3段头+2数量字段+
+52声明字节，声明52=35名称编码+17描述符。不预测删除收益。Top分别限制两张
+文本表，JSON完整保留所有条目和组，格式为moonsize-exports/schema_version 1。
+独立模式只允许Top与自身JSON；参数冲突在读取前返回2，输入/输出错误返回1，
+成功（包括无导出）返回0。JSON沿用独占保护。可达性查询使用另一个独立入口
+--entrypoints；[范围、实测账本及API迁移](docs/exports.md)。
 
 ## 自定义段与符号名称开销
 

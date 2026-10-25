@@ -49,6 +49,9 @@ pub struct Options {
   /// Independent exact local function-body byte comparison.
   duplicates : Bool
   duplicates_json : String?
+  /// Independent strict export declarations and declared-target aliases.
+  exports : Bool
+  exports_json : String?
   /// Independent custom/name physical byte accounting.
   metadata : Bool
   diff_metadata : Bool
@@ -119,6 +122,8 @@ pub fn Options::default(path : String) -> Options {
     entrypoints_json: None,
     duplicates: false,
     duplicates_json: None,
+    exports: false,
+    exports_json: None,
     metadata: false,
     diff_metadata: false,
     metadata_json: None,
@@ -354,6 +359,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut entrypoints_json : String? = None
   let mut duplicates = false
   let mut duplicates_json : String? = None
+  let mut exports = false
+  let mut exports_json : String? = None
   let mut metadata = false
   let mut diff_metadata = false
   let mut metadata_json : String? = None
@@ -519,6 +526,20 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       metadata = true
       diff_metadata = true
       i += 1
+    } else if arg == "--exports" {
+      exports = true
+      i += 1
+    } else if arg == "--exports-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --exports-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      exports = true
+      exports_json = Some(args[i + 1])
+      i += 2
     } else if arg == "--metadata" {
       metadata = true
       i += 1
@@ -708,6 +729,59 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if exports {
+    if retained ||
+      dead_code ||
+      compress ||
+      strict ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      metadata ||
+      diff_metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      call_graph is Some(_) ||
+      html is Some(_) ||
+      summary_json is Some(_) ||
+      max_size is Some(_) ||
+      baseline is Some(_) ||
+      diff_functions_json is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      generics_json is Some(_) ||
+      entrypoints_json is Some(_) ||
+      duplicates_json is Some(_) ||
+      metadata_json is Some(_) ||
+      imports_json is Some(_) ||
+      data_duplicates_json is Some(_) ||
+      instructions_index is Some(_) ||
+      instructions_json is Some(_) ||
+      baseline_instructions_index is Some(_) ||
+      find_functions is Some(_) ||
+      find_functions_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) ||
+      data_json is Some(_) {
+      return Err(
+        "moonsize: --exports is an independent mode; only --top and --exports-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if exports_json is Some(target) && !target.has_suffix(".json") {
+      return Err("moonsize: --exports-json wants a .json path\n\n" + usage())
+    }
   }
   if diff_functions_json is Some(target) {
     if !target.has_suffix(".json") {
@@ -1348,6 +1422,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     entrypoints_json,
     duplicates,
     duplicates_json,
+    exports,
+    exports_json,
     metadata,
     diff_metadata,
     metadata_json,

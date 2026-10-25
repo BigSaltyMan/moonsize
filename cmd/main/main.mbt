@@ -302,6 +302,10 @@ fn main {
     run_imports(options)
     return
   }
+  if options.exports {
+    run_exports(options)
+    return
+  }
   if options.metadata {
     run_metadata(options)
     return

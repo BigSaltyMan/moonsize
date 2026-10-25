@@ -53,6 +53,8 @@ jobs:
         run: node scripts/test-imports-diff.mjs _build/native/release/build/cmd/main/main.exe
       - name: Imports CLI regressions (four cases)
         run: node scripts/test-imports.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Exports CLI regressions (four cases)
+        run: node scripts/test-exports.mjs _build/native/release/build/cmd/main/main.exe
       - name: Metadata-diff CLI regressions (four cases)
         run: node scripts/test-metadata-diff.mjs _build/native/release/build/cmd/main/main.exe
       - name: Metadata CLI regressions (four cases)

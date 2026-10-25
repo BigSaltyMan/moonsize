@@ -743,3 +743,30 @@ JSON、内部partial及已有目标保护。三份合法外层fixture各V8验证
 完成接口/格式/native检查、一次release构建；旧套件、旧CLI、演示、浏览器/PDF
 和性能基准均未本地运行。CI只追加轻量脚本，旧回归保留，最终SHA整体状态另行
 核对。版本与依赖不变，未发布Mooncakes；图片、AGENTS、规划及构建产物不暂存。
+
+## 42. 导出接口清单与别名分组（2026-10-25）
+
+基线6e04aae，版本仍0.5.1。inspect_exports复用parse_module、有界Reader及一次
+SHA-256，只深入export段，不analyze、建图、读取签名、解码函数或调用imports/
+entrypoints。旧Export及parse_export_section不变。新Options.exports/exports_json
+作为独立模式，只允许Top和自身JSON；统一预检与原生独占创建不另开writer。
+
+严格UTF-8名称保留空白、大小写、空名及Unicode，不demangle；跨kind重复名也
+拒绝，诊断同时保留重复和首次声明位置。唯一新增WasmError分支为
+InvalidExportEncoding，范围、LEB及尾随错误复用。目标全u32，结构化(kind,index)
+键不混淆各索引空间；只证明声明别名，不证明目标存在、类型或可安全删除。
+
+真实126 B五类夹具经Node v24.18.0/V8验证一次，不实例化、不执行。8声明=
+5别名成员+3单成员，5目标=2别名组+3单成员；各kind为3/2/1/1/1。export段
+57=3段头+2数量+52声明，声明52=35名称编码+17描述符，名称35=9前缀+26 UTF-8，
+描述符17=8kind+9索引前缀。函数#0的3声明24 B，表#0的2声明12 B，互不合并。
+Top1文本不截JSON的8条目/5目标；控制字符转义，UInt保留4294967295。
+[完整范围、实际JSON与迁移](exports.md)。
+
+3个新组合单测一次通过，真实CLI恰好4次、状态0/0/1/1；文本/完整JSON、重复名
+拒绝且无文件、已有目标保护均通过。重复样本错误在offset90，首次声明offset74。
+完成接口、格式、native检查及一次release构建，接口差异review-5IXIvz；本地
+未运行旧套件/CLI、探针、演示、浏览器/PDF或性能基准。证据保存在
+_build/exports-verification/run-8yg23B/。CI只追加一次轻量脚本，最终SHA整体状态
+在推送后另行核对。版本与依赖不变，未发布Mooncakes；图片、AGENTS、规划及
+构建产物不暂存。

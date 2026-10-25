@@ -306,6 +306,8 @@ identify candidates for investigation.
                        unsupported descriptors fail; baseline requires --diff-imports
   --diff-imports      compare import names/kinds/counts; requires --baseline
                        type compatibility not evaluated; differences still return 0
+  --exports           list exact host-visible declarations and declared-target aliases
+  --exports-json <path> write complete exports to a new .json file; implies --exports
   --metadata          account for custom/name physical file bytes
   --diff-metadata     compare outer custom encodings; requires --baseline
   --metadata-json <path> write full metadata to a new .json file; implies --metadata
@@ -478,6 +480,32 @@ all current minus baseline. Reordering creates no quantity change. Differences
 still return 0; parse errors retain side, path and reason. Declarations do not
 prove runtime use, permissions, host compatibility or removal savings. See
 [the support matrix, comparison contract and actual ledgers](docs/imports.md).
+
+## Export declarations and aliases
+
+This is a source addition after public 0.5.1; build the native CLI from source.
+
+```sh
+moonsize app.wasm --exports --top 20
+moonsize app.wasm --exports-json new-exports.json
+```
+
+Lists function, table, memory, global and tag declarations with exact UTF-8 host
+names, full u32 target indices and original file ranges. Names are not demangled
+internal symbols. Duplicate names across any kinds are rejected. Targets group
+by both kind and index: function #0 and table #0 are separate. Singleton targets
+are retained too. This does not validate target existence, signatures, origin or
+reachability; re-exported functions can be imports without a local body.
+
+The measured five-kind fixture has 8 declarations, 5 declared targets, 2 alias
+groups and 5 alias members. Export bytes: 57 = headers 3 + count 2 + declarations
+52; declaration bytes: 52 = name encodings 35 + descriptors 17. These are declaration
+costs, not body sizes or removal savings. Top limits each text table, while JSON
+retains all entries/targets using moonsize-exports/schema_version 1. Only Top and
+own JSON may be combined; invalid combinations return 2 before input I/O, input/
+output failures return 1 and successful empty results return 0. New JSON paths
+use the existing exclusive-create protection. Use --entrypoints separately for
+model reachability. See [scope, actual ledgers and API migration](docs/exports.md).
 
 ## Custom sections and symbol-name overhead
 

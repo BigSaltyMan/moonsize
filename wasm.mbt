@@ -309,6 +309,8 @@ pub fn describe_error(error : WasmError) -> String {
       reason
     InvalidDataEncoding(offset, reason) =>
       "invalid data encoding at offset " + offset.to_string() + ": " + reason
+    InvalidExportEncoding(offset, reason) =>
+      "invalid export encoding at offset \{offset}: \{reason}"
     InvalidImportEncoding(offset, reason) =>
       "import encoding at offset " + offset.to_string() + ": " + reason
     InvalidImportKind(kind) =>
