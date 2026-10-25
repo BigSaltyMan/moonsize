@@ -347,3 +347,19 @@ metrics. Top limits text only. Ambiguous/missing names remain unresolved even in
 self comparison; symbol states and package labels do not establish source changes,
 semantic identity or dependency ownership. See [fields and actual ledgers](function-diff-json.md).
 Version remains 0.5.1; this source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: outer custom encoding comparison
+
+New APIs: compare_metadata(Bytes, Bytes) -> Result[MetadataComparison, ComparisonError],
+render_metadata_diff(report, top), render_metadata_diff_json(report). New types:
+MetadataEncodingTotals, MetadataComparisonGroup and MetadataComparison. Reuses the
+existing Baseline/Current ComparisonError; no WasmError or old signature changes.
+Options adds diff_metadata=false; --diff-metadata implies metadata and requires
+baseline. Single-file metadata with baseline remains invalid without that flag.
+
+The new moonsize-metadata-diff/schema_version 1 nests the complete original reports
+as objects. Original metadata JSON fields, types and format remain unchanged.
+Category and exact-name views account for the same physical instances; unavailable
+names form an accounting bucket only. Optional partial name details remain normal
+success and are retained, not compared. No content matching or deletion estimate.
+Version stays 0.5.1, with no Mooncakes publication; see [metadata](metadata.md).

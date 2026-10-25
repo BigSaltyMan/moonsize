@@ -22,7 +22,7 @@ fn metadata_uint_json(value : UInt) -> Json {
 }
 
 ///|
-pub fn render_metadata_json(report : MetadataReport) -> String {
+fn metadata_json_value(report : MetadataReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-metadata"))
   root.set("schema_version", int_json(1))
@@ -212,7 +212,12 @@ pub fn render_metadata_json(report : MetadataReport) -> String {
       }),
     ),
   )
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+pub fn render_metadata_json(report : MetadataReport) -> String {
+  metadata_json_value(report).stringify(indent=2) + "\n"
 }
 
 ///|

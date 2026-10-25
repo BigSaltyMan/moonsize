@@ -505,8 +505,9 @@ pub fn usage() -> String {
   "  --diff-imports      compare exact import names/kinds/counts; requires --baseline\n" +
   "                       type compatibility not evaluated; successful differences return 0\n" +
   "  --metadata          account for custom/name physical file bytes\n" +
+  "  --diff-metadata     compare outer custom encodings; requires --baseline\n" +
   "  --metadata-json <path> write complete metadata JSON to a new .json file\n" +
-  "                       only --top and --metadata-json allowed; partial details use exit 0\n" +
+  "                       --top, own JSON; --baseline only with --diff-metadata; partial exits 0\n" +
   "  --duplicates        group byte-identical local bodies (locals + instructions)\n" +
   "  --duplicates-json <path> write complete groups to a new .json file\n" +
   "                       only --top and --duplicates-json allowed; no savings estimate\n" +

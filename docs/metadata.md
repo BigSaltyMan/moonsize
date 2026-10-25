@@ -135,3 +135,106 @@ JSON及results.json）；这是本机位置，不是公开下载地址。CI复�
 
 metadata可能被调试器、加载器或其他工具使用；本入口不证明可以安全删除，
 不解释运行时内存、源码归属、重编译减量或gzip/传输收益。
+
+## 自定义段编码开销基线比较（公开0.5.1后的源码增量）
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-metadata --top 20
+moonsize after.wasm --baseline before.wasm --diff-metadata --metadata-json new-metadata-diff.json
+```
+
+compare_metadata每侧各调用一次inspect_metadata，保留原报告和既有SHA-256，不再
+解析或哈希。外层错误沿用ComparisonError的Baseline/Current，整体失败；没有
+custom、合法空名称、opaque和内部name明细partial均可成功。
+
+比较只核算custom外层完整编码：段头（含实际长度前缀）、名称编码、内容。按
+name、producers、debug、other、unavailable固定顺序汇总，再按完整UTF-8名称
+精确分组，不trim、不忽略大小写、不归一化。重复名称的全部实例和双侧ordinal
+列表保留，不按ordinal建立跨构建配对。ordinal仅定位各自输入里的物理实例。
+
+不可用名称的组为kind=unavailable_names、name=null，只用于核算；合法空名称、
+字面名称(unavailable)和合法U+FFFD不会混入该桶。分类与名称是同一集合的两种
+视图，不能相加。debug只依据名称前缀，不验证DWARF。名称相同、数量相同或字节
+差为零都不证明内容相等；不比较name子段、函数名记录增删或部分解析的内部差异。
+
+双侧byte_ledger_complete、custom_name_status、name_details_status、diagnostics、
+未解析范围和所有原始明细完整保留。文本在表前列覆盖、诊断和未解析范围；外层
+账本完整可以同时伴随name_details_status=partial。opaque表示未解释，不是失败。
+
+### 实测外层账本
+
+scripts/test-metadata-diff.mjs在Node v24.18.0下生成三份外层合法样本，分别V8验证
+一次，不实例化、不执行。基线60 B，SHA-256：
+8d3c563a287db4683342358fef8841b68520d2d27f88295dbce37da27685b645。
+当前62 B，SHA-256：
+5866b9fd5dd876b48be77cb6734a62d2f6109fd2a0f83d46144ced5da172f760。
+
+实际CLI输出：
+
+```text
+Baseline custom: 52 B = headers 12 B + name encodings 32 B + contents 8 B; 6 instances
+Current custom: 49 B = headers 11 B + name encodings 27 B + contents 11 B; 5 instances
+Custom delta: -3 B = headers -1 B + name encodings -5 B + contents 3 B; count delta -1
+Non-custom: 8 -> 13 B
+File delta: 2 B = custom -3 B + non-custom 5 B
+```
+
+分类编码差依次为name 0、producers -13、debug -1、other +11、unavailable 0，
+合计-3。完整名称组有6组，Top1只展示producers；JSON仍有两侧全部6/5个实例。
+x在基线出现两次、当前一次，双侧ordinal为[1,2]和[1]；两边完整编码均10 B，
+但次数和内容不同。当前x使用两字节段长度及名称长度前缀，按实际输入宽度核算。
+
+所有差值为current-baseline，不是文件范围。每组完整编码差等于段头、名称及
+内容差之和；分类/名称各自的数量、双侧字节和差值分别闭合。non_custom_bytes
+包含Wasm头、code和全部标准段，不是“非code”或“其他元数据”。
+
+JSON摘要节选（实际值；完整文件还保留两侧报告、全部组和成员ordinal）：
+
+```json
+{
+  "format": "moonsize-metadata-diff",
+  "schema_version": 1,
+  "delta": {
+    "custom_count": -1,
+    "custom_encoded_bytes": -3,
+    "section_header_bytes": -1,
+    "name_encoding_bytes": -5,
+    "content_bytes": 3
+  },
+  "delta_file_bytes": 2,
+  "delta_non_custom_bytes": 5
+}
+```
+
+完整JSON的baseline/current是原moonsize-metadata报告对象，不是序列化字符串。
+单文件JSON及原render_metadata_json接口不变。名称组按完整编码差绝对值、数量
+差绝对值降序，再按完整名称字典序，等优先级的不可用桶最后；Top只限制文本
+名称组，不截断分类、汇总、覆盖、诊断或JSON。
+
+### 用法与验证范围
+
+--diff-metadata隐含metadata，baseline必须非空；显式重复--metadata不增加解析。
+没有diff标志的metadata加baseline仍返回2。比较模式只允许baseline、Top、自身
+JSON和metadata标志；strict、max-size、预算、HTML、compress及其他模式在读取
+输入前拒绝。退出0表示比较完成（包括增长、无custom、partial），1为读取、
+外层结构或输出失败，2为参数错误。JSON仍要求新的.json目标，复用统一预检及
+原生独占创建。没有新增覆盖或事务保证。
+
+新增API为compare_metadata、render_metadata_diff、render_metadata_diff_json，
+新增MetadataEncodingTotals、MetadataComparisonGroup、MetadataComparison及
+Options.diff_metadata；见[迁移说明](migration-0.5.md)。
+
+本地仅3个新组合单测及4次CLI，状态0/0/0/1：混合样本文本Top1、完整JSON、
+内部name损坏但外层合法的partial JSON、已有JSON拒绝且原字节不变。无效UTF-8
+样本只验证旧解析器兼容行为，不宣称V8合法。本地证据：
+_build/metadata-diff-verification/run-MYjdpn/，含三份输入、四份日志、
+metadata-diff.json、partial-diff.json及results.json。可重现命令：
+
+```sh
+moon test --target native metadata_diff_wbtest.mbt
+node scripts/test-metadata-diff.mjs _build/native/release/build/cmd/main/main.exe
+```
+
+本地未运行旧套件、演示、浏览器/PDF或性能基准；CI沿用既有回归，只追加一次
+轻量脚本，目标SHA的整体状态在推送后独立核对。版本与依赖不变，未发布Mooncakes。
+本功能不比较内容、不推断稳定身份、语义或安全strip，不预测重编译与gzip收益。

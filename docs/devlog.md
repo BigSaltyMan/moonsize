@@ -719,3 +719,27 @@ baseline112→current128（+16）；code22→29（+7），函数19→24（+5）�
 本地未跑旧套件、旧CLI/演示、浏览器/PDF或性能基准，未重复strict进程，只核对
 写入前代码位置。CI只追加轻量脚本，保留旧回归并确认最终SHA。用户图片、AGENTS
 和规划排除；不改版本、不发布Mooncakes，不新增分析工具或Schema框架。
+
+## 41. 自定义段编码开销基线比较（2026-10-25）
+
+基线cffc252，版本仍0.5.1。compare_metadata每侧只inspect_metadata一次，复用
+原始SHA和完整报告，不建图、不再解析/哈希。复用ComparisonError侧别，旧
+WasmError、单文件JSON和公开签名不变；新增3种比较结构、3个入口/渲染函数及
+Options.diff_metadata，接口差异保存在review-NK0upl。
+
+按固定类别和严格完整名称生成两个替代视图，同名物理实例全部计入，ordinal
+仅定位各自输入。名称不可用使用结构化内部键、kind=unavailable_names/name=null，
+不与空名、字面标签或U+FFFD混淆。差值用实际前缀宽度；不匹配内容、不配对段，
+不比较name内部，不推断语义、可删除性或gzip收益。
+
+实测文件60→62（+2），custom52→49（-3），non-custom8→13（+5）；custom差
+-3=段头-1+名称编码-5+内容+3。分类差0/-13/-1/+11/0合计-3，6名称组全部
+保留。x的两个实例变一个，编码同为10 B也不称内容相同。partial样本保持外层
+完整、诊断及未解析范围，不升级为模块错误。文档及完整JSON见metadata.md和
+_build/metadata-diff-verification/run-MYjdpn/。
+
+本地3个新组合单测一次通过，真实CLI恰好4次、状态0/0/0/1，覆盖Top1、完整
+JSON、内部partial及已有目标保护。三份合法外层fixture各V8验证一次，不执行。
+完成接口/格式/native检查、一次release构建；旧套件、旧CLI、演示、浏览器/PDF
+和性能基准均未本地运行。CI只追加轻量脚本，旧回归保留，最终SHA整体状态另行
+核对。版本与依赖不变，未发布Mooncakes；图片、AGENTS、规划及构建产物不暂存。

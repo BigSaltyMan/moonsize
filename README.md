@@ -307,6 +307,7 @@ identify candidates for investigation.
   --diff-imports      compare import names/kinds/counts; requires --baseline
                        type compatibility not evaluated; differences still return 0
   --metadata          account for custom/name physical file bytes
+  --diff-metadata     compare outer custom encodings; requires --baseline
   --metadata-json <path> write full metadata to a new .json file; implies --metadata
                        partial optional name details still return 0 with diagnostics
   --duplicates        group exact local body bytes, excluding length prefixes
@@ -503,6 +504,23 @@ The measured fixture accounts for 115 custom bytes as 15 header + 48 custom-name
 encoding + 52 content bytes; these are decompositions, not additive parent/child
 totals. Metadata is not necessarily removable, and file bytes do not predict
 recompiled or transfer savings. See [the scope, actual ledgers and API](docs/metadata.md).
+
+Compare outer custom encodings by category and exact full name:
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-metadata --top 20
+moonsize after.wasm --baseline before.wasm --diff-metadata --metadata-json new-metadata-diff.json
+```
+
+Repeated names retain all instances; unavailable names use a separate accounting
+bucket. Both coverage states and partial name details remain visible. Top limits
+only text name groups; JSON retains both complete reports and all groups using
+`moonsize-metadata-diff/schema_version: 1`. This compares counts and outer bytes,
+not contents, name internals, DWARF or semantics. Equal names or zero deltas do
+not establish equal contents or safe removal. The measured fixture changes file
+bytes by +2 = custom -3 + non-custom +5. Comparison accepts only baseline, Top,
+metadata and its JSON; exits 0/1/2 mean success (including partial), input/output
+failure and argument error. This is a source addition after public 0.5.1.
 
 ## Identical function bodies
 

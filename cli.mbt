@@ -51,6 +51,7 @@ pub struct Options {
   duplicates_json : String?
   /// Independent custom/name physical byte accounting.
   metadata : Bool
+  diff_metadata : Bool
   metadata_json : String?
   /// Independent host-import declaration byte accounting.
   imports : Bool
@@ -119,6 +120,7 @@ pub fn Options::default(path : String) -> Options {
     duplicates: false,
     duplicates_json: None,
     metadata: false,
+    diff_metadata: false,
     metadata_json: None,
     imports: false,
     imports_json: None,
@@ -353,6 +355,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut duplicates = false
   let mut duplicates_json : String? = None
   let mut metadata = false
+  let mut diff_metadata = false
   let mut metadata_json : String? = None
   let mut imports = false
   let mut imports_json : String? = None
@@ -512,6 +515,10 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       imports = true
       imports_json = Some(args[i + 1])
       i += 2
+    } else if arg == "--diff-metadata" {
+      metadata = true
+      diff_metadata = true
+      i += 1
     } else if arg == "--metadata" {
       metadata = true
       i += 1
@@ -994,6 +1001,16 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       return Err("moonsize: --imports-json wants a .json path\n\n" + usage())
     }
   }
+  if diff_metadata {
+    match baseline {
+      Some(path) if !path.trim().is_empty() && !path.has_prefix("--") => ()
+      _ =>
+        return Err(
+          "moonsize: --diff-metadata requires a non-empty --baseline path\n\n" +
+          usage(),
+        )
+    }
+  }
   if metadata {
     if retained ||
       dead_code ||
@@ -1007,7 +1024,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       duplicates ||
       html is Some(_) ||
       call_graph is Some(_) ||
-      baseline is Some(_) ||
+      (baseline is Some(_) && !diff_metadata) ||
       max_size is Some(_) ||
       experiment is Some(_) ||
       experiment_context is Some(_) ||
@@ -1020,7 +1037,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_json is Some(_) ||
       budget_md is Some(_) {
       return Err(
-        "moonsize: --metadata is an independent mode; only --top and --metadata-json may be combined with it\n\n" +
+        "moonsize: metadata modes allow only --top, --metadata-json and (--diff-metadata only) --baseline\n\n" +
         usage(),
       )
     }
@@ -1332,6 +1349,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     duplicates,
     duplicates_json,
     metadata,
+    diff_metadata,
     metadata_json,
     imports,
     imports_json,

@@ -67,6 +67,7 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --imports-json <path> 启用导入模式，全部声明写入新的.json；不支持编码返回1
   --diff-imports      需baseline，比较名称/种类/次数；未评估类型兼容性，发现差异仍返回0
   --metadata          核算每个custom及name记录的实际文件字节
+  --diff-metadata     按类别和完整名称比较custom外层编码；必须有baseline
   --metadata-json <path> 启用独立明细并写入新的.json；可选内容损坏仍返回0并附诊断
   --retained           当前图模型中受支配函数的编码字节总和
   --dead-code          从根不可达的函数
@@ -357,6 +358,21 @@ moonsize app.wasm --metadata-json new-metadata.json
 模式只允许Top和自身JSON，不接受strict；JSON沿用独占保护。实测custom账本为
 115=15段头+48名称编码+52内容字节；父项与子项不能再相加。元数据不一定可删除，
 不预测重编译或传输收益。[范围、实际账本和API](docs/metadata.md)。
+
+比较两次构建的custom外层编码：
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-metadata --top 20
+moonsize after.wasm --baseline before.wasm --diff-metadata --metadata-json new-metadata-diff.json
+```
+
+按类别和精确完整名称汇总，同名重复实例全部保留；不可用名称进入单独核算桶，
+不冒充内容身份。双侧覆盖状态、partial和诊断保留，Top只限制文本名称组，JSON
+完整保留两侧报告及所有组，使用独立的moonsize-metadata-diff/schema_version 1。
+实测文件差+2=custom差-3+非custom差+5字节。只比较数量和外层编码，不比较内容、
+name内部、DWARF或语义；同名或零差值不证明相同内容或可安全删除。比较模式只
+允许baseline、Top、metadata及自身JSON；退出0包括partial，1为输入/输出错误，
+2为参数错误。这是公开0.5.1之后的源码增量，未发布新包。
 
 ## 重复函数体字节检测
 
