@@ -7,9 +7,9 @@ fn function_instruction_range_json(range : FunctionInstructionRange) -> Json {
 }
 
 ///|
-pub fn render_function_instructions_json(
+fn function_instructions_json_value(
   report : FunctionInstructionsReport,
-) -> String {
+) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-function-instructions"))
   root.set("schema_version", int_json(1))
@@ -57,7 +57,14 @@ pub fn render_function_instructions_json(
       }),
     ),
   )
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+pub fn render_function_instructions_json(
+  report : FunctionInstructionsReport,
+) -> String {
+  function_instructions_json_value(report).stringify(indent=2) + "\n"
 }
 
 ///|

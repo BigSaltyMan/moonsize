@@ -8,8 +8,9 @@ moonsize app.wasm --instructions 3 --instructions-json new-instructions.json
 ```
 
 `index`是包含前置导入的完整函数索引，不是code段本地编号或体积排名。
-独立模式只允许Top和自身JSON；strict、baseline、其他分析或输出模式在读取前
-拒绝，返回2。JSON需要显式指定目标和新的`.json`路径。输入、越界或导入目标、
+独立模式允许Top和自身JSON；baseline只能配合显式baseline-instructions目标，
+详见下节比较。strict及其他分析/输出模式在读取前拒绝，返回2。JSON需要显式
+指定目标和新的`.json`路径。输入、越界或导入目标、
 解码及输出失败返回1；成功返回0。导入函数没有本地body，不能作为0字节目标。
 写入复用统一preflight及独占创建，已有目标不会被截断；未新增事务保证。
 
@@ -97,3 +98,107 @@ body_relative_offset、encoded_size。没有操作数、收益或graph_complete�
 Options新增instructions_index=None、instructions_json=None，Options::default提供默认值。
 旧公开签名、WasmError、已有报告schema不变；外部手工构造Options的代码需补字段。
 详见[迁移说明](migration-0.5.md)。
+
+## 显式双目标的编码构成比较
+
+这是公开0.5.1之后的源码增量。需要前后两个文件及各自的完整函数index：
+
+```sh
+moonsize after.wasm --instructions 7 --baseline before.wasm --baseline-instructions 5 --top 20
+moonsize after.wasm --instructions 7 --baseline before.wasm --baseline-instructions 5 --instructions-json new-instructions-diff.json
+```
+
+index7/5在上面仅说明参数位置；实际样本index见下表。可以先分别用--find-functions
+取得真实编号，再由用户选择；比较不启动检索，不按名称、相同编号或排名配对。
+两个index都必须显式给出，即使编号相同。缺项、负数、非法index或空baseline
+路径返回2；单独instructions+baseline也拒绝，不默认同编号。strict、HTML、预算
+及其他模式读取前拒绝。新选项不能被其他模式忽略。成功（含增长和零差）返回0；
+读取、解析、目标、解码、输出失败返回1，不增加退出3的门禁。
+
+每侧只调用一次inspect_function_instructions，保留其完整身份、范围、指令顺序
+和opcode组。沿用现有基础结构和函数边界检查，仅解码两侧选定body，不额外遍历
+其他函数的指令。不调用analyze、图或全模块差异分析；任一侧失败整体返回错误，
+不输出半份成功报告或创建JSON。导入目标不能当作0字节基线，越界不回退到同名项。
+
+按精确mnemonic取并集，记录两侧count/encoded_bytes及current-baseline差值。
+缺失侧为0，不按offset/ordinal对齐，不合并扩展subopcode。次数相同但立即数
+编码宽度不同也能有字节差，不根据长度猜立即数值。保留零差行；排序为绝对字节差
+降序、绝对次数差降序、mnemonic字典序升序。Top只限制文本opcode行，不影响账本
+或JSON。仅比较编码构成统计，未比较指令序列与立即数值；零差不证明序列相同、
+语义等价或兼容，相同名称/编号也不证明跨构建身份，名称不同不妨碍比较。
+
+有符号差值只表示数量，不是文件范围：
+
+```text
+delta.entry_bytes = delta.prefix_bytes + delta.body_bytes
+delta.body_bytes = delta.locals_bytes + delta.instruction_bytes
+delta.instruction_bytes = sum(opcode.encoded_bytes_delta)
+delta.instruction_count = sum(opcode.count_delta)
+```
+
+locals包括向量数量前缀，函数长度前缀保留真实宽度。仍不含code段头/数量字段、
+function和name段或依赖闭包；条目差不等于整个文件差，不预测执行速度、源码
+删减、重编译或gzip收益。
+
+### 本次实际样本
+
+2026-10-25在Windows、Node v24.18.0/V8 13.6.233.17-node.50、moon 0.1.20260915、
+moonc v0.10.13+cbb11c36f下运行；两个合法fixture各由Node/V8验证一次，未实例化
+或执行。每个模块有一个前置函数导入及两个本地定义。本次实际命令：
+
+```sh
+moonsize after.wasm --instructions 2 --baseline before.wasm --baseline-instructions 1 --top 1
+```
+
+用户显式选择：
+
+| 侧别 | 函数index | 名称 | 输入字节 | 条目file offset | body file offset |
+| --- | ---: | --- | ---: | ---: | ---: |
+| baseline | 1 | before-target | 67 | 31 | 33 |
+| current | 2 | renamed-current | 74 | 35 | 36 |
+
+输入SHA-256：
+
+```text
+baseline 11e5dfa20f50d8b2e02ef38032554602469d4f7fe0e8339535370660149e435b
+current  0b10ba86138daea4ca131889506551b00c12ca4c68ae7ffae1aaa11a87303f19
+```
+
+| 指标 | baseline | current | current-baseline |
+| --- | ---: | ---: | ---: |
+| 条目编码B | 8 | 12 | +4 |
+| 长度前缀B | 2 | 1 | -1 |
+| body B | 6 | 11 | +5 |
+| locals B | 1 | 3 | +2 |
+| 指令B | 5 | 8 | +3 |
+| 指令数 | 4 | 5 | +1 |
+
+baseline 8=2+6、6=1+5；current 12=1+11、11=3+8。
+差值4=-1+5、5=2+3。整个文件增长7字节，与条目增长4字节不同。
+按排序的完整opcode差：i32.const字节+3/次数+1，drop +1/+1，nop -1/-1，end
+0/0；求和分别为指令+3字节和+1条。Top1只显示i32.const，但JSON仍有四行、
+baseline四条指令和current五条指令。两种目标名称不同，仍按显式选择比较。
+
+脚本共四次分析器：文本Top1、同一对目标完整JSON、current index2自比、已有
+JSON拒绝覆盖；退出分别0/0/0/1，已有文件保持原字节。自比明确输出零差及统计
+边界，不用零差推断序列或语义。原始输入、完整JSON、日志、环境和CLI摘要在
+`_build/function-instructions-diff-verification/run-NVyOL3/`。前置名称检索及文档里的后续操作未额外运行分析器。
+
+### 比较API与独立JSON
+
+新增compare_function_instructions(baseline, baseline_index, current, current_index)，
+返回FunctionInstructionsComparison或FunctionInstructionsComparisonError。
+BaselineInstructionsError(index, cause)和CurrentInstructionsError(index, cause)
+包装原FunctionInstructionsError；describe_function_instructions_comparison_error
+保留侧别、目标index、原offset及原因。新增FunctionOpcodeDelta和
+FunctionInstructionsDelta仅存统计量，Comparison同时保留两份完整报告。
+
+render_function_instructions_diff(report, top)和render_function_instructions_diff_json
+不重复解码。比较JSON使用format=moonsize-function-instructions-diff、schema_version=1，
+包括baseline/current完整单函数对象、delta、全部opcodes和scope。嵌套对象复用
+私有function_instructions_json_value构造器，不嵌入序列化字符串。旧单文件JSON
+的format、字段、类型、值和公开签名不变；只有显式比较时共用的instructions_json
+输出槽才输出比较格式，继续统一preflight/独占写入。
+
+Options新增baseline_instructions_index=None，默认值由Options::default提供；外部
+手工构造Options需补字段。旧签名及WasmError不变，不增加依赖、不修改版本。

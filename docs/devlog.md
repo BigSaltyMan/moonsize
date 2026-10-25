@@ -615,3 +615,37 @@ Unicode、空白query和占位符、完整账本，以及未知opcode不触发�
 演示、浏览器/PDF或性能基准。CI只追加同一轻量脚本，保留原回归并核对最终SHA。
 不增加正则、模糊匹配、源码/别名搜索、HTML或自动下游查询，不改依赖、版本，
 不发布Mooncakes；用户图片、AGENTS及规划继续排除。
+
+## 38. 单函数指令构成基线比较（2026-10-25）
+
+基线16e3d41，版本仍0.5.1。新增compare_function_instructions，用户显式指定前后
+两个完整函数index，每侧inspect_function_instructions一次，保留完整报告、文件
+摘要、目标身份、范围、顺序指令和聚合。不自动配对、不按ordinal/offset对齐、
+不解码其他函数，不调用analyze、图或全模块差异。新错误按baseline/current包装
+原FunctionInstructionsError，同时保留用户index和原始位置/原因；不改WasmError。
+
+精确mnemonic并集分别计算次数和编码字节，缺失侧0，零差行仍保留；排序为绝对
+字节差、绝对次数差降序及mnemonic字典序。条目/前缀/body/locals/指令/次数差值
+统一current-baseline。数量不是文件范围，零统计差不等于序列、立即数或语义相同，
+不证明跨构建身份，也不预测性能、重编译或gzip收益。
+
+CLI增加baseline-instructions，必须同时有instructions和非空baseline；缺任一
+index均参数阶段返回2，不默认同编号。独立比较只允许Top和自身JSON。成功包括
+零差返回0，输入/目标/解码/输出错误返回1，无新退出3门禁。复用原输出槽、统一
+preflight及独占创建。旧单文件渲染仅提取私有Json对象helper，字段/值/签名不变；
+新比较JSON为moonsize-function-instructions-diff，嵌套完整对象而非JSON字符串。
+新增四个入口、四种类型及Options一个字段，接口快照在review-VNxdka。
+
+本地3个新组合单测、四次新CLI全部通过；包含非最短前缀、立即数宽度、重排零差、
+扩展opcode分开成行、侧别错误和旧单文件对象一致性。合法前后fixture各由Node
+v24.18.0/V8验证一次，未实例化或执行。baseline index1 before-target对current
+index2 renamed-current：条目8→12、前缀2→1、body6→11、locals1→3、指令5→8、
+次数4→5。差值4=-1+5、5=2+3，全部opcode差求和+3字节/+1条；文件总差+7，
+不是条目差+4。Top1不截JSON；自比0差返回0，已有JSON返回1且原字节不变。
+[实际SHA、身份和完整账本](function-instructions.md)。原始证据
+_build/function-instructions-diff-verification/run-NVyOL3，未为文档另跑名称检索或后续分析。
+
+完成接口、格式、native检查及一次release构建；本地未跑旧套件、旧CLI、探针、
+演示、浏览器/PDF或性能基准。CI保留原回归，只追加轻量脚本并核对最终SHA。
+不新增HTML、预算、自动匹配、指令对齐、立即数比较或语义判断，不改依赖和版本，
+不发布Mooncakes。用户图片、AGENTS及规划继续排除。

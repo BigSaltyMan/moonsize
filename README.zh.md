@@ -40,6 +40,7 @@ moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--budget <config.json>] [--budget-json <path.json>] [--budget-md <path.md>]
 moonsize <file.wasm> --find-functions <query> [--top <n>] [--find-functions-json <new.json>]
 moonsize <file.wasm> --instructions <n> [--top <n>] [--instructions-json <new.json>]
+moonsize <after.wasm> --instructions <n> --baseline <before.wasm> --baseline-instructions <n> [--top <n>] [--instructions-json <new.json>]
 moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]
 moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
 moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]
@@ -54,7 +55,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --find-functions <query> 本地raw/display名称的大小写敏感字面检索
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --instructions <n> 查询完整函数索引中的本地函数编码
-  --instructions-json <path> 完整opcode组及指令写入新的.json；需显式instructions
+  --instructions-json <path> 完整单函数或显式比较写入新的.json；需显式instructions
+  --baseline-instructions <n> 基线完整函数index，需instructions/baseline
   --data-duplicates   检测当前文件内字节完全相同的data payload
   --data-duplicates-json <path> 完整组和原始明细写入新的.json；每组文本预览最多20成员
   --imports           列出宿主导入声明及其文件编码字节
@@ -151,9 +153,22 @@ moonsize app.wasm --instructions 3 --instructions-json new-instructions.json
 index使用包含前置导入的完整函数索引，不是体积排名或本地编号。导入目标没有
 本地函数体，返回输入错误。只解码选中的函数，分别核算长度前缀、locals编码和
 指令字节，展示opcode次数、编码量及原文件指令范围。Top限制两张文本表，JSON
-保留所有组和指令。独立模式只允许Top和自身JSON，strict/其他模式在读取前拒绝，
+保留所有组和指令。独立模式允许Top、自身JSON及显式baseline/index对；strict和
+其他模式在读取前拒绝，
 新输出沿用独占保护。静态次数不是执行频率，编码字节不预测耗时或删除收益。
-[测量账本、范围及API说明](docs/function-instructions.md)。
+显式选择两侧目标后可比较编码构成：
+
+```sh
+moonsize after.wasm --instructions 7 --baseline before.wasm --baseline-instructions 5 --top 20
+moonsize after.wasm --instructions 7 --baseline before.wasm --baseline-instructions 5 --instructions-json new-instructions-diff.json
+```
+
+两个index都必须提供，即使编号相同；每侧只检查目标一次。按精确opcode比较数量
+和编码字节，前缀、locals与指令差值统一为current-baseline。名称不同也可比较，
+相同编号或名称不证明跨构建身份。零聚合差不证明序列、立即数或语义相同。
+Top不截断JSON；比较格式moonsize-function-instructions-diff嵌套两份完整对象，
+单文件JSON不变。错误保留baseline/current、目标及原原因，不自动配对或对齐指令，
+不预测性能和完整构建收益。[实测账本、范围及API说明](docs/function-instructions.md)。
 
 ## 数据段重复内容
 

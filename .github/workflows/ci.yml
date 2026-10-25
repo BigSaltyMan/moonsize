@@ -37,6 +37,8 @@ jobs:
         run: moon test
       - name: Build native CLI
         run: moon build --target native --release
+      - name: Function-instructions-diff CLI regressions (four cases)
+        run: node scripts/test-function-instructions-diff.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-search CLI regressions (four cases)
         run: node scripts/test-function-search.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-instructions CLI regressions (four cases)

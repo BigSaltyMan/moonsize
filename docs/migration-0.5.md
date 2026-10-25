@@ -280,3 +280,26 @@ removability proof. Other modes, including strict, are rejected before I/O. JSON
 requires a query and uses the existing preflight/exclusive writer. See
 [measured results and scope](function-search.md). Version remains 0.5.1; this
 source increment has not been published to Mooncakes.
+
+## Source addition after public 0.5.1: explicit instruction composition comparison
+
+New APIs: compare_function_instructions(Bytes, Int, Bytes, Int),
+describe_function_instructions_comparison_error,
+render_function_instructions_diff(report, top), and
+render_function_instructions_diff_json(report). New types: FunctionOpcodeDelta,
+FunctionInstructionsDelta, FunctionInstructionsComparison and
+FunctionInstructionsComparisonError. BaselineInstructionsError(index, cause) and
+CurrentInstructionsError(index, cause) wrap the original FunctionInstructionsError,
+retaining the selected target and original offset/reason. Options adds
+baseline_instructions_index=None; default supplies it, and external struct literals
+need the new field. Old signatures, WasmError and single-file JSON fields/types/
+values remain unchanged. A private JSON object constructor is shared so the new
+moonsize-function-instructions-diff/schema_version 1 format nests complete report
+objects, not serialized strings. The instructions_json output slot and exclusive
+writer are reused. Comparison requires both explicit indices plus a nonempty
+baseline; no same-index default or name matching. Each selected body is inspected
+once. Delta=current-baseline, preserving actual prefix/locals widths. Exact
+mnemonic rows retain zero deltas; Top limits text only. Aggregates do not compare
+sequences or immediate values and do not establish identity, equivalence,
+compatibility or savings. See [actual ledgers and errors](function-instructions.md).
+Version remains 0.5.1; this source increment has not been published to Mooncakes.

@@ -124,10 +124,27 @@ no local body and returns an input error. Only the selected body is decoded.
 The report separates its length prefix, locals encoding and instructions, and
 lists opcode counts, encoded bytes and original-file instruction ranges.
 Top limits both text tables; JSON contains every group and instruction.
-This independent mode accepts only Top and its own JSON, rejects strict and
-other modes before I/O, and refuses to overwrite existing output. Counts and
+This independent mode accepts Top, its own JSON and an optional explicit
+baseline/index pair, rejects strict and other modes before I/O, and refuses
+to overwrite existing output. Counts and
 bytes describe static encoding, not execution frequency, timing or savings.
-See [scope, measured ledger and API](docs/function-instructions.md).
+To compare two explicitly selected local functions:
+
+```sh
+moonsize after.wasm --instructions 7 --baseline before.wasm --baseline-instructions 5 --top 20
+moonsize after.wasm --instructions 7 --baseline before.wasm --baseline-instructions 5 --instructions-json new-instructions-diff.json
+```
+
+Both indices are required, even when numerically equal. Each target is inspected
+once. Exact opcode mnemonics compare counts and encoded bytes; full prefix,
+locals and instruction ledgers use current minus baseline. Different names are
+allowed; names and indices do not establish cross-build identity. Zero aggregate
+deltas do not prove equal sequences, immediate values, semantics or compatibility.
+Top limits text rows only. The independent moonsize-function-instructions-diff
+JSON nests both complete reports as objects; single-file JSON remains unchanged.
+Baseline/current errors retain their target and original cause. No automatic
+matching, instruction alignment, performance or complete-build savings prediction.
+See [scope, measured ledgers and API](docs/function-instructions.md).
 
 ## Duplicate data payloads
 
@@ -178,6 +195,7 @@ usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--experiment <report.html|report.json>] [--experiment-context <context.json>]
        moonsize <file.wasm> --find-functions <query> [--top <n>] [--find-functions-json <new.json>]
        moonsize <file.wasm> --instructions <n> [--top <n>] [--instructions-json <new.json>]
+       moonsize <after.wasm> --instructions <n> --baseline <before.wasm> --baseline-instructions <n> [--top <n>] [--instructions-json <new.json>]
        moonsize <file.wasm> --data-duplicates [--top <n>] [--data-duplicates-json <new.json>]
        moonsize <file.wasm> --imports [--top <n>] [--imports-json <new.json>]
        moonsize <file.wasm> --baseline <before.wasm> --diff-imports [--top <n>] [--imports-json <new.json>]
@@ -220,7 +238,8 @@ identify candidates for investigation.
   --find-functions <query> case-sensitive literal search of local raw/display names
   --find-functions-json <path> save all matches to a new .json; requires a query
   --instructions <n> inspect a local function in the full function index space
-  --instructions-json <path> save complete groups and instructions to a new .json
+  --instructions-json <path> save complete groups/instructions or explicit comparison to a new .json
+  --baseline-instructions <n> explicit baseline function index; requires instructions/baseline
   --data-duplicates   group exact data payloads within the current input
   --data-duplicates-json <path> write full groups and source entries to a new .json
                        only Top and own JSON; text previews 20 members per group

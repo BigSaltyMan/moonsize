@@ -59,6 +59,8 @@ pub struct Options {
   /// Independent selected local-function instruction encoding.
   instructions_index : Int?
   instructions_json : String?
+  /// Explicit baseline function index; requires instructions and baseline.
+  baseline_instructions_index : Int?
   /// Independent literal search of available local raw/display names.
   find_functions : String?
   find_functions_json : String?
@@ -119,6 +121,7 @@ pub fn Options::default(path : String) -> Options {
     data_duplicates_json: None,
     instructions_index: None,
     instructions_json: None,
+    baseline_instructions_index: None,
     find_functions: None,
     find_functions_json: None,
     budget: None,
@@ -350,6 +353,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut data_duplicates_json : String? = None
   let mut instructions_index : Int? = None
   let mut instructions_json : String? = None
+  let mut baseline_instructions_index : Int? = None
   let mut find_functions : String? = None
   let mut find_functions_json : String? = None
   let mut budget : String? = None
@@ -416,19 +420,24 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
       find_functions_json = Some(args[i + 1])
       i += 2
-    } else if arg == "--instructions" {
+    } else if arg == "--instructions" || arg == "--baseline-instructions" {
       if i + 1 >= args.length() {
-        return Err(
-          "moonsize: --instructions needs a function index\n\n" + usage(),
-        )
+        return Err("moonsize: " + arg + " needs a function index\n\n" + usage())
       }
-      instructions_index = match parse_path_index(args[i + 1]) {
-        Some(index) => Some(index)
+      let index = match parse_path_index(args[i + 1]) {
+        Some(index) => index
         None =>
           return Err(
-            "moonsize: --instructions wants a nonnegative function index\n\n" +
+            "moonsize: " +
+            arg +
+            " wants a nonnegative function index\n\n" +
             usage(),
           )
+      }
+      if arg == "--instructions" {
+        instructions_index = Some(index)
+      } else {
+        baseline_instructions_index = Some(index)
       }
       i += 2
     } else if arg == "--instructions-json" {
@@ -664,6 +673,30 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     Some(path) => path
     None => return Err(usage())
   }
+  if baseline_instructions_index is Some(_) {
+    if instructions_index is None {
+      return Err(
+        "moonsize: --baseline-instructions requires --instructions and --baseline\n\n" +
+        usage(),
+      )
+    }
+    match baseline {
+      Some(path) if !path.trim().is_empty() && !path.has_prefix("--") => ()
+      _ =>
+        return Err(
+          "moonsize: --baseline-instructions requires a non-empty --baseline path\n\n" +
+          usage(),
+        )
+    }
+  }
+  if instructions_index is Some(_) &&
+    baseline is Some(_) &&
+    baseline_instructions_index is None {
+    return Err(
+      "moonsize: --instructions with --baseline requires explicit --baseline-instructions\n\n" +
+      usage(),
+    )
+  }
   if find_functions_json is Some(_) && find_functions is None {
     return Err(
       "moonsize: --find-functions-json requires --find-functions\n\n" + usage(),
@@ -735,7 +768,6 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       data_json is Some(_) ||
       html is Some(_) ||
       call_graph is Some(_) ||
-      baseline is Some(_) ||
       max_size is Some(_) ||
       experiment is Some(_) ||
       experiment_context is Some(_) ||
@@ -748,7 +780,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_json is Some(_) ||
       budget_md is Some(_) {
       return Err(
-        "moonsize: --instructions is an independent mode; only --top and --instructions-json may be combined with it\n\n" +
+        "moonsize: --instructions is an independent mode; only --top, --instructions-json and an explicit --baseline / --baseline-instructions pair may be combined with it\n\n" +
         usage(),
       )
     }
@@ -1188,6 +1220,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     data_duplicates_json,
     instructions_index,
     instructions_json,
+    baseline_instructions_index,
     find_functions,
     find_functions_json,
     budget,
