@@ -69,13 +69,15 @@ fn help_topics() -> Array[HelpTopic] {
       title: "Data payloads and encoding overhead",
       summary: "Inspect data entries, group identical payloads, or compare content groups.",
       options: [
+        "--data-preview <index>; --data-offset <n>; --data-limit <1..4096>; --data-preview-json <new.json>",
         "--find-data <UTF-8 literal>; --find-data-json <new.json>", "--data-segments; --data-json <new.json>; --top <n>",
         "--data-duplicates; --data-duplicates-json <new.json>", "--diff-data with --baseline; --html with current-input details",
       ],
       examples: [
         ["moonsize", "app.wasm", "--find-data", "assets/logo", "--top", "20"],
         [
-          "moonsize", "app.wasm", "--data-duplicates-json", "new-data-duplicates.json",
+          "moonsize", "app.wasm", "--data-preview", "1", "--data-offset", "8", "--data-limit",
+          "64",
         ],
         [
           "moonsize", "after.wasm", "--baseline", "before.wasm", "--diff-data", "--data-json",
@@ -84,6 +86,7 @@ fn help_topics() -> Array[HelpTopic] {
       ],
       limits: [
         "File offsets are not memory addresses; payload bytes differ from full entry encodings. Offset expressions are recorded, not evaluated.",
+        "--data-preview is independent with its own modifiers only, no Top. Default limit 256, maximum 4096 bytes; clips at payload end and permits an empty end window. Hex and printable ASCII show actual window content; other bytes become dots. No encoding or runtime-address inference.",
         "--find-data is independent: only Top and its own JSON. Spaces and overlaps matter; no cross-entry matches. Query text is saved in reports. A hit is not proof of a string or used resource; compiler encodings may differ. Complete hits use memory proportional to occurrence count.",
         "Repeated payloads do not prove they can be safely merged. Content groups do not establish cross-build entry identity or deletion savings.",
         "--html accepts --data-segments or --data-json for current input only; --html --diff-data is rejected. --data-duplicates is a separate mode with Top and its own JSON only.",

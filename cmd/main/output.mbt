@@ -46,6 +46,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
       options.instructions_json,
       options.find_functions_json,
       options.find_data_json,
+      options.data_preview_json,
       options.budget_json,
       options.budget_md,
       options.data_json,

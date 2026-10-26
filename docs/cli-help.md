@@ -183,3 +183,16 @@ CI保留已有回归，只追加轻量参数路由脚本；最终SHA整体结果
 按UTF-8字节检索各payload，保留重叠、不跨条目，文件偏移不是内存地址。
 Top不截断JSON、不限制查找成本或命中记录内存；查询文字会保存到报告。
 [语义、API和验证结果](data-search.md)。
+
+## data主题：有限payload字节预览
+
+保持七主题及每主题三个示例，用一个data示例展示检索后的手动预览；坐标为
+说明值。新增`--data-preview <index>`、`--data-offset <n>`、
+`--data-limit <n>`和`--data-preview-json <new.json>`。
+后三项必须配目标序号；独立模式不支持Top、strict、baseline或其他模式。
+默认offset=0、limit=256，上限4096；offset为payload字节位置，末尾空窗口成功，
+limit裁到末尾。文本显示小写hex和ASCII，非0x20..0x7e替换为点，不输出控制字节。
+JSON完整保存实际返回窗口，而非整个payload；两种报告都包含窗口实际内容。
+正常/末尾空窗口返回0，输入/目标/offset/输出错误返回1，参数/limit/组合错误
+返回2。严格十进制、未知选项、--分隔符和首参数帮助规则保留。
+[完整规则与验证](data-preview.md)。

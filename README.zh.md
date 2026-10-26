@@ -47,6 +47,24 @@ moonsize app.wasm --find-data "assets/logo" --find-data-json new-search.json
 编译器也可能采用其他编码。独立模式只接受Top和自身的新JSON目标。
 [匹配规则、API及实测位置](docs/data-search.md)。
 
+### 数据段有限字节预览
+
+公开0.5.1后的源码增量，尚未重新发布包。下面的索引和偏移是说明值，应换成
+自身检索结果中的坐标：
+
+```sh
+moonsize app.wasm --find-data "assets/logo"
+moonsize app.wasm --data-preview 1 --data-offset 8 --data-limit 64
+moonsize app.wasm --data-preview 1 --data-preview-json new-preview.json
+```
+
+使用原始数据条目序号和payload字节偏移，默认offset为0、limit为256，上限4096。
+超过剩余长度时裁到末尾，offset等于末尾时成功返回空窗口；不跨段、不补零。
+文本显示十六进制和可打印ASCII，其余字节显示点。JSON完整返回有限窗口，
+不代表导出整个payload；报告包含实际内容。窗口可切开多字节字符，不猜测
+编码或内存地址。独立模式不支持Top和其他分析/报告组合。
+[范围规则、API与实测字节](docs/data-preview.md)。
+
 ### 按任务查帮助
 
 无需Wasm输入。这是公开0.5.1之后的源码增量，需构建当前native CLI；示例中的
@@ -107,6 +125,10 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --data-preview <index> 原始条目的有限payload窗口，不支持Top
+  --data-offset <n> payload字节偏移，默认0，需data-preview
+  --data-limit <n> 最多1..4096字节，默认256，需data-preview
+  --data-preview-json <path> 完整返回窗口写入新的.json，需data-preview
   --find-data <query> data payload内UTF-8字面字节检索，保留重叠命中
   --find-data-json <path> 全部命中写入新的.json，需显式query
   --find-functions <query> 本地raw/display名称的大小写敏感字面检索

@@ -876,3 +876,34 @@ API审查仅新增DataSearchMatch、DataSearchReport、DataSearchError、检索/
 本地未跑旧CLI/套件、V8矩阵、探针、旧演示、性能、浏览器/截图/PDF。
 CI仅追加同一四调用脚本，旧回归保留；推送后核对最终SHA整体结论。
 图片、AGENTS、规划和构建证据不纳入提交。
+
+## 47. 数据段有限字节预览
+
+基于38a33bc新增preview_data_segment，显式接受index/offset/limit；只调用一次
+inspect_data_segments，仍检查全部data编码，不进入analyze、建图或find-data。
+先验证limit，再核对真实段数和offset范围；用payload.size-offset计算剩余，
+按min裁剪，不计算offset+limit。只复制最多4096字节窗口，整文件SHA复用既有
+实现。新增DataPreviewReport、DataPreviewError、预览/描述/两渲染函数，以及
+Options四个可选字段；默认值在运行时填充为offset0/limit256，旧签名不变。
+
+文本每行最多16字节，小写hex和0x20..0x7e的ASCII，其余为点，完整窗口不经Top。
+JSON独立moonsize-data-preview/schema_version1，保留选中条目完整元数据和窗口
+hex，缺失memory/expression为null。CLI在普通分析前独立分发，显式Top和其他
+模式在I/O前拒绝；新目标复用统一preflight/独占创建，保持非事务边界。
+七帮助主题和原示例数量不变，替换一个data示例说明手动衔接。
+
+本地3个新组合单测通过，覆盖窗口/账本、边界/错误/安全渲染、参数契约；四次
+真实CLI退出0/0/1/1。92 B样本SHA-256为
+596b71eb6db4f48d527a144bddb88fb5f73735b3504f30e75d530bb7ae8f4bfc。
+段1（共3条目）payload从文件21开始，长61。offset1/limit20返回文件[22,42)，
+61=1+20+40；hex为094142434445464748494a4b4c4d4e4f501b7f20。文本行位置1/22和
+17/38。limit4096返回[22,82)共60字节，61=1+60+0，hex长120。脚本用Node原始
+Buffer独立核对文本/JSON、位置、SHA，不跨入邻段；offset62失败不建目标，
+已有哨兵目标拒绝，输入与目标字节保持不变。
+
+证据_build/data-preview-verification/run-tWH3cU/含输入、四份日志、完整argv/状态、
+new-preview.json和results.json，API审查review-de72d634。
+[说明及接口迁移](data-preview.md)。完成必要接口、格式、native检查及一次release
+构建；本地未跑旧套件/旧CLI、演示/探针、V8矩阵、性能、浏览器/截图/PDF。
+CI仅追加同一四调用脚本，推送后核对最终SHA整体结果。版本保持0.5.1，未改
+依赖、未发布Mooncakes；图片、AGENTS、规划和构建证据不纳入提交。

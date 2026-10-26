@@ -336,3 +336,14 @@ node scripts/test-data-duplicates.mjs _build/native/release/build/cmd/main/main.
 去重或删除收益；无命中不证明内容不存在。旧重复payload功能仍只比较完整
 payload，此新入口独立搜索子串，不改变旧格式或语义。
 [完整规则、公开接口和真实43 B样本](data-search.md)。
+
+## 有限payload字节预览（0.5.1后源码增量）
+
+`--data-preview <index>`使用原始条目序号，不是大小排名；可从find-data的
+segment_index和payload_offset手动衔接。默认offset=0、limit=256，上限4096；
+不跨段、不补零，limit裁到末尾，末尾offset返回空窗口。文本按16字节一行显示
+hex和可打印ASCII，其他字节为点，不解码UTF-8；JSON只保存选中段元数据及实际
+返回的完整有限窗口。报告包含实际内容，不代表完整payload导出，不支持Top。
+仍检查全部数据段编码、仍计算整文件SHA，不承诺只解析目标条目。文件字节
+偏移不是内存地址，不求值表达式或推断源码归属/活跃性/删除收益。
+[参数、API迁移及真实字节等式](data-preview.md)。

@@ -299,6 +299,10 @@ fn main {
       return
     }
   }
+  if options.data_preview_index is Some(index) {
+    run_data_preview(options, index)
+    return
+  }
   if options.find_data is Some(query) {
     run_data_search(options, query)
     return

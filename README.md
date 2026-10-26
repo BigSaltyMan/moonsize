@@ -103,6 +103,25 @@ standalone strings, resource use or deletion savings; compiler encodings can
 differ. This independent mode accepts only Top and its own new JSON target.
 See [matching rules, API and verified positions](docs/data-search.md).
 
+## Bounded data payload preview
+
+This source addition follows public 0.5.1 and has not been republished.
+Coordinates below are illustrative; use your own search result:
+
+```sh
+moonsize app.wasm --find-data "assets/logo"
+moonsize app.wasm --data-preview 1 --data-offset 8 --data-limit 64
+moonsize app.wasm --data-preview 1 --data-preview-json new-preview.json
+```
+
+Preview uses the original entry index and payload byte offsets. Default offset
+is 0 and limit is 256; valid limits are 1..4096. It clips at payload end and
+permits an empty end window, without crossing entries or padding data. Text
+shows hex plus printable ASCII (other bytes become dots); JSON contains the
+complete returned window, not a full payload export. Both expose actual content.
+No encoding or memory address is inferred. This independent mode rejects Top
+and other analysis/report modes. See [byte contract, API and actual ranges](docs/data-preview.md).
+
 ## Function and package comparison JSON
 
 This source addition follows public 0.5.1; build the native CLI from source.
@@ -349,6 +368,10 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --data-preview <index> bounded payload bytes (no Top); original entry index
+  --data-offset <n> payload byte offset, default 0; requires --data-preview
+  --data-limit <n> 1..4096 bytes, default 256; requires --data-preview
+  --data-preview-json <path> returned window to a new .json; requires --data-preview
   --find-data <query> exact UTF-8 byte search within data payloads, including overlaps
   --find-data-json <path> save every hit to a new .json; requires --find-data
   --find-functions <query> case-sensitive literal search of local raw/display names

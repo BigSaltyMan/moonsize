@@ -524,6 +524,10 @@ pub fn usage() -> String {
   "  --callers <n>        list recorded one-hop instruction references to function n\n" +
   "  --callers-json <path> write full callers JSON to a new .json file\n" +
   "                       only --top, --callers-json and --strict may accompany --callers\n" +
+  "  --data-preview <index> preview one data payload window (no --top)\n" +
+  "  --data-offset <n>   payload byte offset (default 0; requires --data-preview)\n" +
+  "  --data-limit <n>    max bytes 1..4096 (default 256; requires --data-preview)\n" +
+  "  --data-preview-json <path.json> save the returned bounded window to a new .json\n" +
   "  --find-data <query> search literal UTF-8 bytes in each data payload (overlaps retained)\n" +
   "  --find-data-json <path.json> save all hits to a new .json (requires --find-data)\n" +
   "  --find-functions <query>  search available local raw/display names (literal, case-sensitive)\n" +

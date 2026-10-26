@@ -115,3 +115,21 @@ Local validation did not run legacy suites/scripts, source probes, V8 matrices,
 performance, browser, screenshots or PDF checks. Existing Linux CI retains its
 regressions and adds only this four-call script. Exact commit CI is checked
 after pushing; a local pass alone is not evidence of remote success.
+
+## Follow a hit with a bounded preview
+
+A separate source addition after 0.5.1 offers `--data-preview`. Use the
+original `segment_index` and `payload_offset` from your search. Coordinates
+below illustrate syntax; they are not measurements of your file:
+
+```sh
+moonsize app.wasm --find-data "assets/logo"
+moonsize app.wasm --data-preview 1 --data-offset 8 --data-limit 64
+```
+
+Preview is a separate call, with no Top: default offset 0, default limit 256,
+maximum 4096 bytes, clipped at payload end. An end offset returns an empty
+window. Hex and printable ASCII show actual bytes; all other bytes appear as
+dots in text. The window may split UTF-8 characters and is not decoded.
+`--data-preview-json` writes the complete returned window to a new file.
+[Bounded byte preview, API and actual evidence](data-preview.md).
