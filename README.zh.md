@@ -65,6 +65,22 @@ moonsize app.wasm --data-preview 1 --data-preview-json new-preview.json
 编码或内存地址。独立模式不支持Top和其他分析/报告组合。
 [范围规则、API与实测字节](docs/data-preview.md)。
 
+### 文件偏移归属查询
+
+公开0.5.1后的源码增量，未重新发布包。示例31为说明值：
+
+```sh
+moonsize app.wasm --locate-offset 31
+moonsize app.wasm --locate-offset 31 --locate-offset-json new-location.json
+```
+
+按十进制文件字节偏移查询物理段，以及选中code/data中的数量字段、函数前缀/
+body、数据元数据/payload。范围为半开区间，EOF没有对应字节，返回错误。
+物理序号包含custom，函数索引包含导入；其他payload不细分。独立模式不支持
+Top、strict或其他模式，只允许自身的新JSON。仍有基础结构扫描和整文件SHA
+成本，不解码opcode，不提供运行时地址或完整语义验证。
+[九种区域、API及实测记录](docs/file-offset.md)。
+
 ### 按任务查帮助
 
 无需Wasm输入。这是公开0.5.1之后的源码增量，需构建当前native CLI；示例中的
@@ -125,6 +141,8 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --locate-offset <n> 十进制文件字节归属，EOF失败，不支持Top
+  --locate-offset-json <path> 定位写入新的.json，需查询参数
   --data-preview <index> 原始条目的有限payload窗口，不支持Top
   --data-offset <n> payload字节偏移，默认0，需data-preview
   --data-limit <n> 最多1..4096字节，默认256，需data-preview

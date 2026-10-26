@@ -53,6 +53,8 @@ jobs:
         run: node scripts/test-imports-diff.mjs _build/native/release/build/cmd/main/main.exe
       - name: Imports CLI regressions (four cases)
         run: node scripts/test-imports.mjs _build/native/release/build/cmd/main/main.exe
+      - name: File-offset CLI regressions (four cases)
+        run: node scripts/test-file-offset.mjs _build/native/release/build/cmd/main/main.exe
       - name: Data-preview CLI regressions (four cases)
         run: node scripts/test-data-preview.mjs _build/native/release/build/cmd/main/main.exe
       - name: Data-search CLI regressions (four cases)

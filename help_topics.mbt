@@ -19,14 +19,19 @@ fn help_topics() -> Array[HelpTopic] {
       summary: "Inspect sections and function/module sizes, then save a report.",
       options: [
         "--top <n>; --compress", "--html <new.html>; --summary-json <new.json>",
+        "--locate-offset <decimal byte offset>; --locate-offset-json <new.json>",
       ],
       examples: [
         ["moonsize", "app.wasm", "--top", "20", "--compress"],
         ["moonsize", "app.wasm", "--html", "new-report.html"],
-        ["moonsize", "app.wasm", "--summary-json", "new-summary.json"],
+        [
+          "moonsize", "app.wasm", "--locate-offset", "31", "--locate-offset-json",
+          "new-location.json",
+        ],
       ],
       limits: [
         "-- ends option parsing; place a dash-prefixed input path after it (for example, moonsize -- --help). A single - is a filename, not stdin. Option value constraints are unchanged; use ./--name when needed.",
+        "--locate-offset is independent, with its own JSON only and no Top. Decimal offsets must identify a real byte; EOF fails. Ranges are half-open. Code/data interiors are refined only when selected; no opcode decoding or runtime-address lookup. Example coordinates are placeholders.",
         "--summary-json does not support --baseline, --html or --compress; it exports ordinary analysis.",
         "Whole-file gzip measures one complete stream. Independent section/function gzip sizes are not additive and are not transfer shares.",
         "Top limits text display; complete JSON is not truncated. Report destinations must be new paths.",

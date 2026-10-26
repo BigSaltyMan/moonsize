@@ -299,6 +299,10 @@ fn main {
       return
     }
   }
+  if options.locate_offset is Some(offset) {
+    run_file_offset(options, offset)
+    return
+  }
   if options.data_preview_index is Some(index) {
     run_data_preview(options, index)
     return

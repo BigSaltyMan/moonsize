@@ -122,6 +122,24 @@ complete returned window, not a full payload export. Both expose actual content.
 No encoding or memory address is inferred. This independent mode rejects Top
 and other analysis/report modes. See [byte contract, API and actual ranges](docs/data-preview.md).
 
+## File offset ownership
+
+A source addition after public 0.5.1; not republished. Example 31 is a placeholder:
+
+```sh
+moonsize app.wasm --locate-offset 31
+moonsize app.wasm --locate-offset 31 --locate-offset-json new-location.json
+```
+
+Locate one decimal file byte in its physical section and, for a selected code
+or data payload, its count field, function prefix/body or data metadata/payload.
+Ranges are half-open; EOF has no byte and fails. Custom sections count toward
+physical ordinals, imported functions toward function indices. Other payload
+interiors stay undivided. This independent mode has no Top or strict and accepts
+only its own optional new JSON. No opcode decoding, runtime-address lookup or
+full semantic validation is claimed. Base structure checks and whole-file SHA
+still scan the input. See [nine regions, API and actual ranges](docs/file-offset.md).
+
 ## Function and package comparison JSON
 
 This source addition follows public 0.5.1; build the native CLI from source.
@@ -368,6 +386,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --locate-offset <n> locate one decimal file byte; EOF fails; no Top
+  --locate-offset-json <path> location to a new .json; requires query
   --data-preview <index> bounded payload bytes (no Top); original entry index
   --data-offset <n> payload byte offset, default 0; requires --data-preview
   --data-limit <n> 1..4096 bytes, default 256; requires --data-preview

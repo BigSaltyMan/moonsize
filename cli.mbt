@@ -81,6 +81,9 @@ pub struct Options {
   data_offset : Int?
   data_limit : Int?
   data_preview_json : String?
+  /// Independent original-file byte ownership query.
+  locate_offset : Int?
+  locate_offset_json : String?
   /// Validated multi-metric budgets, with optional evidence outputs.
   budget : String?
   budget_json : String?
@@ -153,6 +156,8 @@ pub fn Options::default(path : String) -> Options {
     data_offset: None,
     data_limit: None,
     data_preview_json: None,
+    locate_offset: None,
+    locate_offset_json: None,
     budget: None,
     budget_json: None,
     budget_md: None,
@@ -397,6 +402,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut data_offset : Int? = None
   let mut data_limit : Int? = None
   let mut data_preview_json : String? = None
+  let mut locate_offset : Int? = None
+  let mut locate_offset_json : String? = None
   let mut budget : String? = None
   let mut budget_json : String? = None
   let mut budget_md : String? = None
@@ -471,6 +478,32 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         )
       }
       summary_json = Some(args[i + 1])
+      i += 2
+    } else if arg == "--locate-offset" {
+      if i + 1 >= args.length() {
+        return Err(
+          "moonsize: --locate-offset needs a nonnegative decimal integer\n\n" +
+          usage(),
+        )
+      }
+      locate_offset = match parse_path_index(args[i + 1]) {
+        Some(value) => Some(value)
+        None =>
+          return Err(
+            "moonsize: --locate-offset wants a nonnegative decimal integer\n\n" +
+            usage(),
+          )
+      }
+      i += 2
+    } else if arg == "--locate-offset-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --locate-offset-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      locate_offset_json = Some(args[i + 1])
       i += 2
     } else if arg == "--data-preview" ||
       arg == "--data-offset" ||
@@ -836,6 +869,76 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if locate_offset_json is Some(_) && locate_offset is None {
+    return Err(
+      "moonsize: --locate-offset-json requires --locate-offset\n\n" + usage(),
+    )
+  }
+  if locate_offset is Some(_) {
+    if top_seen ||
+      retained ||
+      dead_code ||
+      compress ||
+      strict ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      exports ||
+      diff_exports ||
+      metadata ||
+      diff_metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      call_graph is Some(_) ||
+      html is Some(_) ||
+      summary_json is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      diff_functions_json is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      generics_json is Some(_) ||
+      entrypoints_json is Some(_) ||
+      duplicates_json is Some(_) ||
+      exports_json is Some(_) ||
+      metadata_json is Some(_) ||
+      imports_json is Some(_) ||
+      data_duplicates_json is Some(_) ||
+      instructions_index is Some(_) ||
+      instructions_json is Some(_) ||
+      baseline_instructions_index is Some(_) ||
+      find_functions is Some(_) ||
+      find_functions_json is Some(_) ||
+      find_data is Some(_) ||
+      find_data_json is Some(_) ||
+      data_preview_index is Some(_) ||
+      data_offset is Some(_) ||
+      data_limit is Some(_) ||
+      data_preview_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) ||
+      data_json is Some(_) {
+      return Err(
+        "moonsize: --locate-offset is an independent mode; only --locate-offset-json may be combined with it (no --top)\n\n" +
+        usage(),
+      )
+    }
+    if locate_offset_json is Some(target) && !target.has_suffix(".json") {
+      return Err(
+        "moonsize: --locate-offset-json wants a .json path\n\n" + usage(),
+      )
+    }
   }
   if data_preview_index is None &&
     (
@@ -1692,6 +1795,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     data_offset,
     data_limit,
     data_preview_json,
+    locate_offset,
+    locate_offset_json,
     budget,
     budget_json,
     budget_md,

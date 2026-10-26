@@ -907,3 +907,38 @@ new-preview.json和results.json，API审查review-de72d634。
 构建；本地未跑旧套件/旧CLI、演示/探针、V8矩阵、性能、浏览器/截图/PDF。
 CI仅追加同一四调用脚本，推送后核对最终SHA整体结果。版本保持0.5.1，未改
 依赖、未发布Mooncakes；图片、AGENTS、规划和构建证据不纳入提交。
+
+## 48. Wasm文件偏移归属查询
+
+基于4d571c4新增locate_file_offset，先复用parse_module基础检查，再核对查询
+严格小于file_size，EOF和负数拒绝。物理段按原序计数，含重复custom；段头
+大小使用实际total_size-payload_size。命中code payload才调用collect_function_stats
+并读取实际数量前缀，保留前置导入后的完整index和raw/display名称；命中data
+payload才调用一次inspect_data_segments，允许其既有结构复查。其他payload不细分。
+无analyze、图或函数opcode解码，渲染不重复定位，成功报告只计算一次整文件SHA。
+
+九类region明确区分模块头、段头、普通payload、code数量、函数长度前缀/body、
+data数量、条目元数据/payload。独立datacount payload不误叫data_count。范围先
+用减法检查后加法，细分必须连续完整且唯一，不一致直接报错，不静默回退。
+空payload无字节归属但前缀仍是metadata。JSON保留section/function/data可空
+字段和完整范围，终端名称安全转义，不输出原字节、opcode或运行时地址。
+
+新增FileOffsetKind、FileOffsetRegion、FileOffsetReport、FileOffsetError及定位/
+描述/两渲染函数，Options仅locate_offset/locate_offset_json两个None字段。
+旧公开签名、WasmError和JSON不变；新模式只允许自身JSON，显式Top等在I/O前
+拒绝，输出继续统一preflight和独占创建，不新增覆盖或事务保证。
+
+本地3个新组合单测通过，覆盖九类/边界/宽编码、错误/呈现/按需检查和参数契约。
+真实CLI恰好4次，退出0/0/1/1。78 B样本SHA为
+ac242670646f17a6eaa1ff9660f4ae7185cf276a64890847e387f890a29cee63。
+偏移52属于物理段7 code[44,56)、完整函数index1编码[49,53)，body[51,53)，
+relative=52-51=1。偏移66属于物理段8 data[56,74)、条目0编码[61,68)，
+payload[65,68)，relative=66-65=1。Node按原始编码独立核对位置/字节/SHA；
+EOF78拒绝不建目标，已有哨兵拒绝且输入/目标字节不变。
+
+证据_build/file-offset-verification/run-0Qhnor/含输入、四日志、argv/状态、
+new-location.json和results.json；API快照review-09ea3c9e。
+[完整说明](file-offset.md)。完成必要接口/格式/native检查和一次release构建。
+本地未跑旧套件/旧CLI、旧演示、V8矩阵/探针、性能、浏览器/截图/PDF。
+CI保留原流程，仅追加四调用脚本，推送后核对最终SHA整体结果。版本保持
+0.5.1，不改依赖、不发布Mooncakes；图片、AGENTS、规划和构建证据不纳入提交。

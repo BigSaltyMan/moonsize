@@ -133,3 +133,13 @@ Local checks did not run old suites/scripts, source demos/probes, V8 matrices,
 performance or browser/screenshot/PDF acceptance. CI retains its old checks and
 adds only this four-call script; final exact-SHA CI is confirmed after push.
 Version stays 0.5.1; no package publication is part of this change.
+
+## Locate an absolute window position
+
+A separate source addition after 0.5.1 provides `--locate-offset`. Use the
+preview row's **FILE OFFSET**, not its payload offset; query the actual input
+byte, strictly below EOF. For example `moonsize app.wasm --locate-offset 31`
+has an illustrative coordinate. A zero-sized end window contains no byte, so
+its start may be a later region or EOF rather than that payload's owner.
+[File ownership and nine region kinds](file-offset.md). Run separately, with no
+Top or strict; this does not evaluate offset expressions or runtime addresses.

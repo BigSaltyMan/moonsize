@@ -202,3 +202,12 @@ render_function_instructions_diff(report, top)和render_function_instructions_di
 
 Options新增baseline_instructions_index=None，默认值由Options::default提供；外部
 手工构造Options需补字段。旧签名及WasmError不变，不增加依赖、不修改版本。
+
+## 从指令文件位置查归属（0.5.1后源码增量）
+
+已有指令报告的file_offset可以单独交给`--locate-offset`，例如
+`moonsize app.wasm --locate-offset 31`；31只是说明值，应替换为实际位置。
+新查询只确认段、函数前缀/body等文件范围，不重新解码opcode，也不细分locals、
+指令和立即数。物理段序号含custom，完整函数index含前置导入。范围为半开
+区间，EOF没有字节；独立模式不支持Top/strict或与instructions组合。
+[范围、成本和迁移说明](file-offset.md)。

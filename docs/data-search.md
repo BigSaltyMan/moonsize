@@ -133,3 +133,13 @@ window. Hex and printable ASCII show actual bytes; all other bytes appear as
 dots in text. The window may split UTF-8 characters and is not decoded.
 `--data-preview-json` writes the complete returned window to a new file.
 [Bounded byte preview, API and actual evidence](data-preview.md).
+
+## Locate the file-byte owner
+
+Source addition after 0.5.1: pass a search hit's `file_offset` to the separate
+`--locate-offset` mode. For example, `moonsize app.wasm --locate-offset 31`
+uses an illustrative coordinate; substitute your actual hit. The query uses an
+absolute file byte, not `payload_offset` or a memory address. Data count,
+entry metadata and payload have distinct half-open regions; EOF fails.
+[Ownership contract, cost and API](file-offset.md). No Top/strict or search
+combination; run the two queries separately.
