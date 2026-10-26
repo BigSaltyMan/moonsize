@@ -31,6 +31,31 @@ moon build --target native --release
 
 ## 用法
 
+### 按任务查帮助
+
+无需Wasm输入。这是公开0.5.1之后的源码增量，需构建当前native CLI；示例中的
+路径和索引是占位值，不是实测结果。
+
+```sh
+moonsize --help
+moonsize -h
+moonsize --help-topic functions
+```
+
+| 主题ID | 要做的事 | 现有专用说明 |
+| --- | --- | --- |
+| overview | 普通概览、Top、HTML、summary JSON | [HTML交付](docs/html-delivery.md)、[summary JSON](docs/summary-json.md) |
+| functions | 查索引、指令、引用及模型路径 | [名称检索](docs/function-search.md)、[指令](docs/function-instructions.md)、[反向引用](docs/function-callers.md) |
+| data | 数据条目、重复payload与基线比较 | [数据段编码与比较](docs/data-segments.md) |
+| interfaces | imports、exports及其基线比较 | [导入](docs/imports.md)、[导出](docs/exports.md) |
+| metadata | custom/name开销、外层比较和partial | [元数据](docs/metadata.md) |
+| baseline | 文件、函数模块及指定双函数比较 | [函数模块JSON](docs/function-diff-json.md)、[实验报告](docs/optimization-experiments.md) |
+| ci | max-size、budget、证据输出及支持的strict模式 | [预算](docs/budgets.md) |
+
+仅首个用户参数识别为帮助，业务参数中的帮助字样仍交给旧parser。合法帮助返回0，
+错误帮助返回2并列出主题；不读取输入、不创建报告。[语法与分发规则](docs/cli-help.md)。
+下方保留完整参数表。
+
 ```
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]

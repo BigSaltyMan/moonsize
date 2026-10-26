@@ -278,7 +278,20 @@ fn read_budget(options : @lib.Options) -> @lib.CompiledBudget? {
 ///|
 /// Supply command-line arguments and filesystem access to the library.
 fn main {
-  let options = match @lib.parse_options(@env.args()) {
+  let args = @env.args()
+  match @lib.help_request(args) {
+    Ok(Some(text)) => {
+      println(text)
+      return
+    }
+    Ok(None) => ()
+    Err(message) => {
+      println(message)
+      @sys.exit(@lib.EXIT_USAGE)
+      return
+    }
+  }
+  let options = match @lib.parse_options(args) {
     Ok(options) => options
     Err(message) => {
       println(message)

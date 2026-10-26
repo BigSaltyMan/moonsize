@@ -539,7 +539,9 @@ pub fn usage() -> String {
   "Targets are checked together; each file is created exclusively. Output errors use exit 1.\n" +
   "Multiple files are not a transaction; a later failure may leave earlier new outputs.\n\n" +
   "Exit codes: 0 completed, 1 input/query/output/unavailable measurement, 2 bad arguments/config,\n" +
-  "            3 over budget, incomplete strict graph, or path search limited."
+  "            3 over budget, incomplete strict graph, or path search limited." +
+  "\n\n" +
+  help_navigation()
 }
 
 ///|

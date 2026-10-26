@@ -240,6 +240,32 @@ than opening the report with `file://`.
 
 ## Usage
 
+### Help by task
+
+No Wasm input is needed. This is a source addition after public 0.5.1; build the
+current native CLI. Help examples use placeholder paths/indices, not measurements.
+
+```sh
+moonsize --help
+moonsize -h
+moonsize --help-topic functions
+```
+
+| Topic ID | Task | Existing guides |
+| --- | --- | --- |
+| overview | Ordinary report, Top, HTML and summary JSON | [HTML delivery](docs/html-delivery.md), [summary JSON](docs/summary-json.md) |
+| functions | Find an index, inspect instructions and model references | [Search](docs/function-search.md), [instructions](docs/function-instructions.md), [callers](docs/function-callers.md) |
+| data | Data entries, duplicate payloads and comparisons | [Data encodings and comparisons](docs/data-segments.md) |
+| interfaces | Imports/exports and their baseline comparisons | [Imports](docs/imports.md), [exports](docs/exports.md) |
+| metadata | Custom/name overhead, outer comparison and partial details | [Metadata](docs/metadata.md) |
+| baseline | File, function/package and selected-function comparisons | [Function/package JSON](docs/function-diff-json.md), [experiments](docs/optimization-experiments.md) |
+| ci | Size gates, budget evidence and supported strict modes | [Budgets](docs/budgets.md) |
+
+Only the first user argument triggers help; flags inside business arguments are
+left to the existing parser. Help returns 0; malformed help requests return 2
+with available topics. No input is read and no report is created. See [help syntax
+and dispatch rules](docs/cli-help.md). The full option table remains below.
+
 ```
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]
