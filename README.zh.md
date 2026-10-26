@@ -84,6 +84,23 @@ location，默认格式不变。仍有结构/名称检查和整文件SHA成本�
 地址或完整语义验证。
 [九种区域、API及实测记录](docs/file-offset.md)。
 
+### 单函数调用点清单
+
+公开0.5.1后的源码增量，尚未重新发布；下面的index 3为说明值：
+
+```sh
+moonsize app.wasm --calls 3 --top 20
+moonsize app.wasm --calls 3 --calls-json new-calls.json --top 1
+```
+
+按原位置列出目标本地body中的普通、尾、间接及引用调用；直接目标附完整索引
+和身份，动态目标为null，不猜候选。ref.func取引用不计调用；无调用的本地函数
+正常成功，导入目标因没有本地body明确拒绝。Top仅限制文本行，不截断JSON、
+也不限制解码成本。独立模式只允许Top和自身新JSON，不支持strict。
+callers查模型中的入向引用，calls列出目标字节中的调用指令，二者不是简单的
+图反转，取引用和动态目标的范围不同。调用数量不是执行次数或优化收益。
+[范围、API与实测字节账本](docs/function-calls.md)。
+
 ### 按任务查帮助
 
 无需Wasm输入。这是公开0.5.1之后的源码增量，需构建当前native CLI；示例中的
@@ -157,6 +174,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline
   --summary-json <path> 普通Analysis全量导出到新的.json，Top不截断
+  --calls <n> 目标本地body中的调用指令，仅支持Top及自身JSON
+  --calls-json <path> 全部调用点写入新的.json，需calls
   --instructions <n> 查询完整函数索引中的本地函数编码
   --instructions-json <path> 完整单函数或显式比较写入新的.json；需显式instructions
   --baseline-instructions <n> 基线完整函数index，需instructions/baseline

@@ -224,3 +224,14 @@ body-relative及条内偏移。opcode、subopcode、立即数不被拆成新指�
 影响合法目标。基础接口/九类/JSON不变，修饰模式独立format为
 moonsize-file-offset-decoded/schema1。不新增opcode，不认证完整类型/栈/控制流
 语义或执行成本。[接口迁移与真实两条定位](file-offset.md#optional-target-function-decoding-source-increment-after-051)。
+
+## 从完整指令明细到调用点清单（0.5.1后源码增量）
+
+单独运行`--calls <index>`可仅列出call、return_call、call_indirect、
+return_call_indirect、call_ref和return_call_ref；index为含导入的完整函数索引。
+每行保留完整指令序列中的ordinal和真实opcode/偏移/长度，不把过滤后的列表
+重新编号。ref.func不是调用，不入表。直接目标附FunctionPathNode，动态目标
+保持null；type/table只记录编码，不验证存在性或兼容性，不猜候选。
+不先运行instructions再重解操作数；新入口只对目标decode_instructions一次，
+全函数成功后才返回。Top仅限制文本，不截断JSON，也不是成本限制。
+[API、账本和实测八个调用点](function-calls.md)。

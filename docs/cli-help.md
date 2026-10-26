@@ -218,3 +218,14 @@ JSON完整保存实际返回窗口，而非整个payload；两种报告都包含
 成功或不适用0，参数错2。细化JSON为moonsize-file-offset-decoded/schema1，
 嵌套原location对象，locals的instruction为null，无全部指令列表或byte_role。
 [检查成本、边界及迁移](file-offset.md#optional-target-function-decoding-source-increment-after-051)。
+
+## functions主题：单函数calls
+
+新增`--calls <index>`与`--calls-json <new.json>`；JSON需要主参数，
+独立模式只允许输入、Top和自身JSON，不支持baseline、strict、callers、
+instructions、locate/decode、search/preview等其他模式。保持七主题和原示例
+数量，替换一个functions示例，示例index为占位值。保留严格Int索引、非空.json、
+--分隔符、未知选项和首参数帮助规则。成功含零调用0；输入/目标/解码/证据/
+输出错误1；参数错误2。导入目标明确拒绝。文本Top只限制调用行，JSON完整。
+callers查模型入向引用，calls查目标body调用，ref.func和动态目标口径不同，
+不是图反转；calls不构图，无strict保证。[用法和账本](function-calls.md)。

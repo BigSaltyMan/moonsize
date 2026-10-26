@@ -93,3 +93,12 @@ JSON 独立使用 `format: moonsize-function-callers`、`schema_version: 1`。
 本地仅运行新文件内的三个组合测试及四个新功能 CLI 场景；类型检查、接口生成
 和构建不等于运行旧测试。旧回归只由既有目标 Linux CI 自动执行。本功能不增加
 HTML、递归查询、限额体系、源码演示或性能基准。
+
+## 与单函数calls查询的区别（0.5.1后源码增量）
+
+`--callers`查当前模型的入向引用，可能包含ref.func取引用和间接候选；
+`--calls <index>`只解码目标本地body，列出其中实际编码的六种调用指令，
+排除ref.func，直接目标可核对，动态目标为null。不构图、不递归、不按可达性
+过滤，因此二者不是简单的图反转。calls不提供graph_complete、unresolved_count
+或strict保证。Top仅限制调用行，JSON始终完整；导入目标没有本地body，明确
+拒绝，不伪造空清单。[单函数调用清单与实际记录](function-calls.md)。

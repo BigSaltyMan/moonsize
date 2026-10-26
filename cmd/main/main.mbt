@@ -299,6 +299,10 @@ fn main {
       return
     }
   }
+  if options.calls_index is Some(index) {
+    run_function_calls(options, index)
+    return
+  }
   if options.locate_offset is Some(offset) {
     run_file_offset(options, offset)
     return

@@ -144,6 +144,25 @@ location nested; default JSON is unchanged. No runtime-address lookup or full
 semantic validation is claimed. Base structure checks and whole-file SHA
 still scan the input. See [nine regions, API and actual ranges](docs/file-offset.md).
 
+## Calls inside one function
+
+Source addition after public 0.5.1; not republished. Index 3 is illustrative:
+
+```sh
+moonsize app.wasm --calls 3 --top 20
+moonsize app.wasm --calls 3 --calls-json new-calls.json --top 1
+```
+
+List call/return_call, table calls and reference calls at their original positions
+in one local body. Direct targets retain full indices and identities; dynamic
+targets remain null. ref.func is excluded. A local function with no calls succeeds;
+imports have no local body and are rejected. Top limits text rows, not the full
+JSON or decode cost. This independent mode has no strict and only accepts Top
+and its own new JSON. Calls are static instruction facts, not execution counts
+or savings. Callers queries incoming model references; calls inspects body call
+instructions, so these are not a simple graph reversal.
+[Scope, API and actual call-site ledger](docs/function-calls.md).
+
 ## Function and package comparison JSON
 
 This source addition follows public 0.5.1; build the native CLI from source.
@@ -427,6 +446,8 @@ identify candidates for investigation.
   --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
   --generics-json <path> write full groups to a new .json file; implies --generics
+  --calls <n> list call instructions in one local body; Top/own JSON only
+  --calls-json <path> save all call sites to a new .json; requires calls
   --callers <n>        list recorded one-hop incoming instruction sources
   --callers-json <path> write full callers JSON to a new .json file; requires --callers
   --why-index <n>      explain a shortest model reference path to function n

@@ -976,3 +976,36 @@ new-detail.json和results.json；API审查review-fa7ea65e仅五个必要新类�
 浏览器/截图/PDF。CI保留原回归，仅追加四调用脚本，推送后核对最终SHA。
 版本保持0.5.1，不改依赖、不发布Mooncakes；图片、AGENTS、规划和构建证据
 继续保留且不纳入提交。
+
+## 50. 单函数调用点清单
+
+基于b120be3新增inspect_function_calls，复用parse_module、path_inventory和
+有界code/body读取，仅对目标本地body执行一次decode_instructions。使用同一
+数组收集实际opcode、过滤前ordinal、file/body偏移和长度；没有analyze、建图、
+BFS或逐点重解码。六种调用分direct/indirect/reference_call，尾调用是子集，
+ref.func排除，重复目标不同位置保留，不按可达性过滤。直接target索引校验
+后附FunctionPathNode；动态target=null，只保存type/table编码，不验证存在性
+或兼容性，不猜候选。导入目标拒绝，无调用本地body正常成功；坏目标全解码
+失败不返回部分清单，非目标坏opcode不影响查询。
+
+新增FunctionCallKind、FunctionCallRecord、FunctionCallsReport、FunctionCallsError
+及检索/描述/两渲染函数，Options仅calls_index/calls_json两个None字段，旧接口/
+JSON/WasmError不变。新模式仅Top和自身JSON，覆盖最近locate/decode/preview
+等互斥；输出沿用统一preflight和独占创建。文本目标名称安全转义，JSON完整
+保留null，无graph_complete/unresolved_count/strict保证。Top不是解码成本限制。
+
+本地3个新组合单测通过，真实CLI恰好4次，退出0/0/0/1。复用构造方式得到96 B
+输入SHA为f7e6bd037579921338d03ab9af9b44d3a9c0d6f9d9f09a7c96b9a40f9a9c26d6。
+目标index1，entry[46,72)、body[48,72)，26=prefix2+body24，24=locals1+指令23，
+23=调用编码18+其他5。8调用=direct4+indirect2+reference_call2，尾调用3个。
+完整ordinal为1/4/5/6/7/8/9/10，文件位置50/55/57/59/62/65/67/69，长度
+2/2/2/3/3/2/2/2。ref.func位于52，不计调用；直接导入target0与本地target2
+分别保留None/Some(3)编码大小。Top1的JSON仍完整；index2无调用正常返回，
+已有哨兵拒绝，输入/目标字节不变。Node用固定编码独立核对所有调用位置/长度。
+
+证据_build/function-calls-verification/run-aUejSo/含输入、四日志、完整argv/状态、
+new-calls.json和results.json，API审查review-96c6f0d6。
+[用法与迁移](function-calls.md)。必要接口、格式、native检查及一次release构建
+通过；本地未跑旧套件/旧CLI、演示/探针、V8矩阵、性能或浏览器/PDF。
+CI保留原回归，仅追加四调用脚本，推送后核对最终SHA。版本0.5.1与依赖保持
+不变，未发布Mooncakes；原图片、AGENTS、规划和构建证据不纳入提交。
