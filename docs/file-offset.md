@@ -31,16 +31,16 @@ indices include preceding imports. Data indices preserve original entry order.
 
 The separate **datacount section** is classified as `section_payload`; it is
 not `data_count`. An empty data payload owns no byte, but its entry metadata
-still has an owner. Offset expressions are not evaluated. Function bodies are
-not split into locals, opcodes or immediates; custom/name and import/export
+still has an owner. Offset expressions are not evaluated. By default, function
+bodies are not split into locals or instructions; custom/name and import/export
 declaration interiors are not expanded.
 
 ## Reports and CLI behavior
 
 Text shows input identity and SHA-256, query offset, physical section ordinal,
 kind and range, the most specific region, its relative offset and applicable
-function/data identity. Names are terminal-escaped. No raw bytes or opcode
-records are emitted. JSON has `format: "moonsize-file-offset"`,
+function/data identity. Names are terminal-escaped. Default reports emit no raw
+bytes or instruction records. Default JSON has `format: "moonsize-file-offset"`,
 `schema_version: 1` and nested section/function/data range objects.
 
 `region` contains `kind`, `file_offset`, `size`, `relative_offset`:
@@ -57,8 +57,8 @@ or data owner. Function regions have only `function`, data entry regions only
 `data_segment`. Unavailable raw names, passive memory index and absent offset
 expression are `null`, never a zero or empty object standing in for absence.
 
-This independent CLI mode accepts only input, `--locate-offset` and its own
-optional JSON. Explicit Top, baseline, strict, max-size, budget, HTML, search,
+This independent CLI mode accepts input, `--locate-offset`, its own optional
+JSON and optional `--locate-decode`. Explicit Top, baseline, strict, max-size, budget, HTML, search,
 preview and other business options are rejected before input I/O. The number
 must be a decimal whole integer within Int range; hex, negative numbers, units,
 fractions and overflow are rejected. JSON requires the query and a nonempty new
@@ -99,15 +99,15 @@ claim that the data inspector ran.
 File ranges use checked subtraction before addition. Code/data subranges must
 partition the payload contiguously, with no gaps or overlaps; a missing owner
 is an internal-range error. Zero-length bodies/payloads own no query byte.
-The whole-input SHA-256 is computed once for a successful report. Rendering is
-pure: it neither re-reads nor re-locates. There is no instruction inspection,
+The whole-input SHA-256 is computed once for a successful base report. Rendering
+is pure: it neither re-reads nor re-locates. The default path has no instruction inspection,
 graph construction, retained calculation or ordinary `analyze`.
 
 Success confirms this path's structural/range checks, not complete Wasm type
 or instruction semantics. A file position is not a runtime memory address,
 source location, execution trace or prediction of deletion/gzip savings.
 
-## Actual focused evidence
+## Base location evidence (commit 4fa22cc)
 
 The 78-byte mixed fixture SHA-256 is
 `ac242670646f17a6eaa1ff9660f4ae7185cf276a64890847e387f890a29cee63`.
@@ -143,3 +143,97 @@ native checks and one release build. No old suites/scripts, demos/probes,
 V8 matrix, performance, browser, screenshots or PDFs. CI keeps the existing
 regressions and adds only this four-call script; exact-SHA success is confirmed
 after push. Version remains 0.5.1; Mooncakes publication is outside this change.
+
+## Optional target-function decoding (source increment after 0.5.1)
+
+Only explicit `--locate-decode` enables this behavior; it requires
+`--locate-offset`. These example numbers are placeholders:
+
+```sh
+moonsize app.wasm --locate-offset 45 --locate-decode
+moonsize app.wasm --locate-offset 34 --locate-decode --locate-offset-json new-detail.json
+```
+
+If the base region is `function_body`, the entire selected local function
+must decode successfully using existing instruction support. The detail is
+`locals_encoding` or one whole `instruction`, with a half-open file range
+and `relative_offset = query - detail.file_offset`. Opcode, extended subopcode
+and immediate bytes belong to that same instruction. No operand fields/values,
+`byte_role`, WAT or call-target guesses are emitted. The base
+`location.region.kind` remains `function_body`.
+
+For a size prefix, section/module header, count, data or another non-body byte,
+status is `not_applicable` and detail is `null`; no instruction decoding
+runs. Applicable queries return `decoded`. A bad target returns an error even
+when the query is in valid locals before the bad instruction; there is no partial
+success or fallback. Unknown opcodes in other function bodies do not block a
+valid target. EOF and the existing argument rules still apply. Non-body and
+successful decoded queries return 0; location/decode/write failure 1; argument
+errors 2. Decode failure happens before output checks/creation or success text.
+
+JSON without the modifier keeps `moonsize-file-offset`/schema 1 unchanged.
+With the modifier it uses `moonsize-file-offset-decoded`/schema 1, containing
+`location` as the original **object**, plus `decode_status`, `detail`
+and `scope`. Locals detail has `instruction: null`. Instruction detail
+reuses `FunctionInstructionRecord` (ordinal, mnemonic, file offset,
+body-relative offset and encoded size). Only the matching record is exported,
+not the entire list. Both formats use the same existing JSON target slot and native
+exclusive writer; Top is still rejected.
+
+```moonbit
+locate_file_offset_decoded(Bytes, Int) -> Result[FileOffsetDecodedReport, FileOffsetDecodeError]
+describe_file_offset_decode_error(FileOffsetDecodeError) -> String
+render_file_offset_decoded(FileOffsetDecodedReport) -> String
+render_file_offset_decoded_json(FileOffsetDecodedReport) -> String
+```
+
+New types are FileOffsetDecodedReport, FileOffsetDecodeStatus,
+FileOffsetDecodeDetail, FileOffsetDecodeDetailKind and FileOffsetDecodeError.
+Errors wrap base-location and instruction-inspection failures or explain a
+consistency failure. Options adds only `locate_decode: Bool`, default false;
+full struct literals must add it. FileOffsetKind, FileOffsetReport, WasmError
+and their old public signatures remain unchanged.
+
+The entry locates exactly once, then calls `inspect_function_instructions`
+exactly once for a body hit. Existing structural/name checks and whole-file
+hashing can repeat across these two composed APIs; only target instruction
+decoding runs once. File size/SHA, function identity and entry/prefix/body ranges
+must agree, and locals plus all contiguous instruction ranges must cover the
+body exactly. It accepts no separately supplied reports. Rendering does not
+parse or decode. Other functions and complete Wasm type, stack or control-flow
+semantics are not certified. Counts/bytes do not imply execution frequency,
+time, removal or optimization savings. No new opcodes are added.
+
+### Actual decoded-location verification
+
+Reused fixed function-instructions fixture: 90 bytes, SHA-256
+`768c361dbef43f068141ad27b866b8540ff221433d84b95ff22e684b4179283e`.
+It has one function import and target function index 1, encoding [31,66),
+prefix [31,33), body [33,66). Body ledger: **33 = locals 3 + instructions 30**.
+
+| Query | Detail | Range | Relative offset | Evidence |
+| --- | --- | --- | --- | --- |
+| 45 | ordinal 4, i32.const | [43,46) | 45 - 43 = 2 | fixture bytes 41 80 01; body-relative start 10 |
+| 34 | locals_encoding | [33,36) | 34 - 33 = 1 | fixture bytes 01 02 7f; instruction=null |
+
+The known instruction is [43,46), so its last immediate byte is not classified
+as another opcode. Unit checks also include 0xFC/subopcode ownership and the
+final end. A deliberately invalid copy changes only byte 47 to 0xff, preserving
+outer lengths; its locals query 34 fails with unknown opcode at 47 and no file.
+The bad copy SHA-256 is
+`8d6473a3c71940764dd0102af00f114449bcfa386eda32ee63ede67a45c591fd`.
+
+```sh
+moon test --target native file_offset_decode_wbtest.mbt
+node scripts/test-file-offset-decode.mjs _build/native/release/build/cmd/main/main.exe
+```
+
+Three new combined tests passed; exactly four analyzer calls returned
+**0 / 0 / 1 / 1**: immediate text, locals JSON, bad target (new output absent),
+and existing sentinel. Input and sentinel bytes stayed unchanged. Evidence:
+`_build/file-offset-decode-verification/run-SzeQzE/`, including both inputs,
+raw argv/status, four logs, new-detail.json and results.json. API snapshots:
+`review-fa7ea65e/`. No local old suites/scripts, demos, probes, V8 matrix,
+performance or browser/PDF acceptance. Existing CI remains and only adds the
+four-call script. Confirm the final exact SHA after push. Version stays 0.5.1;
+this increment is not a Mooncakes publication.

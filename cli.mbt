@@ -84,6 +84,8 @@ pub struct Options {
   /// Independent original-file byte ownership query.
   locate_offset : Int?
   locate_offset_json : String?
+  /// Opt-in complete instruction decoding of the located local body only.
+  locate_decode : Bool
   /// Validated multi-metric budgets, with optional evidence outputs.
   budget : String?
   budget_json : String?
@@ -158,6 +160,7 @@ pub fn Options::default(path : String) -> Options {
     data_preview_json: None,
     locate_offset: None,
     locate_offset_json: None,
+    locate_decode: false,
     budget: None,
     budget_json: None,
     budget_md: None,
@@ -404,6 +407,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut data_preview_json : String? = None
   let mut locate_offset : Int? = None
   let mut locate_offset_json : String? = None
+  let mut locate_decode = false
   let mut budget : String? = None
   let mut budget_json : String? = None
   let mut budget_md : String? = None
@@ -479,6 +483,9 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
       summary_json = Some(args[i + 1])
       i += 2
+    } else if arg == "--locate-decode" {
+      locate_decode = true
+      i += 1
     } else if arg == "--locate-offset" {
       if i + 1 >= args.length() {
         return Err(
@@ -870,6 +877,11 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     Some(path) => path
     None => return Err(usage())
   }
+  if locate_decode && locate_offset is None {
+    return Err(
+      "moonsize: --locate-decode requires --locate-offset\n\n" + usage(),
+    )
+  }
   if locate_offset_json is Some(_) && locate_offset is None {
     return Err(
       "moonsize: --locate-offset-json requires --locate-offset\n\n" + usage(),
@@ -930,7 +942,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_md is Some(_) ||
       data_json is Some(_) {
       return Err(
-        "moonsize: --locate-offset is an independent mode; only --locate-offset-json may be combined with it (no --top)\n\n" +
+        "moonsize: --locate-offset is an independent mode; only --locate-decode and --locate-offset-json may be combined with it (no --top)\n\n" +
         usage(),
       )
     }
@@ -1797,6 +1809,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     data_preview_json,
     locate_offset,
     locate_offset_json,
+    locate_decode,
     budget,
     budget_json,
     budget_md,

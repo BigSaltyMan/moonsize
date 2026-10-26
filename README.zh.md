@@ -77,8 +77,11 @@ moonsize app.wasm --locate-offset 31 --locate-offset-json new-location.json
 按十进制文件字节偏移查询物理段，以及选中code/data中的数量字段、函数前缀/
 body、数据元数据/payload。范围为半开区间，EOF没有对应字节，返回错误。
 物理序号包含custom，函数索引包含导入；其他payload不细分。独立模式不支持
-Top、strict或其他模式，只允许自身的新JSON。仍有基础结构扫描和整文件SHA
-成本，不解码opcode，不提供运行时地址或完整语义验证。
+Top、strict或其他模式，只允许自身JSON及可选--locate-decode。默认不解码指令；
+启用后只对命中body完整解码，细化为locals或整条指令，其他区域明确不适用。
+坏目标即使查询locals也失败；细化JSON为moonsize-file-offset-decoded，嵌套原
+location，默认格式不变。仍有结构/名称检查和整文件SHA成本，不提供运行时
+地址或完整语义验证。
 [九种区域、API及实测记录](docs/file-offset.md)。
 
 ### 按任务查帮助
@@ -142,6 +145,7 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
 
   --top <n>            排名显示多少个函数（默认 10）
   --locate-offset <n> 十进制文件字节归属，EOF失败，不支持Top
+  --locate-decode 可选单函数完整解码，细分locals/整条指令，需查询参数
   --locate-offset-json <path> 定位写入新的.json，需查询参数
   --data-preview <index> 原始条目的有限payload窗口，不支持Top
   --data-offset <n> payload字节偏移，默认0，需data-preview

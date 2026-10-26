@@ -207,3 +207,14 @@ JSON完整保存实际返回窗口，而非整个payload；两种报告都包含
 范围/输出错误1，参数/组合错误2。九类半开区域按命中段细分，不解码opcode，
 也不提供完整语义验证或运行时地址；仍需基础结构扫描和整文件SHA。
 [完整说明与实测范围](file-offset.md)。
+
+## overview：可选locate-decode
+
+`--locate-decode`必须配`--locate-offset`；复用原JSON输出路径和
+互斥规则，仍不允许Top/strict/其他业务模式。七主题和示例总数不变。
+默认九类定位和moonsize-file-offset/schema1不变。修饰后body才完整解码目标
+函数，locals或整条指令的范围单独保存；立即数和subopcode属于整条指令。
+非body明确not_applicable，不解码。坏目标即使查询locals也失败1、不建文件；
+成功或不适用0，参数错2。细化JSON为moonsize-file-offset-decoded/schema1，
+嵌套原location对象，locals的instruction为null，无全部指令列表或byte_role。
+[检查成本、边界及迁移](file-offset.md#optional-target-function-decoding-source-increment-after-051)。

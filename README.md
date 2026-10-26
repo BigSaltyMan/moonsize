@@ -136,8 +136,12 @@ or data payload, its count field, function prefix/body or data metadata/payload.
 Ranges are half-open; EOF has no byte and fails. Custom sections count toward
 physical ordinals, imported functions toward function indices. Other payload
 interiors stay undivided. This independent mode has no Top or strict and accepts
-only its own optional new JSON. No opcode decoding, runtime-address lookup or
-full semantic validation is claimed. Base structure checks and whole-file SHA
+its own optional new JSON and --locate-decode. Default locating does not decode
+instructions; the modifier refines only a hit local body to locals or one whole
+instruction. Non-body bytes are not_applicable; a bad target fails even for a
+locals query. Decoded JSON uses moonsize-file-offset-decoded with the base
+location nested; default JSON is unchanged. No runtime-address lookup or full
+semantic validation is claimed. Base structure checks and whole-file SHA
 still scan the input. See [nine regions, API and actual ranges](docs/file-offset.md).
 
 ## Function and package comparison JSON
@@ -387,6 +391,7 @@ identify candidates for investigation.
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
   --locate-offset <n> locate one decimal file byte; EOF fails; no Top
+  --locate-decode opt-in whole target-body decoding to locals/instruction; requires query
   --locate-offset-json <path> location to a new .json; requires query
   --data-preview <index> bounded payload bytes (no Top); original entry index
   --data-offset <n> payload byte offset, default 0; requires --data-preview

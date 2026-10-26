@@ -158,7 +158,7 @@ fn file_offset_data_segment_json(entry : DataSegment) -> Json {
 
 ///|
 /// New independent format, rendering only the already located ownership.
-pub fn render_file_offset_json(report : FileOffsetReport) -> String {
+fn file_offset_json_value(report : FileOffsetReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-file-offset"))
   root.set("schema_version", int_json(1))
@@ -194,5 +194,11 @@ pub fn render_file_offset_json(report : FileOffsetReport) -> String {
   region.set("relative_offset", int_json(report.region.relative_offset))
   root.set("region", Json::object(region))
   root.set("scope", Json::string(report.scope))
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+/// Preserve the original standalone format; refinement nests the same object.
+pub fn render_file_offset_json(report : FileOffsetReport) -> String {
+  file_offset_json_value(report).stringify(indent=2) + "\n"
 }

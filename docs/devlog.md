@@ -942,3 +942,37 @@ new-location.json和results.json；API快照review-09ea3c9e。
 本地未跑旧套件/旧CLI、旧演示、V8矩阵/探针、性能、浏览器/截图/PDF。
 CI保留原流程，仅追加四调用脚本，推送后核对最终SHA整体结果。版本保持
 0.5.1，不改依赖、不发布Mooncakes；图片、AGENTS、规划和构建证据不纳入提交。
+
+## 49. 文件偏移的单函数指令细化
+
+基于4fa22cc增加locate_file_offset_decoded：只定位一次，非FunctionBodyBytes
+返回not_applicable/detail=null，不解码。命中body时从基础报告取完整index，
+只调用一次inspect_function_instructions完整解码目标，检查文件SHA/大小、
+函数身份及entry/prefix/body一致。locals和连续指令范围必须完整覆盖body，
+唯一命中才成功；即使query在locals也先完成整函数解码，不部分成功。
+其他函数仍只做结构/名称检查，坏opcode不妨碍合法目标。无新opcode、操作数
+值/WAT/调用目标推断，不改变旧定位九类、报告或WasmError。
+
+Options只新增locate_decode=false；依赖locate-offset，沿用Top等互斥和原JSON
+输出槽、preflight/独占创建。CLI按标志选择入口，只读一次，不先基础定位再
+重复调用细化。旧JSON构造提取私有对象helper，保持字段与序列化，细化使用
+moonsize-file-offset-decoded/schema1，location嵌套原对象，detail为locals或
+单条FunctionInstructionRecord。渲染不重复解析或解码，名称继续安全转义。
+
+本地3个新组合单测通过，验证locals、opcode/变长立即数/0xFC边界、选择性、
+错误、JSON null/对象一致、参数和三种呈现。恰好4次CLI，退出0/0/1/1。
+复用90 B固定函数指令夹具，SHA为
+768c361dbef43f068141ad27b866b8540ff221433d84b95ff22e684b4179283e。
+目标index1，前缀[31,33)，body[33,66)，33=locals3+指令30。query45属于ordinal4
+的i32.const[43,46)，relative=45-43=2、body-relative=43-33=10；query34属于
+locals[33,36)，relative=34-33=1、instruction=null。故意只把文件47改成ff，
+保留外层长度，locals查询34仍报unknown opcode at47，新JSON未建。已有哨兵
+拒绝且输入/坏样本/哨兵字节均不变。
+
+证据_build/file-offset-decode-verification/run-SzeQzE/含两输入、四日志、argv/状态、
+new-detail.json和results.json；API审查review-fa7ea65e仅五个必要新类型、四函数
+及Options一个字段。[范围与迁移](file-offset.md)。必要接口/格式/native检查和
+一次release构建通过；本地未跑旧套件/旧CLI、旧演示/探针、V8矩阵、性能或
+浏览器/截图/PDF。CI保留原回归，仅追加四调用脚本，推送后核对最终SHA。
+版本保持0.5.1，不改依赖、不发布Mooncakes；图片、AGENTS、规划和构建证据
+继续保留且不纳入提交。

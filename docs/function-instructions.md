@@ -207,7 +207,20 @@ Options新增baseline_instructions_index=None，默认值由Options::default提�
 
 已有指令报告的file_offset可以单独交给`--locate-offset`，例如
 `moonsize app.wasm --locate-offset 31`；31只是说明值，应替换为实际位置。
-新查询只确认段、函数前缀/body等文件范围，不重新解码opcode，也不细分locals、
+基础查询只确认段、函数前缀/body等文件范围，不重新解码opcode，也不细分locals、
 指令和立即数。物理段序号含custom，完整函数index含前置导入。范围为半开
 区间，EOF没有字节；独立模式不支持Top/strict或与instructions组合。
 [范围、成本和迁移说明](file-offset.md)。
+
+## 文件偏移的可选单函数细化
+
+公开0.5.1之后的源码增量：`--locate-offset 45 --locate-decode`；45为
+说明值，应替换为自身位置。基础查询保持原来的function_body归属；启用修饰
+后，命中body才调用一次现有inspect_function_instructions，只完整解码目标
+函数。结果分locals_encoding或整条instruction，含ordinal/mnemonic、编码范围、
+body-relative及条内偏移。opcode、subopcode、立即数不被拆成新指令，也不
+进一步识别操作数字段或值；不输出全部指令列表。非body明确not_applicable。
+坏目标即使查询locals也返回1、不建JSON、不回退成功；其他函数坏opcode不
+影响合法目标。基础接口/九类/JSON不变，修饰模式独立format为
+moonsize-file-offset-decoded/schema1。不新增opcode，不认证完整类型/栈/控制流
+语义或执行成本。[接口迁移与真实两条定位](file-offset.md#optional-target-function-decoding-source-increment-after-051)。

@@ -525,6 +525,7 @@ pub fn usage() -> String {
   "  --callers-json <path> write full callers JSON to a new .json file\n" +
   "                       only --top, --callers-json and --strict may accompany --callers\n" +
   "  --locate-offset <n> locate a decimal file byte offset (EOF fails; no --top)\n" +
+  "  --locate-decode      refine a body hit to locals or one instruction; requires --locate-offset\n" +
   "  --locate-offset-json <path.json> save location to a new .json (requires query)\n" +
   "  --data-preview <index> preview one data payload window (no --top)\n" +
   "  --data-offset <n>   payload byte offset (default 0; requires --data-preview)\n" +
