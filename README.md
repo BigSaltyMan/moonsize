@@ -266,6 +266,20 @@ left to the existing parser. Help returns 0; malformed help requests return 2
 with available topics. No input is read and no report is created. See [help syntax
 and dispatch rules](docs/cli-help.md). The full option table remains below.
 
+Unknown ASCII dash-prefixed options now return 2 before file/config I/O. End option
+parsing with `--` to read a dash-prefixed filename, including a file named `--help`:
+
+```sh
+moonsize -- --help
+moonsize --top 1 --summary-json new-summary.json -- --app.wasm
+```
+
+After the separator, tokens are positional paths only; at most one input is
+accepted overall. Place all options before it. Known option-value constraints
+are unchanged; use an explicit path such as `./--name` where needed. A single `-`
+is a filename, not stdin. This source behavior follows public 0.5.1; earlier
+implicit dash-prefixed input calls must use `--` or an explicit relative path.
+
 ```
 usage: moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]

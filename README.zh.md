@@ -56,6 +56,18 @@ moonsize --help-topic functions
 错误帮助返回2并列出主题；不读取输入、不创建报告。[语法与分发规则](docs/cli-help.md)。
 下方保留完整参数表。
 
+未知ASCII短横线选项现在在文件/配置I/O前返回2。用`--`结束选项解析，可以读取
+短横线开头的文件，包括字面文件名`--help`：
+
+```sh
+moonsize -- --help
+moonsize --top 1 --summary-json new-summary.json -- --app.wasm
+```
+
+分隔符后每个token只作为位置路径，整个调用最多一个输入；选项应放在分隔符前。
+已知选项的值约束不变，需要时使用`./--name`。单个`-`是文件名，不表示stdin。
+这是公开0.5.1后的源码行为增量；旧的隐式短横线输入调用需改用分隔符或显式相对路径。
+
 ```
 moonsize <file.wasm> [--top <n>] [--retained] [--dead-code]
                  [--compress] [--strict] [--call-graph <path>] [--html <path>]

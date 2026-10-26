@@ -53,6 +53,8 @@ jobs:
         run: node scripts/test-imports-diff.mjs _build/native/release/build/cmd/main/main.exe
       - name: Imports CLI regressions (four cases)
         run: node scripts/test-imports.mjs _build/native/release/build/cmd/main/main.exe
+      - name: CLI option-boundary regressions (four cases)
+        run: node scripts/test-cli-option-boundary.mjs _build/native/release/build/cmd/main/main.exe
       - name: Help-topic CLI regressions (four cases, no Wasm input)
         run: node scripts/test-help-topics.mjs _build/native/release/build/cmd/main/main.exe
       - name: Exports-diff CLI regressions (four cases)

@@ -822,3 +822,27 @@ Ok(Some(text))/Ok(None)/Err(message)。main只取一次argv，在parse_options�
 最终SHA整体结果推送后核对。README仅在长参数表前补七主题导航与原专用文档
 链接；[帮助规则](cli-help.md)说明真实语法和边界。版本与依赖不变，未发布
 Mooncakes；图片、AGENTS、规划及构建产物排除。
+
+## 45. 未知选项与输入路径边界
+
+基线dbb8c75，版本仍0.5.1。parser只增加私有positional_only状态和兜底前的
+未知ASCII短横线标志检查，不改已知选项分支及取值规则。--结束选项解析，
+剩余token原样进入唯一输入路径处理；第二个位置参数仍使用unexpected argument。
+单个-为文件名，不新增stdin、缩写、--option=value或自动纠错。
+
+help_request、Options、main及分析流程不变；首参数--使帮助层返回未处理，
+因此字面--help可作为文件名读取。已被选项消费的值不再判断为分隔符，原query/
+输出/负数/baseline校验保留。生成Options后仍经过原模式和输出保护检查。
+usage只追加分隔符说明，overview补一条限制，不新增主题或重排原参数表。
+
+本地3个新组合单测一次通过；真实CLI恰好4次，状态2/0/2/0。拼错--summry-json
+在I/O前拒绝；-- --help路径正常生成有效summary JSON；分隔符后--top成为额外
+位置路径并拒绝，目标未创建；--baseline -before.wasm -- -after.wasm正确比较
+两份8 B空模块，文件差0。输入字节全程不变，使用固定八字节头，没有V8检查
+或新源码探针。完整argv、日志与JSON见
+_build/cli-option-boundary-verification/run-3Oi03W/；[边界说明](cli-help.md)。
+
+完成接口、格式、native检查及一次release构建；.mbti完全无变化，接口快照
+review-Vc4pAo。本地未跑旧套件、旧CLI、旧帮助21组示例、演示、浏览器/PDF
+或性能基准。CI仅追加轻量脚本，原回归保留，最终SHA整体结果推送后核对。
+版本与依赖不变，未发布Mooncakes；图片、AGENTS、规划及构建产物不暂存。

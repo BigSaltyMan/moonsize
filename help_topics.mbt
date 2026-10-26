@@ -26,6 +26,7 @@ fn help_topics() -> Array[HelpTopic] {
         ["moonsize", "app.wasm", "--summary-json", "new-summary.json"],
       ],
       limits: [
+        "-- ends option parsing; place a dash-prefixed input path after it (for example, moonsize -- --help). A single - is a filename, not stdin. Option value constraints are unchanged; use ./--name when needed.",
         "--summary-json does not support --baseline, --html or --compress; it exports ordinary analysis.",
         "Whole-file gzip measures one complete stream. Independent section/function gzip sizes are not additive and are not transfer shares.",
         "Top limits text display; complete JSON is not truncated. Report destinations must be new paths.",

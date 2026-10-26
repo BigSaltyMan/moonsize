@@ -34,7 +34,7 @@ argv。`help_request`接收的数组包含程序名，所以检查的是args[1]�
 - 合法帮助：打印后退出0。
 - 缺topic、空/全空白topic、未知ID、大小写不匹配或额外参数：退出2，解释正确
   形式并列出七主题，不读取输入或创建输出。
-- 其他调用：完整交给既有`parse_options`，原参数规则继续生效。
+- 其他调用：交给`parse_options`；其选项与路径边界见下方新增说明，帮助层不抢占业务值。
 - 无参数：仍是原usage错误，退出2；没有改为成功帮助。
 
 例如`["moonsize", "app.wasm", "--find-functions", "--help"]`不会触发帮助；现有
@@ -109,3 +109,63 @@ SHA整体状态在推送后核对。
 moon test --target native help_topics_wbtest.mbt
 node scripts/test-help-topics.mjs _build/native/release/build/cmd/main/main.exe
 ```
+
+## 选项与输入路径边界（公开0.5.1后的源码行为增量）
+
+选项阶段先匹配完整已知参数；未知token以ASCII短横线开头且不等于单个-时，
+返回unknown option和帮助入口，退出2。输入已出现后也按相同规则检查未知选项。
+不接受前缀缩写或--option=value，不自动纠错。普通第二路径仍报unexpected
+argument，而不是unknown option；非ASCII破折号不按ASCII选项前缀处理。
+
+精确token -- 将主循环永久切换到位置阶段，后续每个token都作为原始路径，
+不删除前导短横线、不再识别选项。规则如下：
+
+| 调用中的参数 | 结果 |
+| --- | --- |
+| -- | 缺输入，参数错误2 |
+| -- --help | 字面输入--help，帮助入口不处理 |
+| -- -- | 第二个--为字面文件名 |
+| app.wasm -- | 保留已有输入，末尾分隔符合法 |
+| app.wasm -- other.wasm | 第二路径错误2 |
+| -- --top 1 | --top先作为路径，1成为第二路径，错误2 |
+
+无分隔符时，普通路径与已知选项仍可按原顺序混排；未知短横线标志不再被隐式
+当作输入。读取短横线文件可使用分隔符，或显式相对路径./--name。单个-仍是
+普通文件名，不新增stdin支持。分隔符后的文件不存在仍走原读取错误1；不将
+全部路径失败改为参数错误。
+
+已知分支已经消费的值不会再经过选项/分隔符判断。--baseline -before.wasm仍
+保留原值，负数、query、输出路径及baseline的原有检查不变；原来拒绝--前缀
+值的分支不放宽。需要这些值时按原规则使用显式路径，如./--before.wasm。
+不全局扫描或删除argv中的--、--help。Options生成后的模式组合、预算配置及
+独占输出检查继续执行，分隔符不能绕过它们。
+
+实际验证使用固定八字节空模块0061736d01000000，无源码探针或V8验证；四次
+真实argv与退出码为：
+
+```text
+--summry-json                                                       -> 2
+--top 1 --summary-json new-summary.json -- --help                     -> 0
+--summary-json should-not-exist.json -- --help --top 1                -> 2
+--baseline -before.wasm -- -after.wasm                               -> 0
+```
+
+第二次确实读取名为--help的文件，summary JSON的format为moonsize-summary、
+file_size为8、wasm_version为1，SHA-256对应输入原字节，没有进入帮助。第三次
+报告unexpected argument --top，没有创建目标。第四次比较两份8 B文件，SIZE
+COMPARISON的total为baseline8/current8/delta0。三份输入字节全程不变。
+
+3个新组合单测通过，另检查未知长短标志、缩写、分隔符各边界、值消费和帮助
+隔离；没有重跑旧帮助21组示例、旧套件或旧脚本。接口审查确认.mbti完全无变化，
+help_request和Options未改。证据位于
+_build/cli-option-boundary-verification/run-3Oi03W/，含四份日志、真实argv、
+results.json及生成的inputs/new-summary.json。
+
+```sh
+moon test --target native cli_option_boundary_wbtest.mbt
+node scripts/test-cli-option-boundary.mjs _build/native/release/build/cmd/main/main.exe
+```
+
+CI保留已有回归，只追加轻量参数路由脚本；最终SHA整体结果推送后核对。版本
+保持0.5.1，不改依赖、不发布Mooncakes；本地未进行旧演示、浏览器/PDF、性能
+或额外Wasm算法验证。

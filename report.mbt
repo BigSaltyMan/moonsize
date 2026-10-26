@@ -540,7 +540,8 @@ pub fn usage() -> String {
   "Multiple files are not a transaction; a later failure may leave earlier new outputs.\n\n" +
   "Exit codes: 0 completed, 1 input/query/output/unavailable measurement, 2 bad arguments/config,\n" +
   "            3 over budget, incomplete strict graph, or path search limited." +
-  "\n\n" +
+  "\n\n-- ends option parsing; place a dash-prefixed input path after it.\n" +
+  "A single - is a filename, not stdin.\n\n" +
   help_navigation()
 }
 

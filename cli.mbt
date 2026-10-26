@@ -385,10 +385,21 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut data_json : String? = None
   let mut diff_data = false
   let mut strict = false
+  let mut positional_only = false
   let mut i = 1
   while i < args.length() {
     let arg = args[i]
-    if arg == "--top" {
+    if positional_only {
+      if path is None {
+        path = Some(arg)
+        i += 1
+      } else {
+        return Err("moonsize: unexpected argument " + arg + "\n\n" + usage())
+      }
+    } else if arg == "--" {
+      positional_only = true
+      i += 1
+    } else if arg == "--top" {
       top_seen = true
       if i + 1 >= args.length() {
         return Err("moonsize: --top needs a number\n\n" + usage())
@@ -726,6 +737,13 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
       baseline = Some(args[i + 1])
       i = i + 2
+    } else if arg.has_prefix("-") && arg != "-" {
+      return Err(
+        "moonsize: unknown option " +
+        arg +
+        "; use --help for usage\n\n" +
+        usage(),
+      )
     } else if path is None {
       path = Some(arg)
       i = i + 1
