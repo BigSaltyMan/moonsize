@@ -31,6 +31,22 @@ moon build --target native --release
 
 ## 用法
 
+### 数据段内容检索
+
+这是公开0.5.1之后的源码增量，尚未重新发布包。
+
+```sh
+moonsize app.wasm --find-data "assets/logo" --top 20
+moonsize app.wasm --find-data "assets/logo" --find-data-json new-search.json
+```
+
+将查询文字编码为UTF-8，在每个data payload内大小写敏感地按字节检索；保留
+重叠命中，空格有意义，不归一化、不跨条目。结果提供原始段序号、段内与文件
+字节偏移，不是内存地址。查询文字本身会写入报告。Top只限制文本行，JSON和
+计数完整，内存需求随命中数增长。命中不证明独立字符串、资源用途或删除收益；
+编译器也可能采用其他编码。独立模式只接受Top和自身的新JSON目标。
+[匹配规则、API及实测位置](docs/data-search.md)。
+
 ### 按任务查帮助
 
 无需Wasm输入。这是公开0.5.1之后的源码增量，需构建当前native CLI；示例中的
@@ -91,6 +107,8 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --find-data <query> data payload内UTF-8字面字节检索，保留重叠命中
+  --find-data-json <path> 全部命中写入新的.json，需显式query
   --find-functions <query> 本地raw/display名称的大小写敏感字面检索
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline

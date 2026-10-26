@@ -846,3 +846,33 @@ _build/cli-option-boundary-verification/run-3Oi03W/；[边界说明](cli-help.md
 review-Vc4pAo。本地未跑旧套件、旧CLI、旧帮助21组示例、演示、浏览器/PDF
 或性能基准。CI仅追加轻量脚本，原回归保留，最终SHA整体结果推送后核对。
 版本与依赖不变，未发布Mooncakes；图片、AGENTS、规划及构建产物不暂存。
+
+## 46. 数据段UTF-8字面内容检索
+
+基于86e88e8增加search_data_segments，先拒绝空查询，再编码一次并调用一次
+inspect_data_segments；私有KMP按payload独立扫描，保留重叠后缀。原字节直接
+匹配，不解码payload、不复制候选切片、不建图、不进入analyze。命中按段序号、
+段内偏移记录，保留实际SHA-256和完整明细。段数分区及原字节账本不变，
+不把重叠长度相加成占用量。新增纯文本/JSON渲染，终端query复用安全转义。
+
+CLI新增find_data/find_data_json两个Options字段，默认为None；独立模式仅允许
+Top和自身JSON。参数检查在I/O前，查询分发在普通分析前，只读一次；新目标
+复用统一preflight和独占写入。版本0.5.1和依赖不变，未发布Mooncakes。
+API审查仅新增DataSearchMatch、DataSearchReport、DataSearchError、检索/描述/
+两渲染函数及Options两字段，旧签名和JSON格式不变。
+
+本地仅3个新组合单测通过，覆盖重叠、中文、NUL/无效UTF-8、多段不跨段、
+元数据排除、错误/空状态、转义、完整JSON和参数路由；未跑旧套件。真实CLI
+恰好4次，退出0/0/0/1，分别为文本Top1、完整JSON、无匹配、已有哨兵目标。
+43 B输入SHA-256为31e4561e6e7de6d7c006a71876134e31170ac87bb6313535c297ab7866a18bb3。
+查询aa的命中为(段0,段内0,文件18)、(段0,段内1,文件19)、(段1,段内8,文件31)，
+长度均2；5条目=命中2+未命中3，3次occurrence。data账本30=payload17+
+条目元数据10+段级开销3。脚本从原输入独立核对每条字节与位置；Top1的JSON
+仍有全部命中。输入和已有目标字节不变。
+
+证据_build/data-search-verification/run-j7bKMY/保留input.wasm、四份日志、
+完整argv/状态、new-search.json和results.json；接口快照review-4f9e823f。
+[使用说明](data-search.md)。完成必要接口、格式、native检查及一次release构建。
+本地未跑旧CLI/套件、V8矩阵、探针、旧演示、性能、浏览器/截图/PDF。
+CI仅追加同一四调用脚本，旧回归保留；推送后核对最终SHA整体结论。
+图片、AGENTS、规划和构建证据不纳入提交。

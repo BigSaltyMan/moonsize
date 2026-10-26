@@ -85,6 +85,24 @@ format; without `--diff-data`, JSON keeps the original single-file format.
 Groups do not establish source identity, equivalent initialization or safe
 deduplication, and raw differences do not predict rebuild or gzip savings.
 
+## Data payload literal search
+
+This source addition follows public 0.5.1; it has not been republished.
+
+```sh
+moonsize app.wasm --find-data "assets/logo" --top 20
+moonsize app.wasm --find-data "assets/logo" --find-data-json new-search.json
+```
+
+Search exact UTF-8 bytes inside each data payload, retaining overlapping hits.
+Spaces matter; no normalization or cross-entry matching is performed. Results
+record original segment indices and payload/file byte offsets, not memory
+addresses. Query text is included in reports. Top limits text only; JSON and
+counts remain complete, and memory grows with occurrences. Hits do not prove
+standalone strings, resource use or deletion savings; compiler encodings can
+differ. This independent mode accepts only Top and its own new JSON target.
+See [matching rules, API and verified positions](docs/data-search.md).
+
 ## Function and package comparison JSON
 
 This source addition follows public 0.5.1; build the native CLI from source.
@@ -331,6 +349,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --find-data <query> exact UTF-8 byte search within data payloads, including overlaps
+  --find-data-json <path> save every hit to a new .json; requires --find-data
   --find-functions <query> case-sensitive literal search of local raw/display names
   --find-functions-json <path> save all matches to a new .json; requires a query
   --diff-functions-json <path> save full function/package comparison; implies diff-functions and requires baseline

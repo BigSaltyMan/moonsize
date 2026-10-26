@@ -169,3 +169,17 @@ node scripts/test-cli-option-boundary.mjs _build/native/release/build/cmd/main/m
 CI保留已有回归，只追加轻量参数路由脚本；最终SHA整体结果推送后核对。版本
 保持0.5.1，不改依赖、不发布Mooncakes；本地未进行旧演示、浏览器/PDF、性能
 或额外Wasm算法验证。
+
+## data主题：UTF-8字面内容检索
+
+公开0.5.1后的源码新增`--find-data <query>`和
+`--find-data-json <new.json>`；保留七主题，在data中可发现。
+例如`moonsize app.wasm --find-data "assets/logo" --top 20`。
+独立模式仅允许输入、query、自身JSON和Top；不支持strict、baseline、预算或
+其他分析模式。空query非法，单空格合法，值的原有--前缀拒绝规则保留。
+首参数帮助与--分隔符不变，查询值不被帮助层全局扫描。
+
+完成查询（含无匹配）返回0，读取/解析/写入失败返回1，参数错误返回2。
+按UTF-8字节检索各payload，保留重叠、不跨条目，文件偏移不是内存地址。
+Top不截断JSON、不限制查找成本或命中记录内存；查询文字会保存到报告。
+[语义、API和验证结果](data-search.md)。

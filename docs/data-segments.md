@@ -325,3 +325,14 @@ node scripts/test-data-duplicates.mjs _build/native/release/build/cmd/main/main.
 本地运行旧套件、旧CLI、演示、探针、浏览器/PDF或性能基准。CI复用native构建
 仅追加同一轻量脚本，旧回归自动执行；提交后核对最终SHA整体结果。版本保持
 0.5.1，不改依赖、不发布Mooncakes。
+
+## UTF-8 payload内容检索（0.5.1后源码增量）
+
+`--find-data "assets/logo"`在每个payload内按UTF-8字节精确匹配，
+`--find-data-json new-search.json`保存完整命中及原始数据段账本。
+它是独立查询，不与明细、比较、HTML或strict组合；使用Top限制文本命中行。
+空格不trim、重叠命中保留、不跨段、不搜索表达式或其他编码。文件偏移不是
+内存地址，查询文字也会写入报告。命中不证明独立字符串、资源用途、可安全
+去重或删除收益；无命中不证明内容不存在。旧重复payload功能仍只比较完整
+payload，此新入口独立搜索子串，不改变旧格式或语义。
+[完整规则、公开接口和真实43 B样本](data-search.md)。

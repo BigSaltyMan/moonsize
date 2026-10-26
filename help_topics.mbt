@@ -69,11 +69,11 @@ fn help_topics() -> Array[HelpTopic] {
       title: "Data payloads and encoding overhead",
       summary: "Inspect data entries, group identical payloads, or compare content groups.",
       options: [
-        "--data-segments; --data-json <new.json>; --top <n>", "--data-duplicates; --data-duplicates-json <new.json>",
-        "--diff-data with --baseline; --html with current-input details",
+        "--find-data <UTF-8 literal>; --find-data-json <new.json>", "--data-segments; --data-json <new.json>; --top <n>",
+        "--data-duplicates; --data-duplicates-json <new.json>", "--diff-data with --baseline; --html with current-input details",
       ],
       examples: [
-        ["moonsize", "app.wasm", "--data-segments", "--top", "20"],
+        ["moonsize", "app.wasm", "--find-data", "assets/logo", "--top", "20"],
         [
           "moonsize", "app.wasm", "--data-duplicates-json", "new-data-duplicates.json",
         ],
@@ -84,6 +84,7 @@ fn help_topics() -> Array[HelpTopic] {
       ],
       limits: [
         "File offsets are not memory addresses; payload bytes differ from full entry encodings. Offset expressions are recorded, not evaluated.",
+        "--find-data is independent: only Top and its own JSON. Spaces and overlaps matter; no cross-entry matches. Query text is saved in reports. A hit is not proof of a string or used resource; compiler encodings may differ. Complete hits use memory proportional to occurrence count.",
         "Repeated payloads do not prove they can be safely merged. Content groups do not establish cross-build entry identity or deletion savings.",
         "--html accepts --data-segments or --data-json for current input only; --html --diff-data is rejected. --data-duplicates is a separate mode with Top and its own JSON only.",
         "Text Top does not truncate ledgers or complete JSON. All report targets must be new paths.",

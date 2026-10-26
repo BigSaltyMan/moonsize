@@ -299,6 +299,10 @@ fn main {
       return
     }
   }
+  if options.find_data is Some(query) {
+    run_data_search(options, query)
+    return
+  }
   if options.find_functions is Some(query) {
     run_function_search(options, query)
     return
