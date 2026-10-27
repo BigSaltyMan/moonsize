@@ -253,3 +253,15 @@ moonsize-function-locals-diff/schema1；单侧格式不变。Top只限制类型�
 不匹配变量身份，不解码remainder，零差不证明语义或组序列相同。functions及
 baseline主题增加入口说明，保持七主题和原示例总数；示例index均为占位值。
 公开0.5.1后的源码增量，尚未重新发布。[详情与迁移](function-locals.md)。
+
+## functions主题：local访问编码
+
+新增`--local-accesses <index>`与`--local-accesses-json <new.json>`，JSON需要主查询。
+独立模式只允许输入、Top和自身JSON；locals/baseline-locals、calls、locate/decode、
+preview、baseline、strict、预算、HTML等在读取前拒绝2。输入/目标/解码/输出错1，
+成功含无访问0。首参数帮助、未知选项、--及原参数值限制保持不变。
+保持七主题和原示例总数，替换一个functions示例；index为占位值。两张表按
+数值index及文件顺序展示，Top各自限制行数，完整成员、汇总和JSON不截断。
+访问index包含参数空间，与locals声明ordinal不同；不解析参数/声明绑定，不
+校验实际index，当前解码器仅非负Int。静态次数不是热度，大小不是运行时内存
+或删除收益。这是公开0.5.1后的源码增量，尚未发布。[用法与迁移](function-local-accesses.md)。

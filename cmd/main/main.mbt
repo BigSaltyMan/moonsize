@@ -299,6 +299,10 @@ fn main {
       return
     }
   }
+  if options.local_accesses_index is Some(index) {
+    run_function_local_accesses(options, index)
+    return
+  }
   if options.locals_index is Some(index) {
     run_function_locals(options, index)
     return

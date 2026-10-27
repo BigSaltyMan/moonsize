@@ -260,3 +260,17 @@ ran locally, with necessary info/format/native checks and one release build.
 Old suites/scripts/demos, probes, V8 matrices, benchmarks and browser/PDF checks
 were not run locally. CI keeps existing regressions and adds the light script;
 verify its final pushed SHA. Version remains 0.5.1, without publication.
+
+## Local access encodings are a separate query
+
+The source addition `--local-accesses <index>` lists actual local.get/set/tee
+sites after one complete target-body decode. Unlike declaration ordinals, its
+encoded indices include the parameter index space. It does not parse signatures
+or bind an index to parameters/declaration groups or validate its actual range.
+Current operand decoding uses nonnegative Int, with explicit errors above it.
+Sparse groups retain all original ordinals, not an array sized by maximum index.
+Zero access instructions does not imply no declarations. Top independently
+limits the groups/sites text tables; full JSON/members remain complete. Static
+counts and encoding bytes do not measure runtime heat/memory or savings. Run it
+separately, without locals/baseline-locals or strict. See
+[API, scope and actual index-width ledger](function-local-accesses.md).

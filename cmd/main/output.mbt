@@ -38,6 +38,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
       options.callers_json,
       options.calls_json,
       options.locals_json,
+      options.local_accesses_json,
       options.generics_json,
       options.entrypoints_json,
       options.duplicates_json,

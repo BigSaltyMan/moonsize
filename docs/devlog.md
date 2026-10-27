@@ -1084,3 +1084,43 @@ entry13->19、prefix2->1、body11->18、locals10->16，差值6=-1+7、7=6+1、
 探针、V8矩阵、性能或浏览器/PDF。CI保留旧流程，仅追加四调用脚本，推送后
 核对最终SHA。版本仍0.5.1，不改依赖、不发布Mooncakes；原图片、AGENTS、
 规划和构建证据未纳入提交。
+
+## 53. 单函数local访问编码清单
+
+基于36f88d0新增inspect_function_local_accesses，参考calls的选择性流程，复用
+模块、path_inventory、body范围与decode_instructions，只对目标完整解码一次。
+不调用analyze/graph/locals，不先生成指令报告再解操作数，不重构旧框架。
+匹配LocalGet/LocalSet/LocalTee，检查单个非负operand及指令边界后计算index
+encoding=[offset+1,offset+size)。保留原ordinal、重复位置、实际LEB宽度；tee
+只计tee，按数值index稀疏Map分组，不按最大index分配。后部未知/截断失败，
+非目标坏opcode不影响查询；沿用Int限制，超范围明确失败，不冒充完整u32。
+访问index包括参数空间，不等于locals排除参数的ordinal；不解析签名、不绑定
+参数/声明组，不猜名字/类型或实际index有效性。静态次数不表示执行热度，
+编码大小不表示运行时内存或优化收益。
+
+新增FunctionLocalAccess、FunctionLocalAccessGroup、FunctionLocalAccessesReport、
+FunctionLocalAccessesError四类型及检索/描述/两渲染四函数，Options只增
+local_accesses_index/local_accesses_json两个None字段。旧签名、WasmError和格式
+不变。新main分支读输入一次、查询一次，JSON只确认，输出加入原统一清单并
+复用preflight/独占创建。两张文本表独立Top，成员/汇总/JSON完整。七主题及
+原示例数量不变。[用法、范围和迁移](function-local-accesses.md)。
+
+三个新组合单测通过。新测试最初直接比较Opcode触发Eq/Debug类型错误，改为
+比较实际助记符，未改旧Opcode trait；随后native检查及三个新测试通过。
+覆盖三opcode、重复index、127/128和非最短宽度、完整ordinal、账本、选择性、
+Int最大稀疏分组/超Int拒绝、截断/溢出/未知目标、数字排序、参数/转义/空态。
+特殊巨大index只作编码检查，不宣称语义合法。真实CLI恰好4次，退出0/0/0/1。
+85 B输入SHA为5f3650d33a8b691228de226fbd060ce4e8b32c6bc3ab4a293ab3a53a3980a2cb。
+一个函数导入，目标index1，entry[31,59)、prefix[31,33)、body[33,59)、locals[33,37)。
+12条指令中5访问=get3+set1+tee1；ordinal0/3/5/7/9，file37/42/47/51/55，index
+127/128/127/128/127，大小2/3/3/3/2，index编码7f/8001/ff00/8001/7f。
+组127保留[0,5,9]、get/set/tee=2/0/1、7 B；组128保留[3,7]、1/1/0、6 B。
+账本28=2+26、26=4+22、22=13+9、13=5+8=7+6。Top1的两表各一行，JSON完整；
+index2有一条i32声明而无访问，未误报无变量。Node固定Buffer独立核对opcode/
+index/位置/大小/SHA，原输入和已有哨兵未变，拒绝无保存提示。
+
+证据_build/function-local-accesses-verification/run-ynX9BB/含输入、四日志、argv/
+状态、new-accesses.json和results.json。必要接口、格式、native检查及一次release
+构建通过；本地未跑旧套件/旧CLI/演示/探针、V8矩阵、性能或浏览器/PDF。
+CI保留旧流程，只追加本四调用脚本，推送后核对最终SHA。版本仍0.5.1，不改
+依赖、不发布Mooncakes；原图片、AGENTS、规划及构建证据未纳入提交。

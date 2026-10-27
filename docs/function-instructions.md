@@ -253,3 +253,14 @@ return_call_indirect、call_ref和return_call_ref；index为含导入的完整�
 十进制字符串。Top只限制类型行，完整两侧及JSON不截断。与完整指令构成比较
 是不同入口，不据零统计差证明语义或剩余内容相同。
 [接口、JSON及实测差值账本](function-locals.md#explicit-two-target-comparison-source-addition-after-051)。
+
+## 单独列出local访问（0.5.1后源码增量）
+
+`--local-accesses <index>`使用同一次目标完整解码，筛出local.get/set/tee，保留
+完整指令序列的ordinal、文件/body偏移、编码长度及索引编码范围。不先生成
+instructions报告再解操作数，也不调用locals查询或构图；其他函数不解码。
+按观察到的index稀疏汇总，不按最大index分配数组，tee不重复计get/set。
+这里的index包含参数空间，不是locals排除参数的声明序号；不解析签名或绑定
+变量，不验证实际范围，沿用现有非负Int上限，不冒充完整u32。目标后部坏指令
+仍失败，不返回半份清单。Top分别限制两张文本表，全量JSON不截断。
+[API、边界与实测五个访问点](function-local-accesses.md)。

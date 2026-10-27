@@ -144,6 +144,26 @@ location nested; default JSON is unchanged. No runtime-address lookup or full
 semantic validation is claimed. Base structure checks and whole-file SHA
 still scan the input. See [nine regions, API and actual ranges](docs/file-offset.md).
 
+## Local access instruction encodings
+
+Source addition after public 0.5.1; not republished. Index 3 is illustrative:
+
+```sh
+moonsize app.wasm --local-accesses 3 --top 20
+moonsize app.wasm --local-accesses 3 --local-accesses-json new-accesses.json --top 1
+```
+
+List actual local.get/set/tee positions and index encoding widths in one fully
+decoded local body, with sparse numeric-index groups. Repeated sites remain;
+tee counts once. The encoded local index includes the parameter index space,
+unlike parameter-excluding --locals ordinals. No signature, parameter/declaration
+binding, variable names/types or actual index-range validation is provided.
+The decoder currently limits operands to nonnegative Int, not full u32. Static
+counts are not execution frequency; encoded bytes do not measure runtime memory
+or savings. Top independently limits each text table, keeping totals, members
+and JSON complete. This standalone mode accepts only Top and own new JSON,
+without strict. [Scope, API and measured access ledger](docs/function-local-accesses.md).
+
 ## Local declaration groups in one function
 
 Source addition after public 0.5.1; not republished. Index 3 is illustrative:
@@ -483,6 +503,8 @@ identify candidates for investigation.
   --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
   --generics-json <path> write full groups to a new .json file; implies --generics
+  --local-accesses <n> inspect local.get/set/tee encodings; Top/own JSON only
+  --local-accesses-json <path> save full accesses/groups to a new .json; requires query
   --locals <n> inspect local declaration groups; Top/own JSON or explicit baseline pair
   --locals-json <path> save all groups or explicit comparison to a new .json
   --baseline-locals <n> baseline target; requires locals and baseline

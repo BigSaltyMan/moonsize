@@ -84,6 +84,23 @@ location，默认格式不变。仍有结构/名称检查和整文件SHA成本�
 地址或完整语义验证。
 [九种区域、API及实测记录](docs/file-offset.md)。
 
+### 单函数local访问编码清单
+
+公开0.5.1后的源码增量，尚未重新发布；index 3为说明值：
+
+```sh
+moonsize app.wasm --local-accesses 3 --top 20
+moonsize app.wasm --local-accesses 3 --local-accesses-json new-accesses.json --top 1
+```
+
+列出目标本地body中local.get/set/tee的实际位置、原始ordinal和索引编码宽度，
+按数值index稀疏分组，重复位置保留，tee只计一次。访问index包含参数所在索引
+空间，与locals中排除参数的声明序号不同；不解析签名、不绑定参数/声明组，不
+猜变量名或类型，不校验实际index范围。当前解码器限制为非负Int，不支持完整
+u32。静态次数不是执行热度，编码大小不是运行时占用或删除收益。Top分别限制
+两张文本表，汇总、成员及JSON完整。独立模式仅支持Top和自身新JSON，无strict。
+[范围、迁移及实测访问账本](docs/function-local-accesses.md)。
+
 ### 单函数locals声明编码明细
 
 公开0.5.1后的源码增量，尚未重新发布；index 3为说明值：
@@ -206,6 +223,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline
   --summary-json <path> 普通Analysis全量导出到新的.json，Top不截断
+  --local-accesses <n> 目标body的local.get/set/tee编码清单，仅Top和自身JSON
+  --local-accesses-json <path> 全量访问/分组写入新的.json，需主查询
   --locals <n> 本地函数locals声明组，保留实际编码，不解码指令
   --locals-json <path> 全部组或显式比较写入新的.json，需locals
   --baseline-locals <n> 基线目标index，需locals和baseline成对

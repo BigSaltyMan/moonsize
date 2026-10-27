@@ -44,6 +44,7 @@ fn help_topics() -> Array[HelpTopic] {
       summary: "Locate a local index, inspect its encoding, or query model references.",
       options: [
         "--find-functions <literal>; --find-functions-json <new.json>", "--instructions <index>; --instructions-json <new.json>; --baseline-instructions <index>",
+        "--local-accesses <index>; --local-accesses-json <new.json> (actual local.get/set/tee encodings)",
         "--locals <index>; --locals-json <new.json>; --baseline-locals <before-index> with --baseline (explicit pair)",
         "--calls <index>; --calls-json <new.json> (actual calls in one local body)",
         "--callers <index>; --callers-json <new.json> (all recorded one-hop sources)",
@@ -54,8 +55,8 @@ fn help_topics() -> Array[HelpTopic] {
       examples: [
         ["moonsize", "app.wasm", "--find-functions", "decode", "--top", "20"],
         [
-          "moonsize", "after.wasm", "--locals", "42", "--baseline", "before.wasm",
-          "--baseline-locals", "17", "--locals-json", "new-locals-diff.json",
+          "moonsize", "app.wasm", "--local-accesses", "42", "--local-accesses-json",
+          "new-accesses.json",
         ],
         [
           "moonsize", "app.wasm", "--why-index", "42", "--why-root", "0", "--why-json",
@@ -66,6 +67,7 @@ fn help_topics() -> Array[HelpTopic] {
         "Run independent queries separately. --instructions-json requires --instructions; instruction inspection requires a local body. Imports may have no local body.",
         "--why-root must be an actual model root; element functions are conservative roots. --why-index does not accept --top.",
         "Retained, unreachable functions and reference paths belong to the current model, not execution traces or predictions of recompiled savings.",
+        "--local-accesses records static local.get/set/tee positions and encoded indices (including the parameter index space). No parameter/declaration binding or index validity check; current decoder uses nonnegative Int, not full u32. Only Top and own JSON; no strict. Counts are not execution frequency; both text tables have independent Top limits and JSON stays complete.",
         "--locals preserves declaration groups and actual type bytes, without variable expansion. Declared ordinals exclude parameters; the body remainder is undecoded. Only Top, its own JSON and an explicit baseline/--baseline-locals pair; no strict. Full type_hex buckets are encoding facts, not variable identity.",
         "--calls lists direct/table/reference call instructions, including tail calls, but excludes ref.func. Only local bodies; dynamic targets remain unknown. It is not a reverse callers graph or execution trace. Only Top and its own JSON; no strict. Top never truncates JSON or limits decoding cost.",
         "--callers, --why-index and --entrypoints allow --strict. Name search, instructions, duplicates and generics do not. Retained/dead-code flags belong to ordinary analysis.",

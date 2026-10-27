@@ -521,6 +521,8 @@ pub fn usage() -> String {
   "  --generics          group supported raw generic symbols by encoded function bytes\n" +
   "  --generics-json <path> write full groups to a new .json file; implies --generics\n" +
   "                       independent mode: only --top and --generics-json allowed\n" +
+  "  --local-accesses <n> inspect local.get/set/tee encodings (Top/own JSON only)\n" +
+  "  --local-accesses-json <path> save full accesses/groups to a new .json; requires query\n" +
   "  --locals <n>         inspect local declaration groups (Top/own JSON or explicit baseline pair)\n" +
   "  --locals-json <path> save all locals groups or explicit comparison to a new .json\n" +
   "  --baseline-locals <n> baseline target index; requires --locals and --baseline\n" +
