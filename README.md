@@ -144,6 +144,26 @@ location nested; default JSON is unchanged. No runtime-address lookup or full
 semantic validation is claimed. Base structure checks and whole-file SHA
 still scan the input. See [nine regions, API and actual ranges](docs/file-offset.md).
 
+## Module-wide function opcode statistics
+
+Source addition after public 0.5.1; not republished:
+
+```sh
+moonsize app.wasm --opcode-stats --top 20
+moonsize app.wasm --opcode-stats-json new-opcodes.json --top 1
+```
+
+Decode every local body once and aggregate mnemonic counts, complete instruction
+encoding bytes and distinct-function counts. Bytes include subopcodes/immediates;
+function_count is deduplicated within each function and cannot be summed to a
+function total. Imports have no synthetic body; initializer expressions are
+excluded. One bad body fails the whole query, naming its full index. The result
+keeps only opcode groups and compact function summaries, without instruction
+lists or a matrix. Top limits text only, not all-body decoding cost or JSON.
+This standalone mode accepts Top and own new JSON only, without strict, baseline,
+HTML or budgets. Static statistics are not runtime hotspots or savings.
+[Code byte ledger, API and real output](docs/module-opcodes.md).
+
 ## Local access instruction encodings
 
 Source addition after public 0.5.1; not republished. Index 3 is illustrative:
@@ -503,6 +523,8 @@ identify candidates for investigation.
   --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
   --generics-json <path> write full groups to a new .json file; implies --generics
+  --opcode-stats aggregate all local function instruction encodings; Top/own JSON only
+  --opcode-stats-json <path> full opcode/function summaries to a new .json; implies mode
   --local-accesses <n> inspect local.get/set/tee encodings; Top/own JSON only
   --local-accesses-json <path> save full accesses/groups to a new .json; requires query
   --locals <n> inspect local declaration groups; Top/own JSON or explicit baseline pair

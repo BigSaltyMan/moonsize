@@ -265,3 +265,16 @@ preview、baseline、strict、预算、HTML等在读取前拒绝2。输入/目�
 访问index包含参数空间，与locals声明ordinal不同；不解析参数/声明绑定，不
 校验实际index，当前解码器仅非负Int。静态次数不是热度，大小不是运行时内存
 或删除收益。这是公开0.5.1后的源码增量，尚未发布。[用法与迁移](function-local-accesses.md)。
+
+## overview/functions主题：全模块opcode统计
+
+新增`--opcode-stats`及隐含启用模式的`--opcode-stats-json <new.json>`。独立模式
+仅输入、这两个选项及Top，baseline、strict、预算、HTML、单函数查询等在读取
+前拒绝2。成功含空态0，输入/任一body/输出错误1；坏body不部分成功、不建JSON。
+只统计code中本地函数，全部各解码一次，不混入初始化表达式。完整字节包括
+subopcode和立即数；function_count每函数内去重，跨组求和不等于函数总数。
+结果没有全模块逐指令清单或矩阵。Top只限opcode文本表，JSON含全部函数摘要，
+不构图或计算retained，也不限制资源成本。静态次数不是执行频率或运行热点。
+overview与functions均补入口/范围，替换一个overview示例；七主题和原示例总数
+不变。缺失名称和范围在JSON为null，显示fallback单独保留，原帮助/--规则不变。
+公开0.5.1后源码增量，未发布。[使用及迁移](module-opcodes.md)。

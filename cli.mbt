@@ -46,6 +46,9 @@ pub struct Options {
   /// Independent encoded local.get/set/tee access inspection.
   local_accesses_index : Int?
   local_accesses_json : String?
+  /// Independent all-local-body opcode encoding statistics.
+  opcode_stats : Bool
+  opcode_stats_json : String?
   /// Independent bounded local declaration groups, without instruction decode.
   locals_index : Int?
   locals_json : String?
@@ -145,6 +148,8 @@ pub fn Options::default(path : String) -> Options {
     calls_json: None,
     local_accesses_index: None,
     local_accesses_json: None,
+    opcode_stats: false,
+    opcode_stats_json: None,
     locals_index: None,
     locals_json: None,
     baseline_locals_index: None,
@@ -399,6 +404,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut calls_json : String? = None
   let mut local_accesses_index : Int? = None
   let mut local_accesses_json : String? = None
+  let mut opcode_stats = false
+  let mut opcode_stats_json : String? = None
   let mut locals_index : Int? = None
   let mut locals_json : String? = None
   let mut baseline_locals_index : Int? = None
@@ -545,6 +552,20 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         )
       }
       locals_json = Some(args[i + 1])
+      i += 2
+    } else if arg == "--opcode-stats" {
+      opcode_stats = true
+      i += 1
+    } else if arg == "--opcode-stats-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --opcode-stats-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      opcode_stats_json = Some(args[i + 1])
+      opcode_stats = true
       i += 2
     } else if arg == "--local-accesses" {
       if i + 1 >= args.length() {
@@ -987,6 +1008,80 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if opcode_stats {
+    if local_accesses_index is Some(_) ||
+      local_accesses_json is Some(_) ||
+      calls_index is Some(_) ||
+      calls_json is Some(_) ||
+      locals_index is Some(_) ||
+      locals_json is Some(_) ||
+      baseline_locals_index is Some(_) ||
+      retained ||
+      dead_code ||
+      compress ||
+      strict ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      exports ||
+      diff_exports ||
+      metadata ||
+      diff_metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      locate_decode ||
+      call_graph is Some(_) ||
+      html is Some(_) ||
+      summary_json is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      diff_functions_json is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      generics_json is Some(_) ||
+      entrypoints_json is Some(_) ||
+      duplicates_json is Some(_) ||
+      exports_json is Some(_) ||
+      metadata_json is Some(_) ||
+      imports_json is Some(_) ||
+      data_duplicates_json is Some(_) ||
+      instructions_index is Some(_) ||
+      instructions_json is Some(_) ||
+      baseline_instructions_index is Some(_) ||
+      find_functions is Some(_) ||
+      find_functions_json is Some(_) ||
+      find_data is Some(_) ||
+      find_data_json is Some(_) ||
+      data_preview_index is Some(_) ||
+      data_offset is Some(_) ||
+      data_limit is Some(_) ||
+      data_preview_json is Some(_) ||
+      locate_offset is Some(_) ||
+      locate_offset_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) ||
+      data_json is Some(_) {
+      return Err(
+        "moonsize: --opcode-stats is an independent mode; only --top and --opcode-stats-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if opcode_stats_json is Some(target) && !target.has_suffix(".json") {
+      return Err(
+        "moonsize: --opcode-stats-json wants a .json path\n\n" + usage(),
+      )
+    }
   }
   if local_accesses_json is Some(_) && local_accesses_index is None {
     return Err(
@@ -2125,6 +2220,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     calls_json,
     local_accesses_index,
     local_accesses_json,
+    opcode_stats,
+    opcode_stats_json,
     locals_index,
     locals_json,
     baseline_locals_index,

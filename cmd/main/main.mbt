@@ -299,6 +299,10 @@ fn main {
       return
     }
   }
+  if options.opcode_stats {
+    run_module_opcode_stats(options)
+    return
+  }
   if options.local_accesses_index is Some(index) {
     run_function_local_accesses(options, index)
     return

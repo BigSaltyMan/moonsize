@@ -1124,3 +1124,44 @@ index/位置/大小/SHA，原输入和已有哨兵未变，拒绝无保存提示
 构建通过；本地未跑旧套件/旧CLI/演示/探针、V8矩阵、性能或浏览器/PDF。
 CI保留旧流程，只追加本四调用脚本，推送后核对最终SHA。版本仍0.5.1，不改
 依赖、不发布Mooncakes；原图片、AGENTS、规划及构建证据未纳入提交。
+
+## 54. 全模块函数指令编码统计
+
+基于85601a9新增inspect_module_opcodes，复用模块解析、导入计数、code清单、
+名称及function_stats。先取得范围，再各body执行一次有界decode_instructions，
+检查正长度、连续性和终点；不循环调用单函数inspector，不重复逐函数解析模块。
+私有helper内只保留当前decoded和临时mnemonic Set，汇总后不让引用逃逸，
+不承诺运行时立即释放。最终仅opcode组和函数摘要，无逐指令/出现位置/矩阵，
+不调用analyze/graph/retained/calls/local-accesses。任一坏body整体失败，保留
+完整函数index及WasmError原位置/原因。初始化表达式排除，不按可达性过滤。
+
+四个新类型ModuleOpcodeGroup/ModuleOpcodeFunction/ModuleOpcodeReport/ModuleOpcodeError
+及检索/描述/两渲染四函数。Options只增opcode_stats=false/opcode_stats_json=None，
+JSON隐含模式；独立模式只允许Top/自身JSON，其余模式在读取前拒绝2。新main
+分支只读输入一次、查询一次；沿用统一preflight/独占创建。缺失code/count为
+null，空code保留真实段头和数量字段，导入无伪body；零指令结构结果不证明
+结束语义合法。JSON保留FunctionStat事实，缺失name/raw_name=null，display_name
+单列可读fallback。旧接口/WasmError/格式不变，七主题与原示例数保持。
+[范围、API和实测结果](module-opcodes.md)。
+
+本地仅3个新组合测试通过，覆盖跨函数/重复opcode的去重、locals/立即数宽度、
+两种FC扩展、非最短count/body前缀、账本/排序、无code/空code/仅导入/零指令、
+非首函数未知或截断、初始化排除、参数/转义/null/完整JSON。新测试内单次调用
+旧单函数API作选择性控制，未运行旧测试文件。真实CLI恰好4次，退出0/0/1/1。
+98 B输入SHA为9d0843495e6d353f6676c4a43e4293e6b66faec6f8fc3f5ff1475ad7749099bb。
+一导入/两本地index1和2；code[28,77)总49B，count[30,32)=8200，函数条目
+[32,67)/[67,77)，prefix2/1B，locals3/1B，指令15/5条、30/8B。账本
+49=header2+count2+prefix3+locals4+instruction38，条目35+10=45=3+4+38。
+8组按字节/次数降序及助记符字典序：i32.const(4,10B,2函数)、f32.const(2,10B,1)、
+drop(6,6B,2)、end(4,4B,2)、block及两种trunc_sat与loop各(1,2B,1)。次数合计20，
+字节38，function_count合计11不等于本地函数数2。Top1 JSON保留全部组和摘要。
+坏副本仅把file69改为ff，SHA为
+b2efef4a4657c43fc72b0caeb294b77a986ccd93971d114dd1c9957a4e9f65ca；报函数2/位置69，
+新JSON未建。Buffer固定预期独立核对编码/宽度/次数/函数数/SHA，原输入、坏
+副本和哨兵不变，已有目标拒绝无成功提示。
+
+证据_build/module-opcodes-verification/run-jAkXR8/含双输入、四日志、argv/状态、
+new-opcodes.json及results.json。必要接口、格式、native检查与一次release构建
+通过；本地未跑旧套件/CLI/演示/探针、V8矩阵、性能/大模块基准或浏览器/PDF。
+CI保留旧流程，仅追加四调用脚本，无性能门禁，推送后确认最终SHA。版本仍
+0.5.1，不改依赖、不发布Mooncakes；原图片、AGENTS、规划及构建证据不提交。
