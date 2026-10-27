@@ -521,6 +521,8 @@ pub fn usage() -> String {
   "  --generics          group supported raw generic symbols by encoded function bytes\n" +
   "  --generics-json <path> write full groups to a new .json file; implies --generics\n" +
   "                       independent mode: only --top and --generics-json allowed\n" +
+  "  --locals <n>         inspect local declaration groups (Top/own JSON only)\n" +
+  "  --locals-json <path> save all locals groups to a new .json; requires --locals\n" +
   "  --calls <n>          list call instructions in one local function (Top/own JSON only)\n" +
   "  --calls-json <path>  save all call sites to a new .json; requires --calls\n" +
   "  --callers <n>        list recorded one-hop instruction references to function n\n" +

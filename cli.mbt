@@ -43,6 +43,9 @@ pub struct Options {
   /// Independent actual call instructions in one local body.
   calls_index : Int?
   calls_json : String?
+  /// Independent bounded local declaration groups, without instruction decode.
+  locals_index : Int?
+  locals_json : String?
   /// Independent raw-symbol generic-instance size inspection.
   generics : Bool
   generics_json : String?
@@ -135,6 +138,8 @@ pub fn Options::default(path : String) -> Options {
     callers_json: None,
     calls_index: None,
     calls_json: None,
+    locals_index: None,
+    locals_json: None,
     generics: false,
     generics_json: None,
     entrypoints: false,
@@ -384,6 +389,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut callers_json : String? = None
   let mut calls_index : Int? = None
   let mut calls_json : String? = None
+  let mut locals_index : Int? = None
+  let mut locals_json : String? = None
   let mut generics = false
   let mut generics_json : String? = None
   let mut entrypoints = false
@@ -489,6 +496,29 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         )
       }
       summary_json = Some(args[i + 1])
+      i += 2
+    } else if arg == "--locals" {
+      if i + 1 >= args.length() {
+        return Err("moonsize: --locals needs a function index\n\n" + usage())
+      }
+      locals_index = match parse_path_index(args[i + 1]) {
+        Some(value) => Some(value)
+        None =>
+          return Err(
+            "moonsize: --locals wants a nonnegative decimal function index\n\n" +
+            usage(),
+          )
+      }
+      i += 2
+    } else if arg == "--locals-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --locals-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      locals_json = Some(args[i + 1])
       i += 2
     } else if arg == "--calls" {
       if i + 1 >= args.length() {
@@ -906,6 +936,76 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let path = match path {
     Some(path) => path
     None => return Err(usage())
+  }
+  if locals_json is Some(_) && locals_index is None {
+    return Err("moonsize: --locals-json requires --locals\n\n" + usage())
+  }
+  if locals_index is Some(_) {
+    if calls_index is Some(_) ||
+      calls_json is Some(_) ||
+      retained ||
+      dead_code ||
+      compress ||
+      strict ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      exports ||
+      diff_exports ||
+      metadata ||
+      diff_metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      locate_decode ||
+      call_graph is Some(_) ||
+      html is Some(_) ||
+      summary_json is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      diff_functions_json is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      generics_json is Some(_) ||
+      entrypoints_json is Some(_) ||
+      duplicates_json is Some(_) ||
+      exports_json is Some(_) ||
+      metadata_json is Some(_) ||
+      imports_json is Some(_) ||
+      data_duplicates_json is Some(_) ||
+      instructions_index is Some(_) ||
+      instructions_json is Some(_) ||
+      baseline_instructions_index is Some(_) ||
+      find_functions is Some(_) ||
+      find_functions_json is Some(_) ||
+      find_data is Some(_) ||
+      find_data_json is Some(_) ||
+      data_preview_index is Some(_) ||
+      data_offset is Some(_) ||
+      data_limit is Some(_) ||
+      data_preview_json is Some(_) ||
+      locate_offset is Some(_) ||
+      locate_offset_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) ||
+      data_json is Some(_) {
+      return Err(
+        "moonsize: --locals is an independent mode; only --top and --locals-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if locals_json is Some(target) && !target.has_suffix(".json") {
+      return Err("moonsize: --locals-json wants a .json path\n\n" + usage())
+    }
   }
   if calls_json is Some(_) && calls_index is None {
     return Err("moonsize: --calls-json requires --calls\n\n" + usage())
@@ -1879,6 +1979,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     callers_json,
     calls_index,
     calls_json,
+    locals_index,
+    locals_json,
     generics,
     generics_json,
     entrypoints,

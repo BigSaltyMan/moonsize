@@ -146,3 +146,11 @@ Local checks did not run old suites/scripts, source demos/probes, V8 matrices,
 performance or browser/PDF acceptance. CI retains existing regressions and adds
 only this four-call script; confirm final exact-SHA success after push. Version
 stays 0.5.1, with no dependency change or Mooncakes publication.
+
+## Locals-only inspection (source increment after 0.5.1)
+
+Use `--locals <index>` separately to inspect declaration groups and actual type
+bytes without decoding any instructions. Unlike calls, unknown remainder opcodes
+do not block that query. It does not resolve parameters or local instruction
+bindings. Group quantities stay u32; cumulative declared ordinals use u64 and
+JSON decimal strings, excluding parameters. See [locals](function-locals.md).

@@ -84,6 +84,22 @@ location，默认格式不变。仍有结构/名称检查和整文件SHA成本�
 地址或完整语义验证。
 [九种区域、API及实测记录](docs/file-offset.md)。
 
+### 单函数locals声明编码明细
+
+公开0.5.1后的源码增量，尚未重新发布；index 3为说明值：
+
+```sh
+moonsize app.wasm --locals 3 --top 20
+moonsize app.wasm --locals 3 --locals-json new-locals.json --top 1
+```
+
+保留原始组顺序、quantity和类型编码范围/hex，不合并同类型组，不展开变量，
+不解码后续指令。零组与有组但零声明分别展示；声明序号排除参数，不是完整
+local index。quantity使用完整u32，累计值及序号在JSON中始终为十进制字符串。
+有限类型标签不等于类型验证，body remainder明确未解码。独立模式仅支持Top
+和自身新JSON，不支持strict；Top只限制文本，JSON完整。
+[范围、API迁移和实测字节账本](docs/function-locals.md)。
+
 ### 单函数调用点清单
 
 公开0.5.1后的源码增量，尚未重新发布；下面的index 3为说明值：
@@ -174,6 +190,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline
   --summary-json <path> 普通Analysis全量导出到新的.json，Top不截断
+  --locals <n> 本地函数locals声明组，保留实际编码，不解码指令
+  --locals-json <path> 全部组写入新的.json，需locals，仅支持Top
   --calls <n> 目标本地body中的调用指令，仅支持Top及自身JSON
   --calls-json <path> 全部调用点写入新的.json，需calls
   --instructions <n> 查询完整函数索引中的本地函数编码

@@ -235,3 +235,11 @@ return_call_indirect、call_ref和return_call_ref；index为含导入的完整�
 不先运行instructions再重解操作数；新入口只对目标decode_instructions一次，
 全函数成功后才返回。Top仅限制文本，不截断JSON，也不是成本限制。
 [API、账本和实测八个调用点](function-calls.md)。
+
+## 只检查locals声明（0.5.1后源码增量）
+
+`--locals <index>`只消费目标body的声明，不先调用指令明细，也不解码任何
+函数opcode。保留组、quantity、实际LEB和类型hex；累计声明序号排除参数，
+不等于完整local index。余下编码明确为未解码，因此其坏opcode不妨碍locals
+查询。与instructions完整解码不同；不能组合使用。
+[API、精度约定与字节账本](function-locals.md)。

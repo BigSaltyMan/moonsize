@@ -299,6 +299,10 @@ fn main {
       return
     }
   }
+  if options.locals_index is Some(index) {
+    run_function_locals(options, index)
+    return
+  }
   if options.calls_index is Some(index) {
     run_function_calls(options, index)
     return

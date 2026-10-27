@@ -44,6 +44,7 @@ fn help_topics() -> Array[HelpTopic] {
       summary: "Locate a local index, inspect its encoding, or query model references.",
       options: [
         "--find-functions <literal>; --find-functions-json <new.json>", "--instructions <index>; --instructions-json <new.json>; --baseline-instructions <index>",
+        "--locals <index>; --locals-json <new.json> (encoded declaration groups, no instruction decode)",
         "--calls <index>; --calls-json <new.json> (actual calls in one local body)",
         "--callers <index>; --callers-json <new.json> (all recorded one-hop sources)",
         "--why-index <index>; --why-root <root>; --why-json <new.json> (one root-to-target path)",
@@ -53,7 +54,7 @@ fn help_topics() -> Array[HelpTopic] {
       examples: [
         ["moonsize", "app.wasm", "--find-functions", "decode", "--top", "20"],
         [
-          "moonsize", "app.wasm", "--calls", "42", "--calls-json", "new-calls.json",
+          "moonsize", "app.wasm", "--locals", "42", "--locals-json", "new-locals.json",
         ],
         [
           "moonsize", "app.wasm", "--why-index", "42", "--why-root", "0", "--why-json",
@@ -64,6 +65,7 @@ fn help_topics() -> Array[HelpTopic] {
         "Run independent queries separately. --instructions-json requires --instructions; instruction inspection requires a local body. Imports may have no local body.",
         "--why-root must be an actual model root; element functions are conservative roots. --why-index does not accept --top.",
         "Retained, unreachable functions and reference paths belong to the current model, not execution traces or predictions of recompiled savings.",
+        "--locals preserves declaration groups and actual type bytes, without variable expansion. Declared ordinals exclude parameters; the body remainder is undecoded. Only Top and its own JSON; no strict.",
         "--calls lists direct/table/reference call instructions, including tail calls, but excludes ref.func. Only local bodies; dynamic targets remain unknown. It is not a reverse callers graph or execution trace. Only Top and its own JSON; no strict. Top never truncates JSON or limits decoding cost.",
         "--callers, --why-index and --entrypoints allow --strict. Name search, instructions, duplicates and generics do not. Retained/dead-code flags belong to ordinary analysis.",
         "Identical bodies and generic-instance totals do not prove safe merging or savings. Top limits display, not analysis cost; JSON remains complete.",

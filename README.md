@@ -144,6 +144,23 @@ location nested; default JSON is unchanged. No runtime-address lookup or full
 semantic validation is claimed. Base structure checks and whole-file SHA
 still scan the input. See [nine regions, API and actual ranges](docs/file-offset.md).
 
+## Local declaration groups in one function
+
+Source addition after public 0.5.1; not republished. Index 3 is illustrative:
+
+```sh
+moonsize app.wasm --locals 3 --top 20
+moonsize app.wasm --locals 3 --locals-json new-locals.json --top 1
+```
+
+Inspect original locals groups, quantities and exact type bytes without decoding
+instructions or expanding variables. Zero groups and zero-quantity groups differ;
+ordinals exclude parameters and are not complete local indices. Quantities use
+u32; cumulative counts/ordinals use decimal strings in JSON. Limited type labels
+do not validate types, and the body remainder stays undecoded. Top limits text
+rows only; JSON is complete. This independent mode accepts only Top and its own
+new JSON, without strict. [Scope, API and measured ledger](docs/function-locals.md).
+
 ## Calls inside one function
 
 Source addition after public 0.5.1; not republished. Index 3 is illustrative:
@@ -446,6 +463,8 @@ identify candidates for investigation.
   --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
   --generics-json <path> write full groups to a new .json file; implies --generics
+  --locals <n> inspect local declaration groups; Top/own JSON only
+  --locals-json <path> save all groups to a new .json; requires locals
   --calls <n> list call instructions in one local body; Top/own JSON only
   --calls-json <path> save all call sites to a new .json; requires calls
   --callers <n>        list recorded one-hop incoming instruction sources

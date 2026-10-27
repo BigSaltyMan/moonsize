@@ -229,3 +229,14 @@ instructions、locate/decode、search/preview等其他模式。保持七主题�
 输出错误1；参数错误2。导入目标明确拒绝。文本Top只限制调用行，JSON完整。
 callers查模型入向引用，calls查目标body调用，ref.func和动态目标口径不同，
 不是图反转；calls不构图，无strict保证。[用法和账本](function-calls.md)。
+
+## functions主题：locals声明组
+
+新增`--locals <index>`和`--locals-json <new.json>`，JSON必须有主查询。
+独立模式只允许输入、Top及自身JSON，其他模式包括calls、locate-decode、
+data-preview、strict、baseline、预算均在读取前拒绝2；输入/目标/声明/输出失败1，
+成功含零组0。保留七主题和原示例数，替换一个functions示例，index是占位值。
+原未知选项、--分隔符和首参数帮助规则不变。组数不等于变量数，不展开变量，
+累计序号排除参数，不对应完整local index；JSON累计值始终为十进制字符串。
+类型hex是事实，标签有限，余下body未解码；Top不截断JSON。
+这是公开0.5.1后的源码增量，未重新发布。[范围及迁移](function-locals.md)。

@@ -237,3 +237,12 @@ raw argv/status, four logs, new-detail.json and results.json. API snapshots:
 performance or browser/PDF acceptance. Existing CI remains and only adds the
 four-call script. Confirm the final exact SHA after push. Version stays 0.5.1;
 this increment is not a Mooncakes publication.
+
+## Inspect declarations without a complete body decode
+
+`--locals <index>` is a separate source addition after public 0.5.1. It reads only
+the selected body's locals declarations and labels the remainder undecoded.
+Unlike `--locate-decode`, it can succeed with an unknown opcode after valid
+locals; it does not validate that remainder or resolve local indices including
+parameters. These standalone queries cannot be combined. See the
+[group ranges, precision and API](function-locals.md).

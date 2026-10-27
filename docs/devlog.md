@@ -1009,3 +1009,39 @@ new-calls.json和results.json，API审查review-96c6f0d6。
 通过；本地未跑旧套件/旧CLI、演示/探针、V8矩阵、性能或浏览器/PDF。
 CI保留原回归，仅追加四调用脚本，推送后核对最终SHA。版本0.5.1与依赖保持
 不变，未发布Mooncakes；原图片、AGENTS、规划和构建证据不纳入提交。
+
+## 51. 单函数locals声明编码明细
+
+基于651be6a新增inspect_function_locals，复用parse_module、path_inventory和
+有界body范围。只消费目标locals一次，复用read_valtype，保持Reader原行为；
+不解析签名，不解码任何函数opcode，不经过analyze或图。声明组顺序、零quantity、
+相邻同类型、合法非最短编码均保留。每组quantity为完整UInt，累计和半开声明
+序号用检查后的UInt64，不展开变量；序号排除参数，不冒充完整local index。
+JSON quantity固定为数字，累计值和序号始终为十进制字符串；有限标签之外保留
+hex和null。body_remainder是未解码范围，坏声明不跨body、不返回部分报告。
+
+新增FunctionLocalGroup、FunctionLocalsReport、FunctionLocalsError及检索、错误
+描述、文本/JSON四函数。Options只增locals_index/locals_json两个None字段，
+旧接口、WasmError和其他JSON不变；完整外部Options字面量需补字段。独立模式
+仅Top/自身JSON，含近期calls、locate/decode、preview等互斥。main只读一次输入，
+复用统一preflight与原生独占创建，没有新writer。七主题和原示例数量保持不变。
+[使用说明、API迁移与范围](function-locals.md)。
+
+3个新组合单测通过，覆盖u32最大quantity、累计4294967296、非最短编码、
+heap type、零组/零数量组、坏声明/边界、未解码opcode、Top/JSON/参数/转义。
+特殊巨量样本仅证明结构读取，不宣称完整类型合法。真实CLI恰好4次，退出
+0/0/0/1。70 B输入SHA为
+8abadb6bd1361de559518dd99b7812573349d8ac6924372439183f29004c3973。
+目标index1前有一个函数导入，entry[31,46)、prefix[31,33)、body[33,46)，
+locals[33,45)、group-count[33,35)、undecoded remainder[45,46)。4组位于
+[35,38)/[38,40)/[40,42)/[42,45)，quantity为2/0/1/3，序号[0,2)/[2,2)/[2,3)/[3,6)。
+类型hex为7f/7f/7f/6370，最后一组标签null。数量6=2+0+1+3，字节15=2+13、
+13=12+1、12=2+(3+2+2+3)=2+quantity5+type5。index2零组仍含file47的一字节
+数量字段。Node用固定Buffer/BigInt独立核对范围/hex/宽度/摘要/累计字符串；
+Top1 JSON保留4组，已有哨兵拒绝，输入和目标不变。
+
+证据_build/function-locals-verification/run-WeOB2a/包含输入、四日志、argv/状态、
+new-locals.json及results.json。必要接口、格式、native检查及一次release构建
+通过；本地未跑旧套件/旧CLI/演示/探针、V8矩阵、性能或浏览器/PDF。
+CI保留旧流程，仅追加四调用脚本，推送后核对最终SHA。版本仍0.5.1，不改
+依赖、不发布Mooncakes；原图片、AGENTS、规划和构建证据不纳入提交。
