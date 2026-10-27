@@ -233,10 +233,23 @@ callers查模型入向引用，calls查目标body调用，ref.func和动态目�
 ## functions主题：locals声明组
 
 新增`--locals <index>`和`--locals-json <new.json>`，JSON必须有主查询。
-独立模式只允许输入、Top及自身JSON，其他模式包括calls、locate-decode、
-data-preview、strict、baseline、预算均在读取前拒绝2；输入/目标/声明/输出失败1，
+独立模式允许输入、Top及自身JSON；显式比较另允许baseline与baseline-locals
+成对。其他模式包括calls、locate-decode、data-preview、strict、预算均在读取前
+拒绝2；输入/目标/声明/输出失败1，
 成功含零组0。保留七主题和原示例数，替换一个functions示例，index是占位值。
 原未知选项、--分隔符和首参数帮助规则不变。组数不等于变量数，不展开变量，
 累计序号排除参数，不对应完整local index；JSON累计值始终为十进制字符串。
 类型hex是事实，标签有限，余下body未解码；Top不截断JSON。
 这是公开0.5.1后的源码增量，未重新发布。[范围及迁移](function-locals.md)。
+
+## functions/baseline主题：显式locals比较
+
+新增`--baseline-locals <index>`，必须同时给出locals及非空baseline；locals配
+baseline时也必须有baseline-locals。两侧都用含导入的完整索引，不自动配对，
+不与baseline-instructions、strict或其他模式混用。参数错2，任一侧输入/目标/
+声明或输出错1，成功含自比0。locals-json在比较模式输出独立的
+moonsize-function-locals-diff/schema1；单侧格式不变。Top只限制类型汇总行。
+完整type_hex是键，零quantity按组存在计入，数量差用精确有符号十进制字符串。
+不匹配变量身份，不解码remainder，零差不证明语义或组序列相同。functions及
+baseline主题增加入口说明，保持七主题和原示例总数；示例index均为占位值。
+公开0.5.1后的源码增量，尚未重新发布。[详情与迁移](function-locals.md)。

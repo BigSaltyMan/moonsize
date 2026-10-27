@@ -48,6 +48,11 @@ pub fn render_function_locals(
 
 ///|
 pub fn render_function_locals_json(report : FunctionLocalsReport) -> String {
+  function_locals_json_value(report).stringify(indent=2) + "\n"
+}
+
+///|
+fn function_locals_json_value(report : FunctionLocalsReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-function-locals"))
   root.set("schema_version", int_json(1))
@@ -113,5 +118,5 @@ pub fn render_function_locals_json(report : FunctionLocalsReport) -> String {
     ),
   )
   root.set("scope", Json::string(report.scope))
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
 }

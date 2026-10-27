@@ -158,8 +158,28 @@ instructions or expanding variables. Zero groups and zero-quantity groups differ
 ordinals exclude parameters and are not complete local indices. Quantities use
 u32; cumulative counts/ordinals use decimal strings in JSON. Limited type labels
 do not validate types, and the body remainder stays undecoded. Top limits text
-rows only; JSON is complete. This independent mode accepts only Top and its own
-new JSON, without strict. [Scope, API and measured ledger](docs/function-locals.md).
+rows only; JSON is complete. The single-input query accepts Top and its own
+new JSON, without strict. An explicit comparison additionally requires both
+--baseline and --baseline-locals; targets are never matched automatically.
+[Scope, API and measured ledger](docs/function-locals.md).
+
+### Explicit locals comparison
+
+```sh
+moonsize after.wasm --locals 5 --baseline before.wasm --baseline-locals 3 --top 20
+moonsize after.wasm --locals 5 --baseline before.wasm --baseline-locals 3 --locals-json new-locals-diff.json --top 1
+```
+
+Indices are placeholders in each file's complete function index space. Both
+targets are explicit; full raw type_hex buckets describe encoding statistics,
+not variable identity or semantic type equivalence. Zero-quantity groups count
+as present. Cumulative quantities and signed quantity deltas use exact decimal
+strings; actual encoding widths are measured separately. Remainders stay undecoded. Top limits
+only displayed type rows, keeping all member indices and nested JSON complete.
+The existing single-input JSON stays moonsize-function-locals; the comparison
+uses moonsize-function-locals-diff/schema 1. Zero statistical differences do not
+prove equal group sequences, remainder contents or semantics. This is an
+unpublished source increment after 0.5.1, without deletion/runtime/gzip estimates.
 
 ## Calls inside one function
 
@@ -463,8 +483,9 @@ identify candidates for investigation.
   --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
   --generics-json <path> write full groups to a new .json file; implies --generics
-  --locals <n> inspect local declaration groups; Top/own JSON only
-  --locals-json <path> save all groups to a new .json; requires locals
+  --locals <n> inspect local declaration groups; Top/own JSON or explicit baseline pair
+  --locals-json <path> save all groups or explicit comparison to a new .json
+  --baseline-locals <n> baseline target; requires locals and baseline
   --calls <n> list call instructions in one local body; Top/own JSON only
   --calls-json <path> save all call sites to a new .json; requires calls
   --callers <n>        list recorded one-hop incoming instruction sources

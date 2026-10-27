@@ -97,8 +97,24 @@ moonsize app.wasm --locals 3 --locals-json new-locals.json --top 1
 不解码后续指令。零组与有组但零声明分别展示；声明序号排除参数，不是完整
 local index。quantity使用完整u32，累计值及序号在JSON中始终为十进制字符串。
 有限类型标签不等于类型验证，body remainder明确未解码。独立模式仅支持Top
-和自身新JSON，不支持strict；Top只限制文本，JSON完整。
+和自身新JSON，不支持strict；显式比较另外要求baseline与baseline-locals成对。
+Top只限制文本，JSON完整。
 [范围、API迁移和实测字节账本](docs/function-locals.md)。
+
+### 指定双函数的locals基线比较
+
+```sh
+moonsize after.wasm --locals 5 --baseline before.wasm --baseline-locals 3 --top 20
+moonsize after.wasm --locals 5 --baseline before.wasm --baseline-locals 3 --locals-json new-locals-diff.json --top 1
+```
+
+两侧index是占位值，均包含前置导入，必须显式指定；不按名称或相同index配对。
+按完整原始type_hex汇总，两侧零数量组照常计入存在状态，不猜变量身份或语义
+类型。数量差为精确有符号十进制字符串；实际编码宽度与声明数量分开比较。
+Top只限制类型汇总行，成员序号和两侧完整报告不截断；remainder不解码。
+单侧JSON格式不变，比较使用moonsize-function-locals-diff/schema 1。零统计差不
+证明组序列、余下内容或语义相同。这是公开0.5.1后尚未发布的源码增量，不预测
+删除收益或运行时占用。[API、差值账本与实测样本](docs/function-locals.md)。
 
 ### 单函数调用点清单
 
@@ -191,7 +207,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline
   --summary-json <path> 普通Analysis全量导出到新的.json，Top不截断
   --locals <n> 本地函数locals声明组，保留实际编码，不解码指令
-  --locals-json <path> 全部组写入新的.json，需locals，仅支持Top
+  --locals-json <path> 全部组或显式比较写入新的.json，需locals
+  --baseline-locals <n> 基线目标index，需locals和baseline成对
   --calls <n> 目标本地body中的调用指令，仅支持Top及自身JSON
   --calls-json <path> 全部调用点写入新的.json，需calls
   --instructions <n> 查询完整函数索引中的本地函数编码

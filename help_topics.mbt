@@ -44,7 +44,7 @@ fn help_topics() -> Array[HelpTopic] {
       summary: "Locate a local index, inspect its encoding, or query model references.",
       options: [
         "--find-functions <literal>; --find-functions-json <new.json>", "--instructions <index>; --instructions-json <new.json>; --baseline-instructions <index>",
-        "--locals <index>; --locals-json <new.json> (encoded declaration groups, no instruction decode)",
+        "--locals <index>; --locals-json <new.json>; --baseline-locals <before-index> with --baseline (explicit pair)",
         "--calls <index>; --calls-json <new.json> (actual calls in one local body)",
         "--callers <index>; --callers-json <new.json> (all recorded one-hop sources)",
         "--why-index <index>; --why-root <root>; --why-json <new.json> (one root-to-target path)",
@@ -54,7 +54,8 @@ fn help_topics() -> Array[HelpTopic] {
       examples: [
         ["moonsize", "app.wasm", "--find-functions", "decode", "--top", "20"],
         [
-          "moonsize", "app.wasm", "--locals", "42", "--locals-json", "new-locals.json",
+          "moonsize", "after.wasm", "--locals", "42", "--baseline", "before.wasm",
+          "--baseline-locals", "17", "--locals-json", "new-locals-diff.json",
         ],
         [
           "moonsize", "app.wasm", "--why-index", "42", "--why-root", "0", "--why-json",
@@ -65,7 +66,7 @@ fn help_topics() -> Array[HelpTopic] {
         "Run independent queries separately. --instructions-json requires --instructions; instruction inspection requires a local body. Imports may have no local body.",
         "--why-root must be an actual model root; element functions are conservative roots. --why-index does not accept --top.",
         "Retained, unreachable functions and reference paths belong to the current model, not execution traces or predictions of recompiled savings.",
-        "--locals preserves declaration groups and actual type bytes, without variable expansion. Declared ordinals exclude parameters; the body remainder is undecoded. Only Top and its own JSON; no strict.",
+        "--locals preserves declaration groups and actual type bytes, without variable expansion. Declared ordinals exclude parameters; the body remainder is undecoded. Only Top, its own JSON and an explicit baseline/--baseline-locals pair; no strict. Full type_hex buckets are encoding facts, not variable identity.",
         "--calls lists direct/table/reference call instructions, including tail calls, but excludes ref.func. Only local bodies; dynamic targets remain unknown. It is not a reverse callers graph or execution trace. Only Top and its own JSON; no strict. Top never truncates JSON or limits decoding cost.",
         "--callers, --why-index and --entrypoints allow --strict. Name search, instructions, duplicates and generics do not. Retained/dead-code flags belong to ordinary analysis.",
         "Identical bodies and generic-instance totals do not prove safe merging or savings. Top limits display, not analysis cost; JSON remains complete.",
@@ -155,6 +156,7 @@ fn help_topics() -> Array[HelpTopic] {
       options: [
         "--baseline <before.wasm>; --diff-functions; --diff-functions-json <new.json>",
         "--instructions <current-index>; --baseline-instructions <baseline-index>; --instructions-json <new.json>",
+        "--locals <current-index>; --baseline-locals <baseline-index>; --locals-json <new.json>",
         "--experiment <new.json|new.html>; --experiment-context <context.json>",
         "Separate inspectors: --diff-data, --diff-imports, --diff-exports, --diff-metadata with their own JSON options",
       ],
@@ -174,6 +176,7 @@ fn help_topics() -> Array[HelpTopic] {
       ],
       limits: [
         "--baseline alone compares file/section totals. Diff modes require baseline; run independent comparison modes separately. --summary-json does not support baseline.",
+        "Locals comparison requires both explicit indices and baseline; raw type_hex grouping is not variable matching. Quantity differences are exact decimal strings; body remainder stays undecoded.",
         "Instruction comparison requires both explicit indices and baseline; it does not automatically match functions. Symbol matches may be ambiguous or missing.",
         "Experiment context is user-declared evidence, not automatically verified business behavior. Encoded differences are not source identity, ABI checks or predicted gzip savings.",
         "Top limits text only; JSON remains complete. Output paths must be new; existing destinations are refused.",

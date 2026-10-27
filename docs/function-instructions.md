@@ -243,3 +243,13 @@ return_call_indirect、call_ref和return_call_ref；index为含导入的完整�
 不等于完整local index。余下编码明确为未解码，因此其坏opcode不妨碍locals
 查询。与instructions完整解码不同；不能组合使用。
 [API、精度约定与字节账本](function-locals.md)。
+
+## 指定双函数的locals比较（0.5.1后源码增量）
+
+`--locals <current-index> --baseline <before.wasm> --baseline-locals <before-index>`
+只对两侧声明各检查一次，不进入普通baseline分析，也不解码remainder。两侧
+索引都须显式指定，包含导入，不与baseline-instructions混用。按完整type_hex
+汇总而非变量匹配，保留零数量组、成员和实际LEB宽度；精确有符号数量差使用
+十进制字符串。Top只限制类型行，完整两侧及JSON不截断。与完整指令构成比较
+是不同入口，不据零统计差证明语义或剩余内容相同。
+[接口、JSON及实测差值账本](function-locals.md#explicit-two-target-comparison-source-addition-after-051)。

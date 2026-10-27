@@ -46,6 +46,8 @@ pub struct Options {
   /// Independent bounded local declaration groups, without instruction decode.
   locals_index : Int?
   locals_json : String?
+  /// Explicit baseline target; requires locals and baseline.
+  baseline_locals_index : Int?
   /// Independent raw-symbol generic-instance size inspection.
   generics : Bool
   generics_json : String?
@@ -140,6 +142,7 @@ pub fn Options::default(path : String) -> Options {
     calls_json: None,
     locals_index: None,
     locals_json: None,
+    baseline_locals_index: None,
     generics: false,
     generics_json: None,
     entrypoints: false,
@@ -391,6 +394,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut calls_json : String? = None
   let mut locals_index : Int? = None
   let mut locals_json : String? = None
+  let mut baseline_locals_index : Int? = None
   let mut generics = false
   let mut generics_json : String? = None
   let mut entrypoints = false
@@ -496,6 +500,21 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         )
       }
       summary_json = Some(args[i + 1])
+      i += 2
+    } else if arg == "--baseline-locals" {
+      if i + 1 >= args.length() {
+        return Err(
+          "moonsize: --baseline-locals needs a function index\n\n" + usage(),
+        )
+      }
+      baseline_locals_index = match parse_path_index(args[i + 1]) {
+        Some(value) => Some(value)
+        None =>
+          return Err(
+            "moonsize: --baseline-locals wants a nonnegative decimal function index\n\n" +
+            usage(),
+          )
+      }
       i += 2
     } else if arg == "--locals" {
       if i + 1 >= args.length() {
@@ -937,6 +956,23 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     Some(path) => path
     None => return Err(usage())
   }
+  if baseline_locals_index is Some(_) &&
+    (locals_index is None || baseline is None) {
+    return Err(
+      "moonsize: --baseline-locals requires --locals and --baseline\n\n" +
+      usage(),
+    )
+  }
+  if locals_index is Some(_) {
+    if baseline is Some(before_path) {
+      if before_path.trim().is_empty() || baseline_locals_index is None {
+        return Err(
+          "moonsize: locals comparison requires a nonempty --baseline and explicit --baseline-locals\n\n" +
+          usage(),
+        )
+      }
+    }
+  }
   if locals_json is Some(_) && locals_index is None {
     return Err("moonsize: --locals-json requires --locals\n\n" + usage())
   }
@@ -964,7 +1000,6 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       call_graph is Some(_) ||
       html is Some(_) ||
       summary_json is Some(_) ||
-      baseline is Some(_) ||
       max_size is Some(_) ||
       diff_functions_json is Some(_) ||
       experiment is Some(_) ||
@@ -999,7 +1034,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_md is Some(_) ||
       data_json is Some(_) {
       return Err(
-        "moonsize: --locals is an independent mode; only --top and --locals-json may be combined with it\n\n" +
+        "moonsize: --locals is an independent mode; only --top, --locals-json and the explicit baseline/--baseline-locals pair may be combined with it\n\n" +
         usage(),
       )
     }
@@ -1981,6 +2016,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     calls_json,
     locals_index,
     locals_json,
+    baseline_locals_index,
     generics,
     generics_json,
     entrypoints,

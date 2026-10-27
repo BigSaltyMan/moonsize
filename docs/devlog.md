@@ -1045,3 +1045,42 @@ new-locals.json及results.json。必要接口、格式、native检查及一次re
 通过；本地未跑旧套件/旧CLI/演示/探针、V8矩阵、性能或浏览器/PDF。
 CI保留旧流程，仅追加四调用脚本，推送后核对最终SHA。版本仍0.5.1，不改
 依赖、不发布Mooncakes；原图片、AGENTS、规划和构建证据不纳入提交。
+
+## 52. 指定双函数的locals基线比较
+
+基于95804c9新增compare_function_locals，每侧inspect_function_locals一次，
+成功后才计算差值，完整保留双侧报告。不解码remainder、不解析签名/参数、不
+构图或进入普通baseline。错误BaselineLocalsError/CurrentLocalsError保留index
+和原FunctionLocalsError；不扩展WasmError。按完整type_hex字典序分桶，零
+quantity按组出现计presence，重复/相邻组累计且保留原成员序号，不猜变量身份。
+quantity非最短LEB只影响字节，类型不语义归一化。累计数量差先比较UInt64
+再以较大减较小，零固定0、负数加-，不用Int/Double/未检查Int64转换。
+
+新增比较报告/错误、总差值、类型行、双侧类型汇总和类型差值六类型，及比较/
+错误描述/两渲染四函数。Options仅增baseline_locals_index=None；旧签名不变。
+私有function_locals_json_value复用原构造，单侧格式不变，比较嵌套对象而非
+字符串/重新parse。主程序每侧read一次，配对模式直接分发；新JSON复用原
+locals_json槽和统一preflight/独占写入，不重复加入清单。参数必须显式双index
+和非空baseline，其他旧限制保留；七主题及原示例总数不变。
+
+本地仅3个新组合单测通过，覆盖导入/目标不同、原始类型/零quantity/重复组、
+宽度与数量分离、u32最大及超过u32正负数量、超过JS精确范围的UInt64差值、
+自比、侧别错误、Top/完整JSON/原单侧格式与参数。真实CLI恰好4次，退出
+0/0/0/1；47 B baseline index1（1导入），SHA为
+5d2abe955f9a21dea5b26e667d341560463fd5da35810b018e0ad23a2618b370；
+60 B current index3（2导入），SHA为
+f86329af541446cde8e544970a34f9ce516b11e633a8b2025f29cf68d4376bfa。
+组数4->5、声明3->6，数量差字符串3。类型按6370/638000/7e/7f排序，成员
+baseline[3]/[]/[2]/[0,1]、current[3]/[4]/[]/[0,1,2]；quantity差0/3/-1/1，
+组编码差0/4/-2/3，合计3与5。6370两侧数量为零仍shared_encoding，未丢组。
+entry13->19、prefix2->1、body11->18、locals10->16，差值6=-1+7、7=6+1、
+6=count-width1+quantity-width2+type-width3，组编码5=locals6-count-width1。
+整文件差13不归因于目标entry差6。Node固定Buffer/BigInt核对完整范围/宽度/
+摘要/数量；Top1 JSON完整，自比各差值零且成员保留，双侧输入与哨兵未变。
+
+证据_build/function-locals-diff-verification/run-fY4OkX/含双输入、四日志、argv/
+状态、new-diff.json、self-diff.json和results.json。[用法与迁移](function-locals.md)。
+必要接口、格式、native检查和一次release构建通过；本地未跑旧套件/CLI/演示/
+探针、V8矩阵、性能或浏览器/PDF。CI保留旧流程，仅追加四调用脚本，推送后
+核对最终SHA。版本仍0.5.1，不改依赖、不发布Mooncakes；原图片、AGENTS、
+规划和构建证据未纳入提交。
