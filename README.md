@@ -136,6 +136,22 @@ default to zero and a common limit clips each side. Missing bytes are null (--),
 not 00. No resource matching or insertion/deletion alignment. --diff-data instead
 groups complete payload content. See [byte contract, API and actual ranges](docs/data-preview.md).
 
+## File range ownership
+
+Source addition after public 0.5.1: `--locate-range OFFSET LENGTH` explains a
+half-open file range, without opcode decoding. Empty ranges through EOF are
+valid; out-of-bounds requests fail rather than clip. Each row separates full
+`owner_range` from actual `overlap_range`; all intersections continuously cover
+the query. Only Top and own JSON combine; Top never truncates JSON or coverage.
+
+```sh
+moonsize app.wasm --locate-range 40 32 --top 20
+moonsize app.wasm --locate-range 40 32 --locate-range-json new-range.json --top 1
+```
+
+Coordinates above are placeholders, not measurements. No runtime addresses or
+optimization benefit is inferred. [Actual 13-part ledger, API and errors](docs/file-range.md).
+
 ## File offset ownership
 
 A source addition after public 0.5.1; not republished. Example 31 is a placeholder:
@@ -524,6 +540,8 @@ identify candidates for investigation.
   --experiment <path>  write measured before/after results; requires --baseline
                        refuses to overwrite an existing path
   --experiment-context <path>  attach declared build settings and validation
+  --locate-range <offset> <length> decompose file ownership; EOF empty allowed
+  --locate-range-json <path> complete ownership JSON to a new target
   --locate-offset <n> locate one decimal file byte; EOF fails; no Top
   --locate-decode opt-in whole target-body decoding to locals/instruction; requires query
   --locate-offset-json <path> location to a new .json; requires query

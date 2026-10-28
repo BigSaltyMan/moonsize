@@ -88,14 +88,13 @@ fn file_offset_within(inner : DataByteRange, outer : DataByteRange) -> Bool {
 ///|
 /// Require a contiguous partition, including zero-sized bodies/payloads. Never
 /// fall back to section_payload on a gap, overlap or missing detailed owner.
-fn file_offset_partition(
+fn file_offset_validate_partition(
   parts : Array[FileOffsetPart],
   parent : DataByteRange,
   file_size : Int,
   query : Int,
-) -> Result[FileOffsetPart, FileOffsetError] {
+) -> Result[Unit, FileOffsetError] {
   let mut cursor = parent.offset
-  let mut selected : FileOffsetPart? = None
   for part in parts {
     let range = match
       file_offset_range(file_size, part.range.offset, part.range.size, query) {
@@ -107,35 +106,43 @@ fn file_offset_partition(
         InconsistentFileOffsetRange(query, "non-contiguous detailed ranges"),
       )
     }
-    if file_offset_contains(range, query) {
-      if selected is Some(_) {
-        return Err(
-          InconsistentFileOffsetRange(query, "multiple detailed owners"),
-        )
-      }
-      selected = Some(part)
-    }
-    cursor = range.offset + range.size // checked above, at most file_size
+    cursor = range.offset + range.size
   }
   if cursor - parent.offset != parent.size {
     return Err(
       InconsistentFileOffsetRange(query, "detailed ranges do not cover payload"),
     )
   }
-  match selected {
-    Some(value) => Ok(value)
-    None => Err(InconsistentFileOffsetRange(query, "no detailed owner"))
-  }
+  Ok(())
 }
 
 ///|
-fn file_offset_code(
+fn file_offset_partition(
+  parts : Array[FileOffsetPart],
+  parent : DataByteRange,
+  file_size : Int,
+  query : Int,
+) -> Result[FileOffsetPart, FileOffsetError] {
+  match file_offset_validate_partition(parts, parent, file_size, query) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  for part in parts {
+    if file_offset_contains(part.range, query) {
+      return Ok(part)
+    }
+  }
+  Err(InconsistentFileOffsetRange(query, "no detailed owner"))
+}
+
+///|
+fn file_offset_code_parts(
   data : Bytes,
   parsed : WasmModule,
   section : Section,
   payload : DataByteRange,
   query : Int,
-) -> Result[FileOffsetPart, FileOffsetError] {
+) -> Result[Array[FileOffsetPart], FileOffsetError] {
   let stats = match collect_function_stats(parsed, data) {
     Ok(value) => value
     Err(error) => return Err(FileOffsetInputError(error))
@@ -193,16 +200,19 @@ fn file_offset_code(
       data_segment: None,
     })
   }
-  file_offset_partition(parts, payload, data.length(), query)
+  match file_offset_validate_partition(parts, payload, data.length(), query) {
+    Err(error) => Err(error)
+    Ok(_) => Ok(parts)
+  }
 }
 
 ///|
-fn file_offset_data(
+fn file_offset_data_parts(
   data : Bytes,
   section : Section,
   payload : DataByteRange,
   query : Int,
-) -> Result[FileOffsetPart, FileOffsetError] {
+) -> Result[Array[FileOffsetPart], FileOffsetError] {
   let details = match inspect_data_segments(data) {
     Ok(value) => value
     Err(error) => return Err(FileOffsetInputError(error))
@@ -273,7 +283,10 @@ fn file_offset_data(
       data_segment: Some(entry),
     })
   }
-  file_offset_partition(parts, payload, data.length(), query)
+  match file_offset_validate_partition(parts, payload, data.length(), query) {
+    Err(error) => Err(error)
+    Ok(_) => Ok(parts)
+  }
 }
 
 ///|
@@ -401,4 +414,34 @@ pub fn locate_file_offset(
     },
     scope: "Original-file byte ownership with half-open ranges; physical section ordinals include custom sections, function indices include imports, data indices retain original order. Only selected code/data payloads are refined. Function bodies include locals and instructions without opcode decoding; other payload interiors remain undivided. data_count is the data entry count field, not the separate datacount section. Offset expressions are not evaluated. Base module checks scan all section/code ranges; selected code adds local stats and best-effort names, selected data reuses a full data inspection and its module checks. SHA-256 covers the whole input. This is not full Wasm semantic validation, a runtime address, source attribution or deletion benefit.",
   })
+}
+
+///|
+fn file_offset_code(
+  data : Bytes,
+  parsed : WasmModule,
+  section : Section,
+  payload : DataByteRange,
+  query : Int,
+) -> Result[FileOffsetPart, FileOffsetError] {
+  let parts = match
+    file_offset_code_parts(data, parsed, section, payload, query) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  file_offset_partition(parts, payload, data.length(), query)
+}
+
+///|
+fn file_offset_data(
+  data : Bytes,
+  section : Section,
+  payload : DataByteRange,
+  query : Int,
+) -> Result[FileOffsetPart, FileOffsetError] {
+  let parts = match file_offset_data_parts(data, section, payload, query) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  file_offset_partition(parts, payload, data.length(), query)
 }

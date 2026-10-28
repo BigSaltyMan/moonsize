@@ -267,3 +267,13 @@ documented 49 B fixture, pattern00ff00 hits file23/25 in entry0 and file31 in
 entry1; the custom copy at file15 is excluded. No memory-address or automatic
 encoding interpretation is involved. The two independent modes cannot combine.
 [Hex rules and original-byte checks](data-search.md#compact-hexadecimal-byte-search-source-addition-after-051).
+
+## File range ownership (source increment after 0.5.1)
+
+Use `--locate-range OFFSET LENGTH` to decompose multiple structural owners in
+one query; it intersects the same private code/data partitions, never queries
+one byte at a time. `owner_range` is the whole region and `overlap_range` is the
+covered subset. Empty through EOF is valid, unlike single-byte EOF. No clipping
+or opcode decoding; Top limits text only. Own new JSON is `moonsize-file-range`
+schema1. Single-byte classification/errors/JSON remain unchanged.
+[Contract, API migration and actual ledger](file-range.md).

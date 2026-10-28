@@ -295,3 +295,12 @@ old/full tests, old CLI/demos, probes, V8 matrix, performance/large-module or
 browser/PDF runs. CI keeps previous checks and adds only the four-call script;
 verify final exact-SHA success after push. Version remains 0.5.1, no publication.
 Pictures, AGENTS/plans and build evidence are excluded from the feature commit.
+
+## Explain a file range instead of previewing bytes
+
+`--locate-range OFFSET LENGTH` uses original-file coordinates, not payload
+coordinates, and reports structural intersections rather than byte contents.
+It can cross sections/functions/entries, never clips at EOF, and accepts an EOF
+empty range. Top affects text rows only. Preview retains its bounded/clipped
+payload semantics. Run these independent modes separately; neither locates a
+runtime memory address. [Range ownership and API](file-range.md).

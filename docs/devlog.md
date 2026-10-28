@@ -1315,3 +1315,29 @@ V8矩阵、性能/大模块或浏览器/PDF。CI只追加本四调用，保留�
 帮助data/baseline同步，七主题/21示例不变。版本0.5.1/依赖未改，不发布Mooncakes；
 原图片、AGENTS、规划和构建证据不提交。only不代表语义增删，窗口相同不证明
 资源/文件同一，长度差不是文件差或优化/重编译/gzip收益。
+
+## 59. 文件范围归属分解（0.5.1后源码增量）
+
+新增locate_file_range及错误描述、文本/JSON渲染，3个公开类型/4个函数，Options仅
+增加locate_range_offset/length/json。旧单点入口/错误/分类/JSON不变；最小提取
+私有code/data分区构造与连续性验证，共享结构归属，不逐字节定位。仅相交payload
+细分一次；基础模块检查仍扫描段/code，选中data复用完整inspector及模块检查。
+owner/overlap区别、正长度交集、物理段/完整函数索引/原数据序号全部保留。
+空范围含EOF通过但仍检查结构，越界不裁剪，未知body opcode不解码。新JSON沿用
+统一preflight和原生独占创建，非事务边界不变。独立模式仅Top/自身JSON，退出0/1/2。
+
+三个新组合单测首轮3/3通过；类型检查时修正测试中SectionId不可直接Eq，改用id。
+四次真实CLI为0/0/0/1，输入78B SHA256
+ac242670646f17a6eaa1ff9660f4ae7185cf276a64890847e387f890a29cee63。
+查询offset45,length32=[45,77)，13parts覆盖32=
+2+2+2+2+1+2+3+2+4+3+6+2+1。第一owner[44,47)/overlap[45,47)，末行
+owner[76,78)/overlap[76,77)。code物理段7，完整函数1/2；data物理段8，条目0/1；
+空payload位于74不产生伪行。Top1仅首行但JSON全13，EOF[78,78)零parts/covered0。
+Buffer固定边界/字节/上下文/SHA/连续性/相对偏移检查通过，输入/旧哨兵不变。
+证据_build/file-range-verification/run-sHvIy3/，接口审查review-d8q3wkv1/。
+
+本地仅新3项单测、4次CLI、必要info/fmt/nativecheck/一次release构建；未跑旧/全量
+套件、旧CLI/演示、探针、V8矩阵、性能/大模块或浏览器/PDF。CI保留原完整流程，
+仅追加本四调用；最终SHA状态单独核对。七帮助主题/21示例不变，版本0.5.1不变，
+不改依赖、不发布Mooncakes。原图片、AGENTS、规划、构建证据不提交。
+详见[file-range](file-range.md)；不推断内存地址、完整语义、源码身份或删除收益。

@@ -340,3 +340,13 @@ moonsize-data-preview-diff/schema1，完整双侧对象、位置和计数，缺�
 语义增删；diff-data仍按完整payload内容分桶。报告包含实际窗口内容。
 data/baseline主题已同步，只替换一个data示例，仍七主题/21示例；公开0.5.1后
 源码增量，未重新发布。[实际窗口与迁移](data-preview.md#explicit-two-window-comparison-source-addition-after-051)。
+
+## overview主题：文件范围归属分解
+
+公开0.5.1后的源码增量，七主题/21示例保持不变。
+`--locate-range OFFSET LENGTH`接受严格非负十进制文件offset+length，不是双端点。
+`--locate-range-json new.json`需主查询，仅允许Top和自身JSON。空范围含EOF合法，
+越界不裁剪。owner/overlap分别是原完整区域和实际交集；Top不截断覆盖或JSON。
+不与locate-offset/decode、preview、baseline、strict、预算、HTML等组合。
+成功0、越界/结构/归属/输出失败1、参数错2；独占创建保护不变。
+不解码opcode，不输出运行时地址或收益。[详细账本与接口](file-range.md)。

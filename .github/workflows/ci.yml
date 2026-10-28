@@ -73,6 +73,8 @@ jobs:
         run: node scripts/test-function-calls.mjs _build/native/release/build/cmd/main/main.exe
       - name: File-offset-decode CLI regressions (four cases)
         run: node scripts/test-file-offset-decode.mjs _build/native/release/build/cmd/main/main.exe
+      - name: File-range CLI regressions (four cases)
+        run: node scripts/test-file-range.mjs _build/native/release/build/cmd/main/main.exe
       - name: File-offset CLI regressions (four cases)
         run: node scripts/test-file-offset.mjs _build/native/release/build/cmd/main/main.exe
       - name: Data-preview CLI regressions (four cases)

@@ -21,6 +21,7 @@ fn help_topics() -> Array[HelpTopic] {
         "--find-opcode <mnemonic>; --find-opcode-json <new.json> (exact decoded locations)",
         "--opcode-stats; --opcode-stats-json <new.json> (independent all-local-body encoding totals)",
         "--top <n>; --compress", "--html <new.html>; --summary-json <new.json>",
+        "--locate-range <offset> <length>; --locate-range-json <new.json> (independent, Top allowed)",
         "--locate-offset <decimal byte offset>; --locate-decode; --locate-offset-json <new.json>",
       ],
       examples: [
@@ -33,6 +34,7 @@ fn help_topics() -> Array[HelpTopic] {
       ],
       limits: [
         "-- ends option parsing; place a dash-prefixed input path after it (for example, moonsize -- --help). A single - is a filename, not stdin. Option value constraints are unchanged; use ./--name when needed.",
+        "--locate-range takes file offset + length, not endpoints; empty including EOF is valid. No clipping. owner_range is the full region, overlap_range is actual coverage. Only Top and own JSON; no opcode decoding or runtime addresses. Top does not truncate coverage or JSON.",
         "--locate-offset is independent, with its own JSON and optional --locate-decode only, no Top. Decimal offsets must identify a real byte; EOF fails. Ranges are half-open. Base code/data interiors are refined only when selected, without opcode decoding. --locate-decode completely decodes only the hit local body to locals/whole-instruction ownership; other regions are not_applicable. Target decode failure is an error, including locals queries. No runtime-address lookup. Example coordinates are placeholders.",
         "--summary-json does not support --baseline, --html or --compress; it exports ordinary analysis.",
         "Copy a mnemonic from --opcode-stats, then run --find-opcode separately and use its function index/file offset with --instructions or --locate-offset --locate-decode. These are separate commands, not an automatic multi-pass query.",

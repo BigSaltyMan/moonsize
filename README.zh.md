@@ -76,6 +76,21 @@ offset各自默认0、共用limit并各自裁剪。缺字节为null（文本--�
 不匹配资源身份或进行插入删除对齐；diff-data仍按完整payload内容分桶。
 [范围规则、API与实测字节](docs/data-preview.md)。
 
+### 文件范围归属分解
+
+公开0.5.1后的源码增量：`--locate-range OFFSET LENGTH`按文件offset+length分解
+半开范围，不解码opcode。空范围包括EOF合法；越界失败、不裁剪。每行分别保留
+完整owner_range和实际overlap_range，全部交集连续覆盖请求。独立模式只允许Top
+和自身JSON；Top不截断完整覆盖账本或JSON。
+
+```sh
+moonsize app.wasm --locate-range 40 32 --top 20
+moonsize app.wasm --locate-range 40 32 --locate-range-json new-range.json --top 1
+```
+
+以上坐标仅示范语法。文件偏移不是内存地址，不推断删除或压缩收益。
+[实测13区域账本、接口及错误](docs/file-range.md)。版本未变，未重新发布Mooncakes。
+
 ### 文件偏移归属查询
 
 公开0.5.1后的源码增量，未重新发布包。示例31为说明值：
@@ -259,6 +274,8 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --top <n>            排名显示多少个函数（默认 10）
+  --locate-range <offset> <length> 文件范围分解，EOF空范围合法
+  --locate-range-json <path> 完整归属写入新的.json
   --locate-offset <n> 十进制文件字节归属，EOF失败，不支持Top
   --locate-decode 可选单函数完整解码，细分locals/整条指令，需查询参数
   --locate-offset-json <path> 定位写入新的.json，需查询参数
