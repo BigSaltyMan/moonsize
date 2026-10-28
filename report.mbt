@@ -534,6 +534,7 @@ pub fn usage() -> String {
   "  --calls <n>          list call instructions in one local function (Top/own JSON only)\n" +
   "  --calls-json <path>  save all call sites to a new .json; requires --calls\n" +
   "  --cycles             query reference-model cyclic components (Top/strict allowed)\n" +
+  "  --cycle-witness      add one deterministic closed model path per component (requires cycles)\n" +
   "  --cycles-json <path.json> save all components to a new .json; implies --cycles\n" +
   "  --callers <n>        list recorded one-hop instruction references to function n\n" +
   "  --callers-json <path> write full callers JSON to a new .json file\n" +

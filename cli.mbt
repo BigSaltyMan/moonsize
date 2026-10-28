@@ -39,6 +39,7 @@ pub struct Options {
   why_json : String?
   /// Independent reference-model SCC query.
   cycles : Bool
+  cycle_witness : Bool
   cycles_json : String?
   /// Independent one-hop incoming instruction-reference query.
   callers_index : Int?
@@ -156,6 +157,7 @@ pub fn Options::default(path : String) -> Options {
     why_root: None,
     why_json: None,
     cycles: false,
+    cycle_witness: false,
     cycles_json: None,
     callers_index: None,
     callers_json: None,
@@ -423,6 +425,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut why_root : Int? = None
   let mut why_json : String? = None
   let mut cycles = false
+  let mut cycle_witness = false
   let mut cycles_json : String? = None
   let mut callers_index : Int? = None
   let mut callers_json : String? = None
@@ -675,6 +678,9 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
       calls_json = Some(args[i + 1])
       i += 2
+    } else if arg == "--cycle-witness" {
+      cycle_witness = true
+      i += 1
     } else if arg == "--cycles" {
       cycles = true
       i += 1
@@ -1135,6 +1141,12 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   if locate_range_json is Some(_) && locate_range_offset is None {
     return Err(
       "moonsize: --locate-range-json requires --locate-range\n\n" + usage(),
+    )
+  }
+  if cycle_witness && !cycles {
+    return Err(
+      "moonsize: --cycle-witness requires --cycles or --cycles-json\n\n" +
+      usage(),
     )
   }
   if cycles {
@@ -2626,6 +2638,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     why_root,
     why_json,
     cycles,
+    cycle_witness,
     cycles_json,
     callers_index,
     callers_json,

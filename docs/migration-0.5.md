@@ -415,3 +415,15 @@ cycles=false and cycles_json=None; exhaustive record construction must supply
 them. The independent JSON is moonsize-function-cycles/schema_version1. Local
 component bytes are not retained size or savings; SCC evidence includes reference
 and indirect candidates. This is not republished. [API and scope](function-cycles.md).
+
+## Source-only closed cycle witnesses after public 0.5.1
+
+Adds FunctionCycleWitness, FunctionCycleWitnessReport, FunctionCycleWitnessError
+and four functions: function_cycle_witnesses, describe_function_cycle_witness_error,
+render_function_cycle_witnesses, render_function_cycle_witnesses_json. Options adds
+only cycle_witness=false. The opt-in modifier requires cycles or cycles-json;
+without it the old API/schema/computation remain unchanged. New JSON is
+moonsize-function-cycle-witnesses/schema1 and nests the original complete cycles
+object through private builders. Errors wrap old cycles errors or component ID,
+optional actual edge offset and reason; old enums are unchanged. No new output
+slot, opcode decoder, byte metric or package version. [Selection and migration](function-cycles.md#optional-closed-evidence-paths-source-addition-after-public-051).

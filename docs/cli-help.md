@@ -359,3 +359,13 @@ JSON和strict可组合。Top不截断已展示成员或完整JSON，strict不完
 成功（含空结果）0、输入/图证据/输出错1、参数错2、strict拒绝3。三类边保留，
 候选循环不等于实际递归；编码字节不是retained或删除收益。
 [完整规则、边证据与迁移](function-cycles.md)。
+
+## functions主题：可选闭合证据路径
+
+`--cycle-witness`必须配cycles或隐含cycles的cycles-json，默认false。每分量从最小
+index选一条闭合模型路径，可能只经过部分成员，不承诺全局最短或实际递归。
+先选根自环（D/R/I、offset），否则按callee/kind/offset选首边，再一次局部迭代BFS
+返回根。Top不截断显示步骤或完整JSON。新格式moonsize-function-cycle-witnesses
+嵌套完整cycles对象；不启用时原格式不变。退出0/1/2/strict3，原目标独占保护不变。
+需实际opcode可单独按offset使用locate-decode，不额外解码。七主题/21示例数量不变。
+公开0.5.1后的源码增量，未重新发布。[详细规则与证据](function-cycles.md#optional-closed-evidence-paths-source-addition-after-public-051)。

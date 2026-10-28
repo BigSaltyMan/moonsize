@@ -1372,3 +1372,36 @@ _build/function-cycles-verification/run-Lxw96w/；接口审查review-w54q02yr/�
 的引入路径章节，本次在那里同步说明，不引用不存在的docs/function-path.md。
 详见[function-cycles](function-cycles.md)。模型循环不证明真实递归；组件字节不是
 retained、完整code大小或重编译/gzip/删除收益；候选边数也不是调用点数。
+
+## 61. 循环分量的闭合证据路径（0.5.1后源码增量）
+
+新增function_cycle_witnesses，只调用function_cycles一次，不重复parse/build/SCC或
+opcode解码。每分量局部Map；起点component_id，根自环按D/R/I和offset优先，
+否则按callee/kind/offset取首边，至多一次迭代BFS返回，head索引队列及完整前驱边
+迭代回溯。逐边核对原internal_edges完整键，节点在分量内，除闭合端点不重复。
+断链/跨分量/非法成员明确失败。3新类型、4函数、Options仅cycle_witness=false。
+旧查询/类型/错误/默认JSON不变，JSON构造提取私有helper不stringify再parse。
+runner输入一次并只选一个入口；strict先于输出预检创建，复用cycles_json独占writer。
+
+3项新组合单测首轮3/3通过，含4成员选10→20→30→10(D99/I50/R60)、更短备选
+10→40→10不抢占固定首边、根自边选D50而非D80/R10/I0、成员子集、原11边保留、
+边序置换、稀疏index1000000/2000000局部Map、空结果和内部错误、坏输入包装、
+分量外诊断、Top/JSON/转义与默认格式。未搬旧SCC测试或构造性能大图。
+
+四次真实CLI返回0/0/3/1；复用128B/132B cycles样本，SHA分别为
+4f874186738dda2f384fc38b841fe59b9c208937fadc96754b4286d9948615c7 /
+82845683c910013b94d2b39ace7a770702d3dae4167d486e67fb54b8adb0503d。
+实际路径2→3→2(reference76/direct87)、1→1(direct69)、6→6(reference100)。
+各nodes长度3/2/2=edges2/1/1+1。witness共4边，原分量边仍3/2/1共6条；
+candidate81、平行self71仍在嵌套完整cycles。原字节40=29+11，分量16/7/6不改，
+不新增路径字节求和。函数7/file108 call_ref诊断保留，strict3不创建strict.json，
+unresolved_count仍0；已有目标拒绝1、哨兵及输入未变。Top1仅一分量但全步骤，
+JSON全部3见证和完整原报告。证据_build/function-cycle-witness-verification/run-vkCpu6/。
+
+接口证据review-xupx2hkm/含当前moon-info及与HEAD源声明的审查；历史生成快照
+OS权限拒绝（提升读取亦拒绝），未改ACL或重建旧版本。旧公共签名逐项一致，
+Options仅一字段；旧JSON字段/类型不变。必要fmt/native检查、一次release构建和
+新脚本通过；本地未跑旧/全量套件、旧CLI/演示、探针、V8矩阵、性能/浏览器/PDF。
+CI仅追加本四调用并保留原流程，核对最终SHA。七主题/21示例不变。路径说明同步
+现有README章节；版本0.5.1及依赖不变，不发布Mooncakes，图片/AGENTS/规划/
+构建证据不提交。代表路径不是全成员巡回、唯一环或真实执行递归。

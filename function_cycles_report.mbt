@@ -44,7 +44,7 @@ pub fn render_function_cycles(
 }
 
 ///|
-pub fn render_function_cycles_json(report : FunctionCyclesReport) -> String {
+fn function_cycles_json_value(report : FunctionCyclesReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-function-cycles"))
   root.set("schema_version", int_json(1))
@@ -88,21 +88,28 @@ pub fn render_function_cycles_json(report : FunctionCyclesReport) -> String {
         row.set("local_encoded_bytes", int_json(c.local_encoded_bytes))
         row.set(
           "internal_edges",
-          Json::array(
-            c.internal_edges.map(fn(edge) {
-              let item : Map[String, Json] = Map([])
-              item.set("caller", int_json(edge.caller))
-              item.set("callee", int_json(edge.callee))
-              item.set("kind", Json::string(path_edge_kind(edge.kind)))
-              item.set("offset", int_json(edge.offset))
-              item.set("candidate", Json::boolean(edge.kind is Indirect))
-              Json::object(item)
-            }),
-          ),
+          Json::array(c.internal_edges.map(cycle_edge_json)),
         )
         Json::object(row)
       }),
     ),
   )
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+fn cycle_edge_json(edge : CallEdge) -> Json {
+  let item : Map[String, Json] = Map([])
+  item.set("caller", int_json(edge.caller))
+  item.set("callee", int_json(edge.callee))
+  item.set("kind", Json::string(path_edge_kind(edge.kind)))
+  item.set("offset", int_json(edge.offset))
+  item.set("candidate", Json::boolean(edge.kind is Indirect))
+  Json::object(item)
+}
+
+///|
+/// Preserve the standalone schema and serialization; witnesses nest this value.
+pub fn render_function_cycles_json(report : FunctionCyclesReport) -> String {
+  function_cycles_json_value(report).stringify(indent=2) + "\n"
 }

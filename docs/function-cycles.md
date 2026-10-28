@@ -172,3 +172,143 @@ ran locally; no old/full suite, old CLI/demos, probes, V8 matrix, performance or
 browser/PDF work. Existing Linux CI keeps its full flow with only this four-call
 script added; exact-SHA CI status is reported separately. Version stays 0.5.1,
 dependencies are unchanged, and no Mooncakes publication is performed.
+
+## Optional closed evidence paths (source addition after public 0.5.1)
+
+```sh
+moonsize app.wasm --cycles --cycle-witness --top 10
+moonsize app.wasm --cycles-json new-witnesses.json --cycle-witness --top 1
+moonsize app.wasm --cycles --cycle-witness --strict
+```
+
+`--cycle-witness` must accompany cycles or cycles-json; alone it is an argument
+error before input is read. Its default is false. The old query, computation
+and `moonsize-function-cycles` output remain available without the modifier.
+It uses the existing cycles_json destination, preflight and native exclusive
+creation; there is no new writer or output path. Success, input/path/output
+failure, parameter failure and strict refusal retain exit codes 0/1/2/3.
+
+For every component, the witness starts and ends at component_id (the minimum
+function index). Selection is fixed:
+
+1. If the start has self-edges, choose direct before reference before indirect,
+   then the lowest file offset.
+2. Otherwise choose the first outgoing edge by callee index, kind priority and
+   file offset, in that order.
+3. From that successor run one iterative BFS inside the component back to the
+   start. Adjacency uses the same ordering; a head-index queue retains full
+   predecessor edges. Iterative reverse reconstruction closes the path.
+
+Only one BFS at most runs per component. The new entry calls function_cycles
+once; it does not repeat parsing/build/SCC, callers queries or opcode decoding.
+Local maps scale with component members/evidence, not the module's maximum
+function index. Invalid membership, crossing edges, absent return paths and
+broken chains fail explicitly; they do not trigger a rebuild or guessed path.
+
+This is one representative closed model path. It may visit a subset of members,
+may use a root self-loop even in a larger component, and is not a full-member
+tour, unique cycle or globally shortest cycle. Reference and indirect candidate
+steps do not establish actual recursion. No new byte sum is attached to a
+witness: the start repeats and some members may be absent. Original component
+counts and byte totals remain authoritative.
+
+Every witness retains component_id, start_index, ordered nodes and original
+CallEdge records, edge_count and three kind counts. The invariants are:
+
+```text
+witnesses.length = cycles.component_count
+edge_count = edges.length >= 1
+nodes.length = edge_count + 1
+nodes.first = nodes.last = start_index = component_id
+edges[i].caller = nodes[i]
+edges[i].callee = nodes[i+1]
+edge_count = direct_edges + reference_edges + indirect_edges
+```
+
+All nodes belong to the component, no interior node repeats, and every complete
+edge key (caller, callee, kind, offset) occurs in original internal_edges. All
+parallel evidence stays in cycles; choosing one does not remove the others.
+Witnesses follow the unchanged component order. Text retains the old summary
+and graph warning, then adds CLOSED MODEL WITNESS with index chains, safe names
+and per-edge kind/file offset. Indirect steps say candidate. Top limits the
+number of shown components, never a shown witness's steps or complete JSON.
+
+The opt-in format is `moonsize-function-cycle-witnesses`, schema_version1. Its
+cycles field is the **complete original JSON object**, not a string or partial
+copy; witnesses and scope are separate fields. The old JSON builder is shared
+privately, without stringify/parse. Complete module diagnostics, graph warning
+and unresolved_count keep their meanings, including gaps outside the path.
+Strict uses nested cycles.graph_complete and refuses before preflight/creation.
+
+To see a step's actual opcode, separately run `--locate-offset OFFSET
+--locate-decode` with its original file offset. This query does not decode or
+infer opcode names and cannot combine with the separate location mode.
+
+### Witness API and migration
+
+```moonbit
+function_cycle_witnesses(Bytes)
+  -> Result[FunctionCycleWitnessReport, FunctionCycleWitnessError]
+describe_function_cycle_witness_error(FunctionCycleWitnessError) -> String
+render_function_cycle_witnesses(FunctionCycleWitnessReport, Int) -> String
+render_function_cycle_witnesses_json(FunctionCycleWitnessReport) -> String
+```
+
+New types: FunctionCycleWitness, FunctionCycleWitnessReport and
+FunctionCycleWitnessError. The error wraps the original cycles error or records
+a component ID, optional actual edge offset and reason. When no edge exists,
+the offset is null/absent rather than a fictional position. Options adds only
+cycle_witness=false; full external record construction needs that field. Old
+cycles/error types, public signatures and JSON fields are unchanged. This is
+source-only after public0.5.1; no package publication is performed.
+
+### Actual witness evidence
+
+The unchanged 128 B cycles fixture has SHA-256
+4f874186738dda2f384fc38b841fe59b9c208937fadc96754b4286d9948615c7.
+The chosen paths are:
+
+| Component | Nodes | Original kind and file offset | Witness / component edges |
+| ---: | --- | --- | ---: |
+| 2 | 2 → 3 → 2 | reference76, direct87 | 2 / 3 |
+| 1 | 1 → 1 | direct69 | 1 / 2 |
+| 6 | 6 → 6 | reference100 | 1 / 1 |
+
+Three witnesses correspond to three components. Their node lengths are3/2/2
+and edge lengths2/1/1: each has one repeated endpoint and no repeated interior.
+Total witness edges4 do not replace the original six internal edges. The
+parallel candidate at file81 and second direct self-edge at71 remain in the
+nested cycles report. Original local byte accounting is still40=29+11 with
+component bytes16/7/6; no witness-byte metric is introduced.
+
+New unit evidence also uses a four-member component with root10: the selected
+path10→20→30→10 uses direct99, indirect50 and reference60, excluding member40.
+The alternative10→40→10 is shorter, but the documented successor rule chooses20.
+Adding root self-edges selects direct50 over direct80/reference10/indirect0 and
+returns10→10 while the original four members and eleven edges remain intact.
+A two-node sparse-index case uses1000000/2000000 without a max-index array;
+this is a functional check, not a performance measurement.
+
+The unchanged 132 B gap fixture has SHA-256
+82845683c910013b94d2b39ace7a770702d3dae4167d486e67fb54b8adb0503d.
+Function7/file108 call_ref remains a module diagnostic outside the components.
+Strict returns3 and strict.json is not created; unresolved_count remains0.
+Existing sentinel refusal returns1 with original bytes unchanged.
+
+Three new combined tests passed first run3/3. Exactly four real CLI invocations
+returned0/0/3/1: Top1 witness text, complete witness JSON with Top1, strict refusal,
+and existing-target refusal. Original edges, kinds, offsets, hashes and closure
+were checked against fixed fixture bytes. Input and existing output stayed
+unchanged. Evidence is in
+_build/function-cycle-witness-verification/run-vkCpu6/ (four logs, argv/status,
+results.json, new-witnesses.json, both inputs and sentinel). Interface evidence
+is in review-xupx2hkm/: current moon-info output and HEAD public source-declaration
+audit. The historical generated interface snapshot was OS-permission denied,
+including an escalated read; no ACLs or old build/test were changed to read it.
+
+Only the three new tests, four CLI calls, necessary info/format/native checks
+and one release build ran locally. No old suites/scripts, probes, V8 matrix,
+performance or browser/PDF work. CI retains its existing flow and adds only this
+four-call script. Final exact-SHA CI is reported separately. Version0.5.1 and
+dependencies remain unchanged; pictures, AGENTS, plans and build evidence stay
+outside the commit.

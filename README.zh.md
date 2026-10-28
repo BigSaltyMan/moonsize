@@ -78,6 +78,18 @@ offset各自默认0、共用limit并各自裁剪。缺字节为null（文本--�
 
 ### 引用图循环分量查询
 
+配合`--cycle-witness`可为每个分量展示一条从最小index出发再返回的闭合模型路径。
+可能只经过部分成员，不承诺全局最短或真实递归；完整原边与诊断仍保留，Top不
+截断已展示路径步骤或JSON。不启用修饰时原查询和格式不变。
+
+```sh
+moonsize app.wasm --cycles --cycle-witness --top 10
+moonsize app.wasm --cycles-json new-witnesses.json --cycle-witness --top 1
+```
+
+[选择规则、真实路径和迁移](docs/function-cycles.md#optional-closed-evidence-paths-source-addition-after-public-051)。
+
+
 公开0.5.1后的源码增量：查询当前引用图的强连通分量，包含不可达函数和自环。
 直接调用、取引用和间接候选边分别保留；模型循环不证明运行时递归，分量编码
 字节不是retained或删除收益。独立模式只允许Top、自身JSON和strict。
@@ -289,6 +301,7 @@ moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--st
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
   --cycles             引用图循环分量，允许Top/strict
+  --cycle-witness      每个分量一条闭合模型路径，需cycles或cycles-json
   --cycles-json <path> 完整分量写入新的.json，隐含cycles
   --top <n>            排名显示多少个函数（默认 10）
   --locate-range <offset> <length> 文件范围分解，EOF空范围合法
@@ -729,6 +742,11 @@ moonsize app.wasm --generics-json new-generics.json
 总量不是可删除字节。[实际符号、闭合账本与范围](docs/generic-instances.md)。
 
 ## 查询函数引入路径
+
+`--cycles --cycle-witness`则在每个分量内部选一条代表闭合路径，不从模型根出发，
+不保证访问全部成员。需实际opcode时，可按边offset单独运行locate-decode。
+[闭合见证规则](docs/function-cycles.md#optional-closed-evidence-paths-source-addition-after-public-051)。
+
 
 需要查看全模块互相可达的分量时，单独运行`--cycles`；它保留不可达函数和模型
 自环，不按根过滤。取引用/候选循环不证明真实递归，分量编码量也不是retained。

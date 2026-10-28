@@ -138,6 +138,20 @@ groups complete payload content. See [byte contract, API and actual ranges](docs
 
 ## Reference cycle components
 
+Add `--cycle-witness` to cycles or cycles-json for one deterministic closed
+model path per component, starting at its minimum index. It may show only some
+members and does not promise a globally shortest cycle or actual recursion.
+Original edges and diagnostics remain complete; Top never truncates shown
+steps or JSON. Without the modifier the old query/format is unchanged.
+
+```sh
+moonsize app.wasm --cycles --cycle-witness --top 10
+moonsize app.wasm --cycles-json new-witnesses.json --cycle-witness --top 1
+```
+
+[Selection, actual paths and migration](docs/function-cycles.md#optional-closed-evidence-paths-source-addition-after-public-051).
+
+
 Source addition after public 0.5.1: query strongly connected components in the
 current reference graph, including unreachable functions and self-loops.
 Direct calls, references taken and indirect candidates remain distinct.
@@ -612,6 +626,7 @@ identify candidates for investigation.
   --calls <n> list call instructions in one local body; Top/own JSON only
   --calls-json <path> save all call sites to a new .json; requires calls
   --cycles             query reference-model cyclic components; Top/strict allowed
+  --cycle-witness      add one closed model path per component; requires cycles
   --cycles-json <path> complete cycles JSON to a new .json; implies cycles
   --callers <n>        list recorded one-hop incoming instruction sources
   --callers-json <path> write full callers JSON to a new .json file; requires --callers
@@ -926,6 +941,12 @@ Family keys apply within one artifact; totals do not predict removable bytes.
 See [the observed encoding, size ledger and limits](docs/generic-instances.md).
 
 ## Explaining a function's reference path
+
+`--cycles --cycle-witness` instead closes a representative path inside each
+component, without selecting roots or claiming all members are visited. It is
+a separate query; inspect real opcodes manually with the returned offsets.
+[Closed witness rules](docs/function-cycles.md#optional-closed-evidence-paths-source-addition-after-public-051).
+
 
 For whole-module mutually reachable groups instead of one root path, run
 `--cycles` separately. It includes unreachable functions and model self-loops;
