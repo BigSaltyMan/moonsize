@@ -323,3 +323,20 @@ hex/text分别使用moonsize-data-hex-search / moonsize-data-search格式，旧�
 不猜UTF-16或自动转换编码，不输出payload上下文。Top限文本行，不限制完整JSON/
 扫描成本或结果内存。模式本身写入报告。公开0.5.1后源码增量，尚未发布。
 [实际三命中与API迁移](data-search.md#compact-hexadecimal-byte-search-source-addition-after-051)。
+
+
+## data/baseline主题：指定双数据段窗口比较
+
+新增--baseline-data-preview与--baseline-data-offset；比较必须有baseline和两侧
+显式data-preview index。两侧offset各自默认0、不互相复制，共用data-limit默认256，
+范围1..4096，各自min(limit, remaining)。末尾可空，不跨段/补零。缺配对、非法
+数字/limit、从属offset或Top及其他模式组合，输入前拒绝2。成功含空窗口0，
+输入/任一侧目标或范围/输出错1；原help/未知选项/--规则保持。
+
+复用data-preview-json，单侧moonsize-data-preview不变；比较使用
+moonsize-data-preview-diff/schema1，完整双侧对象、位置和计数，缺字节及其文件
+偏移为null，不与00混淆。每行最多16位置、最多256行，完整输出、不支持Top。
+相同窗口不证明整个payload/资源/文件相同，不自动做插入删除对齐，only不是
+语义增删；diff-data仍按完整payload内容分桶。报告包含实际窗口内容。
+data/baseline主题已同步，只替换一个data示例，仍七主题/21示例；公开0.5.1后
+源码增量，未重新发布。[实际窗口与迁移](data-preview.md#explicit-two-window-comparison-source-addition-after-051)。

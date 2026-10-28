@@ -261,3 +261,16 @@ or old tests/scripts, demos/probes, V8 matrix, performance/large-module benchmar
 or browser/PDF runs. CI retains prior checks and adds only this four-call script;
 confirm the final exact SHA after push. Pictures, AGENTS/plans and _build evidence
 are not included in the feature commit.
+
+
+## Compare two explicitly located windows
+
+After locating each side separately with UTF-8/hex search, choose each entry and
+payload_offset explicitly using --data-preview plus --baseline-data-preview and
+--baseline. --data-offset and --baseline-data-offset independently default to0;
+one --data-limit clips both sides. The reused --data-preview-json has a separate
+moonsize-data-preview-diff format when paired. No Top, resource identity matching
+or automatic insert/delete alignment. Missing bytes are null, not zero-filled;
+reports contain actual selected window content. Unlike --diff-data complete
+content groups, this is equal-relative-position comparison of finite windows.
+[Parameters, count equations and actual ranges](data-preview.md#explicit-two-window-comparison-source-addition-after-051).

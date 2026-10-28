@@ -542,6 +542,8 @@ pub fn usage() -> String {
   "  --data-preview <index> preview one data payload window (no --top)\n" +
   "  --data-offset <n>   payload byte offset (default 0; requires --data-preview)\n" +
   "  --data-limit <n>    max bytes 1..4096 (default 256; requires --data-preview)\n" +
+  "  --baseline-data-preview <index> explicit baseline entry; needs --baseline and --data-preview\n" +
+  "  --baseline-data-offset <n> independent baseline payload offset (default 0; comparison only)\n" +
   "  --data-preview-json <path.json> save the returned bounded window to a new .json\n" +
   "  --find-data <query> search literal UTF-8 bytes in each data payload (overlaps retained)\n" +
   "  --find-data-hex <hex> exact payload bytes from compact hex pairs; excludes --find-data\n" +

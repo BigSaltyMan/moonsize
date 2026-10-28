@@ -96,6 +96,8 @@ pub struct Options {
   find_data : String?
   find_data_json : String?
   /// Independent bounded data payload window; None preserves absent modifiers.
+  baseline_data_preview_index : Int?
+  baseline_data_offset : Int?
   data_preview_index : Int?
   data_offset : Int?
   data_limit : Int?
@@ -186,6 +188,8 @@ pub fn Options::default(path : String) -> Options {
     find_data_hex: None,
     find_data: None,
     find_data_json: None,
+    baseline_data_preview_index: None,
+    baseline_data_offset: None,
     data_preview_index: None,
     data_offset: None,
     data_limit: None,
@@ -446,6 +450,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut find_data_hex : String? = None
   let mut find_data : String? = None
   let mut find_data_json : String? = None
+  let mut baseline_data_preview_index : Int? = None
+  let mut baseline_data_offset : Int? = None
   let mut data_preview_index : Int? = None
   let mut data_offset : Int? = None
   let mut data_limit : Int? = None
@@ -682,7 +688,9 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
       locate_offset_json = Some(args[i + 1])
       i += 2
-    } else if arg == "--data-preview" ||
+    } else if arg == "--baseline-data-preview" ||
+      arg == "--baseline-data-offset" ||
+      arg == "--data-preview" ||
       arg == "--data-offset" ||
       arg == "--data-limit" {
       if i + 1 >= args.length() {
@@ -703,7 +711,11 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
             usage(),
           )
       }
-      if arg == "--data-preview" {
+      if arg == "--baseline-data-preview" {
+        baseline_data_preview_index = Some(value)
+      } else if arg == "--baseline-data-offset" {
+        baseline_data_offset = Some(value)
+      } else if arg == "--data-preview" {
         data_preview_index = Some(value)
       } else if arg == "--data-offset" {
         data_offset = Some(value)
@@ -1528,6 +1540,26 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       )
     }
   }
+  if baseline_data_preview_index is Some(_) || baseline_data_offset is Some(_) {
+    if baseline_data_preview_index is None ||
+      data_preview_index is None ||
+      baseline is None {
+      return Err(
+        "moonsize: baseline data preview options require --baseline, --data-preview and --baseline-data-preview\n\n" +
+        usage(),
+      )
+    }
+  }
+  if data_preview_index is Some(_) && baseline is Some(path) {
+    if path.trim().is_empty() ||
+      path.has_prefix("--") ||
+      baseline_data_preview_index is None {
+      return Err(
+        "moonsize: data preview comparison requires a nonempty --baseline and explicit --baseline-data-preview\n\n" +
+        usage(),
+      )
+    }
+  }
   if data_preview_index is None &&
     (
       data_offset is Some(_) ||
@@ -1561,7 +1593,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       call_graph is Some(_) ||
       html is Some(_) ||
       summary_json is Some(_) ||
-      baseline is Some(_) ||
+      (baseline is Some(_) && baseline_data_preview_index is None) ||
       max_size is Some(_) ||
       diff_functions_json is Some(_) ||
       experiment is Some(_) ||
@@ -1590,7 +1622,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_md is Some(_) ||
       data_json is Some(_) {
       return Err(
-        "moonsize: --data-preview is an independent mode; only --data-offset, --data-limit and --data-preview-json may be combined with it (no --top)\n\n" +
+        "moonsize: --data-preview is an independent mode; only --data-offset, --data-limit, --data-preview-json and an explicit baseline preview pair may be combined with it (no --top)\n\n" +
         usage(),
       )
     }
@@ -2401,6 +2433,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     find_data_hex,
     find_data,
     find_data_json,
+    baseline_data_preview_index,
+    baseline_data_offset,
     data_preview_index,
     data_offset,
     data_limit,

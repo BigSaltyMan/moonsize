@@ -119,6 +119,9 @@ Coordinates below are illustrative; use your own search result:
 moonsize app.wasm --find-data "assets/logo"
 moonsize app.wasm --data-preview 1 --data-offset 8 --data-limit 64
 moonsize app.wasm --data-preview 1 --data-preview-json new-preview.json
+moonsize after.wasm --data-preview 2 --data-offset 8 --data-limit 32 \
+  --baseline before.wasm --baseline-data-preview 1 --baseline-data-offset 4 \
+  --data-preview-json new-window-diff.json
 ```
 
 Preview uses the original entry index and payload byte offsets. Default offset
@@ -127,7 +130,11 @@ permits an empty end window, without crossing entries or padding data. Text
 shows hex plus printable ASCII (other bytes become dots); JSON contains the
 complete returned window, not a full payload export. Both expose actual content.
 No encoding or memory address is inferred. This independent mode rejects Top
-and other analysis/report modes. See [byte contract, API and actual ranges](docs/data-preview.md).
+and other analysis/report modes. An explicit baseline preview pair compares
+equal window-relative positions: both indices are required; offsets independently
+default to zero and a common limit clips each side. Missing bytes are null (--),
+not 00. No resource matching or insertion/deletion alignment. --diff-data instead
+groups complete payload content. See [byte contract, API and actual ranges](docs/data-preview.md).
 
 ## File offset ownership
 
@@ -523,7 +530,9 @@ identify candidates for investigation.
   --data-preview <index> bounded payload bytes (no Top); original entry index
   --data-offset <n> payload byte offset, default 0; requires --data-preview
   --data-limit <n> 1..4096 bytes, default 256; requires --data-preview
-  --data-preview-json <path> returned window to a new .json; requires --data-preview
+  --baseline-data-preview <index> explicit baseline entry, requires baseline/current preview
+  --baseline-data-offset <n> independent baseline payload offset, default 0; comparison only
+  --data-preview-json <path> returned window or explicit comparison to a new .json
   --find-data <query> exact UTF-8 byte search within data payloads, including overlaps
   --find-data-hex <hex> exact payload bytes from compact hex pairs; excludes --find-data
   --find-data-json <path> save every hit to a new .json; requires either query

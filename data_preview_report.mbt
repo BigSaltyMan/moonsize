@@ -81,7 +81,7 @@ pub fn render_data_preview(report : DataPreviewReport) -> String {
 
 ///|
 /// Contains the selected entry only, plus the entire returned bounded window.
-pub fn render_data_preview_json(report : DataPreviewReport) -> String {
+fn data_preview_json_value(report : DataPreviewReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-data-preview"))
   root.set("schema_version", int_json(1))
@@ -123,5 +123,10 @@ pub fn render_data_preview_json(report : DataPreviewReport) -> String {
   root.set("remaining_bytes", int_json(report.remaining_bytes))
   root.set("hex", Json::string(data_preview_hex(report.bytes[:])))
   root.set("scope", Json::string(report.scope))
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+pub fn render_data_preview_json(report : DataPreviewReport) -> String {
+  data_preview_json_value(report).stringify(indent=2) + "\n"
 }

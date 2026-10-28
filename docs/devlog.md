@@ -1273,3 +1273,45 @@ results.json及new-hex-search.json。必要接口/格式/native检查及一次re
 CI保留原流程只加本四调用，推送后核对最终SHA。0.5.1与依赖未变，不发布
 Mooncakes；图片、AGENTS、规划和构建证据不提交。重叠长度不相加为独占量，
 文件偏移非内存地址，不推断编码/源码身份、使用情况或删除/gzip收益。
+
+
+## 58. 指定双数据段窗口比较
+
+基于ee8fabe新增compare_data_previews，每侧preview_data_segment一次，双方成功
+再比较最多4096个相对位置。原始DataPreviewReport双侧完整保留，新增位置记录
+字节0..255/null和实际文件offset/null，same_byte/different_byte/baseline_only/
+current_only及计数，返回长度差current-baseline；不补零、不对齐、不匹配资源。
+不先检索、diff-data或普通分析，不复制完整payload；仍检查每侧完整数据编码。
+3新类型/4函数，错误包装保留baseline/current和原DataPreviewError；旧枚举/签名
+不变。Options只增baseline_data_preview_index/baseline_data_offset默认None。
+
+CLI要求baseline和两侧显式index，两个offset独立默认0，共同limit默认256/最大4096，
+各自裁到末尾、末尾空窗口成功；从属offset必须完整配对。仍无Top/strict/预算/
+其他查询组合，参数先于读取返回2，输入/目标/范围/输出1，成功0。每侧文件
+读取一次/预览一次；复用data-preview-json、统一预检和原生独占创建，不新增
+writer或目标清单项。文本16位置/行、最多256行，--缺字节与00实际零区分，
+./^/B/C不是最小编辑操作。新JSON moonsize-data-preview-diff/schema1，复用私有
+Json对象helper完整嵌入原单侧对象，无字符串反解析，旧schema不变。
+
+本地3项新组合单测首轮全过，覆盖不同index/offset、byte/null/原位置和全部等式、
+交换only方向、空/单空/自比、共同limit裁剪、最大4096和剩余4、边界/侧别错误、
+末行/完整JSON/旧schema、插入不对齐及参数/默认/Top/--/help。真实CLI恰好4次
+退出0/0/0/1。baseline32B、current41B的SHA分别为
+48d940e4f66d58046d735cadd3b97b2d0f516419a972d6a53f8d4a91f9eb7123 /
+f3f59c92d50e97788b806f8ee3edd95fd4a3ea3152783676602b2afdf558976b。
+选择baseline(index1,offset1)payload[21,27)→window[22,27)5B，current(index2,offset3)
+payload[20,41)→window[23,41)18B，limit32、remaining都0。
+计数18=same4+different1+B0+C13，5=4+1+0、18=4+1+13，delta+13=13-0。
+原账本6=1+5+0、21=3+18+0。前窗口00ff414200，后窗口
+007f414200101112131415161718191a1b1c；位置0真零，1不同，2..4相同，5..17前侧
+null。交换后B13/delta-13，插入ABC→XABC不对齐而diff3/C1。
+
+CLI文本两行16+2位置，JSON全18位置和双侧完整对象；自比same18、其他0、delta0。
+Buffer固定切片逐位置验证值/offset/SHA/hex/标记/全部等式，输入和哨兵未变，
+拒绝无成功提示。证据_build/data-preview-diff-verification/run-zhNxIt/含双输入、
+四日志、argv/状态、results.json/new-window-diff.json/self.json。必要接口/格式/
+native检查和一次release构建通过；本地未跑旧/全量套件、旧CLI/演示、探针、
+V8矩阵、性能/大模块或浏览器/PDF。CI只追加本四调用，保留原流程并核对最终SHA。
+帮助data/baseline同步，七主题/21示例不变。版本0.5.1/依赖未改，不发布Mooncakes；
+原图片、AGENTS、规划和构建证据不提交。only不代表语义增删，窗口相同不证明
+资源/文件同一，长度差不是文件差或优化/重编译/gzip收益。

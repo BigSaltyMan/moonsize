@@ -89,6 +89,7 @@ fn help_topics() -> Array[HelpTopic] {
       summary: "Inspect data entries, group identical payloads, or compare content groups.",
       options: [
         "--data-preview <index>; --data-offset <n>; --data-limit <1..4096>; --data-preview-json <new.json>",
+        "--baseline-data-preview <before-index>; --baseline-data-offset <n> with --baseline (explicit window pair)",
         "--find-data <UTF-8 literal> OR --find-data-hex <compact hex>; --find-data-json <new.json>",
         "--data-segments; --data-json <new.json>; --top <n>", "--data-duplicates; --data-duplicates-json <new.json>",
         "--diff-data with --baseline; --html with current-input details",
@@ -96,8 +97,9 @@ fn help_topics() -> Array[HelpTopic] {
       examples: [
         ["moonsize", "app.wasm", "--find-data-hex", "00ff00", "--top", "20"],
         [
-          "moonsize", "app.wasm", "--data-preview", "1", "--data-offset", "8", "--data-limit",
-          "64",
+          "moonsize", "after.wasm", "--data-preview", "2", "--data-offset", "8",
+          "--data-limit", "32", "--baseline", "before.wasm", "--baseline-data-preview",
+          "1", "--baseline-data-offset", "4",
         ],
         [
           "moonsize", "after.wasm", "--baseline", "before.wasm", "--diff-data", "--data-json",
@@ -106,7 +108,8 @@ fn help_topics() -> Array[HelpTopic] {
       ],
       limits: [
         "File offsets are not memory addresses; payload bytes differ from full entry encodings. Offset expressions are recorded, not evaluated.",
-        "--data-preview is independent with its own modifiers only, no Top. Default limit 256, maximum 4096 bytes; clips at payload end and permits an empty end window. Hex and printable ASCII show actual window content; other bytes become dots. No encoding or runtime-address inference.",
+        "--data-preview permits only its modifiers and an explicit --baseline/--baseline-data-preview pair, no Top. Default limit 256, maximum 4096 bytes; clips at payload end and permits an empty end window. Hex and printable ASCII show actual window content; other bytes become dots. No encoding or runtime-address inference.",
+        "Window comparison uses independent offsets defaulting to zero and one common limit (default256, max4096 per side). It compares equal relative positions, no resource matching or edit alignment. Missing bytes/offsets are null (-- in text), actual zeros remain00. Equal windows do not prove equal payloads/files; reports include actual window contents. only labels are byte presence, not semantic additions/removals.",
         "--find-data-hex accepts only nonempty even-length ASCII hex pairs (case equivalent, reports lowercase), no spaces/0x/separators/escapes/wildcards. It is mutually exclusive with UTF-8 --find-data; shared --find-data-json uses moonsize-data-hex-search for hex and moonsize-data-search for text. Patterns are saved, without payload context or automatic encoding detection. Invalid hex fails before input I/O.",
         "--find-data and --find-data-hex are independent: only Top and their own JSON. Spaces and overlaps matter; no cross-entry matches. Query text is saved in reports. A hit is not proof of a string or used resource; compiler encodings may differ. Complete hits use memory proportional to occurrence count.",
         "Repeated payloads do not prove they can be safely merged. Content groups do not establish cross-build entry identity or deletion savings.",
@@ -167,6 +170,7 @@ fn help_topics() -> Array[HelpTopic] {
       summary: "Compare files, function/package encodings, or explicitly selected functions.",
       options: [
         "--baseline <before.wasm>; --diff-functions; --diff-functions-json <new.json>",
+        "--data-preview <current-index>; --baseline-data-preview <baseline-index>; --baseline-data-offset <n>; shared --data-limit (explicit window pair with baseline)",
         "--diff-opcodes; --opcode-stats-json <new.json> (all local bodies, requires baseline)",
         "--instructions <current-index>; --baseline-instructions <baseline-index>; --instructions-json <new.json>",
         "--locals <current-index>; --baseline-locals <baseline-index>; --locals-json <new.json>",
@@ -190,6 +194,7 @@ fn help_topics() -> Array[HelpTopic] {
       limits: [
         "--baseline alone compares file/section totals. Diff modes require baseline; run independent comparison modes separately. --summary-json does not support baseline.",
         "--diff-opcodes compares complete module aggregates without function matching or instruction alignment. Code overhead is separate. Zero statistical deltas do not prove equal bytes or semantics; per-mnemonic function_count deltas are not additive function totals.",
+        "Data preview comparison requires both explicit entry indices and baseline; offsets independently default to zero. No Top, resource identity matching, padding or edit alignment. --diff-data groups complete payload content instead of positional windows.",
         "Locals comparison requires both explicit indices and baseline; raw type_hex grouping is not variable matching. Quantity differences are exact decimal strings; body remainder stays undecoded.",
         "Instruction comparison requires both explicit indices and baseline; it does not automatically match functions. Symbol matches may be ambiguous or missing.",
         "Experiment context is user-declared evidence, not automatically verified business behavior. Encoded differences are not source identity, ABI checks or predicted gzip savings.",

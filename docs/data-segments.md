@@ -347,3 +347,14 @@ hex和可打印ASCII，其他字节为点，不解码UTF-8；JSON只保存选中
 仍检查全部数据段编码、仍计算整文件SHA，不承诺只解析目标条目。文件字节
 偏移不是内存地址，不求值表达式或推断源码归属/活跃性/删除收益。
 [参数、API迁移及真实字节等式](data-preview.md)。
+
+
+## 显式选择双侧有限窗口比较
+
+--data-preview配--baseline/--baseline-data-preview，按两个选定窗口相对位置比字节；
+两侧index均显式，offset各自默认0、共用1..4096的data-limit（默认256），各自
+裁剪，不跨段/补零。--baseline-data-offset只允许完整配对。仍拒绝Top/strict/
+搜索等其他模式，复用data-preview-json与独占输出。缺项为null或文本--，实际
+零字节为00，四类计数闭合；only不表示语义增删，不匹配资源或自动对齐插入。
+diff-data按完整payload内容分桶，本入口只比较显式有限窗口，不做条目身份匹配。
+[实际5/18字节窗口、JSON与API迁移](data-preview.md#explicit-two-window-comparison-source-addition-after-051)。
