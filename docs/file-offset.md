@@ -257,3 +257,13 @@ the independent modes. No raw-byte opcode inference or runtime address lookup
 is performed. On the documented 168 B fixture, query i32.const returns file
 49/52/77/80; 49 is the complete instruction at function1 ordinal2, not its
 following immediate. [Query contract and original bytes](opcode-search.md).
+
+
+## Locate a hexadecimal data-search hit
+
+--find-data-hex returns the same DataSearchMatch coordinates as UTF-8 search.
+Use file_offset in a separate --locate-offset call, not payload_offset. On the
+documented 49 B fixture, pattern00ff00 hits file23/25 in entry0 and file31 in
+entry1; the custom copy at file15 is excluded. No memory-address or automatic
+encoding interpretation is involved. The two independent modes cannot combine.
+[Hex rules and original-byte checks](data-search.md#compact-hexadecimal-byte-search-source-addition-after-051).

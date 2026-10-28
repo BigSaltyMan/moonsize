@@ -143,3 +143,14 @@ has an illustrative coordinate. A zero-sized end window contains no byte, so
 its start may be a later region or EOF rather than that payload's owner.
 [File ownership and nine region kinds](file-offset.md). Run separately, with no
 Top or strict; this does not evaluate offset expressions or runtime addresses.
+
+
+## Find known binary bytes before previewing
+
+Use --find-data-hex 00ff00 for compact known hex bytes such as NUL/ff that a UTF-8
+query cannot express directly. It is mutually exclusive with --find-data and
+shares --find-data-json, with a separate moonsize-data-hex-search format. Copy
+the result's entry index and payload_offset to a separate --data-preview call;
+file_offset is absolute and must not be supplied as a payload-relative offset.
+No encoding detection/conversion, cross-entry match or payload context is added
+to search. [Syntax, overlap example and API](data-search.md#compact-hexadecimal-byte-search-source-addition-after-051).

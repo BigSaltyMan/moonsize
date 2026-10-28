@@ -91,7 +91,8 @@ pub struct Options {
   /// Independent literal search of available local raw/display names.
   find_functions : String?
   find_functions_json : String?
-  /// Independent UTF-8 literal byte search within data payloads.
+  /// Independent data payload search: UTF-8 text or compact hex bytes.
+  find_data_hex : String?
   find_data : String?
   find_data_json : String?
   /// Independent bounded data payload window; None preserves absent modifiers.
@@ -182,6 +183,7 @@ pub fn Options::default(path : String) -> Options {
     baseline_instructions_index: None,
     find_functions: None,
     find_functions_json: None,
+    find_data_hex: None,
     find_data: None,
     find_data_json: None,
     data_preview_index: None,
@@ -441,6 +443,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut baseline_instructions_index : Int? = None
   let mut find_functions : String? = None
   let mut find_functions_json : String? = None
+  let mut find_data_hex : String? = None
   let mut find_data : String? = None
   let mut find_data_json : String? = None
   let mut data_preview_index : Int? = None
@@ -720,6 +723,15 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         )
       }
       data_preview_json = Some(args[i + 1])
+      i += 2
+    } else if arg == "--find-data-hex" {
+      if i + 1 >= args.length() || !data_hex_search_valid(args[i + 1]) {
+        return Err(
+          "moonsize: --find-data-hex needs compact nonempty even-length ASCII hex\n\n" +
+          usage(),
+        )
+      }
+      find_data_hex = Some(args[i + 1])
       i += 2
     } else if arg == "--find-data" {
       if i + 1 >= args.length() ||
@@ -1113,7 +1125,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       baseline_instructions_index is Some(_) ||
       find_functions is Some(_) ||
       find_functions_json is Some(_) ||
-      find_data is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
       find_data_json is Some(_) ||
       data_preview_index is Some(_) ||
       data_offset is Some(_) ||
@@ -1187,7 +1199,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       baseline_instructions_index is Some(_) ||
       find_functions is Some(_) ||
       find_functions_json is Some(_) ||
-      find_data is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
       find_data_json is Some(_) ||
       data_preview_index is Some(_) ||
       data_offset is Some(_) ||
@@ -1264,7 +1276,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       baseline_instructions_index is Some(_) ||
       find_functions is Some(_) ||
       find_functions_json is Some(_) ||
-      find_data is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
       find_data_json is Some(_) ||
       data_preview_index is Some(_) ||
       data_offset is Some(_) ||
@@ -1352,7 +1364,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       baseline_instructions_index is Some(_) ||
       find_functions is Some(_) ||
       find_functions_json is Some(_) ||
-      find_data is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
       find_data_json is Some(_) ||
       data_preview_index is Some(_) ||
       data_offset is Some(_) ||
@@ -1420,7 +1432,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       baseline_instructions_index is Some(_) ||
       find_functions is Some(_) ||
       find_functions_json is Some(_) ||
-      find_data is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
       find_data_json is Some(_) ||
       data_preview_index is Some(_) ||
       data_offset is Some(_) ||
@@ -1495,7 +1507,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       baseline_instructions_index is Some(_) ||
       find_functions is Some(_) ||
       find_functions_json is Some(_) ||
-      find_data is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
       find_data_json is Some(_) ||
       data_preview_index is Some(_) ||
       data_offset is Some(_) ||
@@ -1571,7 +1583,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       baseline_instructions_index is Some(_) ||
       find_functions is Some(_) ||
       find_functions_json is Some(_) ||
-      find_data is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
       find_data_json is Some(_) ||
       budget is Some(_) ||
       budget_json is Some(_) ||
@@ -1588,10 +1600,19 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       )
     }
   }
-  if find_data_json is Some(_) && find_data is None {
-    return Err("moonsize: --find-data-json requires --find-data\n\n" + usage())
+  if find_data is Some(_) && find_data_hex is Some(_) {
+    return Err(
+      "moonsize: --find-data and --find-data-hex are mutually exclusive\n\n" +
+      usage(),
+    )
   }
-  if find_data is Some(_) {
+  if find_data_json is Some(_) && find_data is None && find_data_hex is None {
+    return Err(
+      "moonsize: --find-data-json requires --find-data or --find-data-hex\n\n" +
+      usage(),
+    )
+  }
+  if find_data is Some(_) || find_data_hex is Some(_) {
     if retained ||
       dead_code ||
       compress ||
@@ -2377,6 +2398,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     baseline_instructions_index,
     find_functions,
     find_functions_json,
+    find_data_hex,
     find_data,
     find_data_json,
     data_preview_index,

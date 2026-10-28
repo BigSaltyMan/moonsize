@@ -544,7 +544,8 @@ pub fn usage() -> String {
   "  --data-limit <n>    max bytes 1..4096 (default 256; requires --data-preview)\n" +
   "  --data-preview-json <path.json> save the returned bounded window to a new .json\n" +
   "  --find-data <query> search literal UTF-8 bytes in each data payload (overlaps retained)\n" +
-  "  --find-data-json <path.json> save all hits to a new .json (requires --find-data)\n" +
+  "  --find-data-hex <hex> exact payload bytes from compact hex pairs; excludes --find-data\n" +
+  "  --find-data-json <path.json> save all hits to a new .json (requires --find-data OR --find-data-hex)\n" +
   "  --find-functions <query>  search available local raw/display names (literal, case-sensitive)\n" +
   "  --find-functions-json <path.json>  save all matches (requires --find-functions)\n" +
   "  --instructions <n>  inspect one local function encoding (Top/own JSON, optional explicit comparison)\n" +

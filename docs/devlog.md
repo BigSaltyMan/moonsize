@@ -1236,3 +1236,40 @@ results.json和new-matches.json。必要接口/格式/native检查与一次relea
 CI保留原流程，仅加本四调用脚本，推送后核对最终SHA。0.5.1/依赖未变，不发布
 Mooncakes；原图片/AGENTS/规划/构建证据不提交。不推断操作数值/源码/运行频率/
 完整语义或优化收益；无匹配不证明模块其他区域不存在该指令。
+
+
+## 57. 数据段十六进制字节检索
+
+基于b5750ef新增search_data_segments_hex，先用CLI/库共用的私有ASCII语法检查，
+拒绝空/奇数位/空格/前缀/转义/通配符及非ASCII，再直接解码成字节并规范为小写。
+不经UTF-8转换，不先查询文字再改结果；每次inspect_data_segments一次，模式与
+前缀表各一次。原KMP循环最小提取到私有字节helper，逐段重置、保留重叠，
+不复制完整payload或候选切片。UTF-8接口/空格/原格式保持；无图或函数解码。
+
+新增DataHexSearchReport/DataHexSearchError及查询/描述/两渲染四函数，复用
+DataSearchMatch。只增Options.find_data_hex=None，不扩展旧错误枚举；query互斥，
+共用find_data_json目标，不增writer或清单重复项，仍预检/独占创建。联合模式检查
+覆盖hex，不能因find_data=None绕过；参数先于读取失败2，输入/输出错1，成功0。
+新format moonsize-data-hex-search/schema1含小写query_hex、字节query_size、完整
+匹配及嵌套原数据报告；旧UTF-8 format不改。文本Top仅位置行，JSON全量，
+不输出payload上下文。帮助保持七主题/21示例；无自动编码识别、HTML/比较/预算。
+
+3个新增组合测试通过：首轮2过，1项fixture中00总数误写6，逐payload核对为7后
+仅重跑--index0通过1/1。未修改匹配实现来迎合预期。覆盖00/ff/重叠、多段、空
+payload、跨段/custom反例、6161与UTF-8 aa事实一致、语法先于坏输入、空态/截断、
+Top/JSON/null和query/模式/--/帮助规则。49B输入SHA为
+aad74aba2dc0b955b32e162e95b3cd6f47e539fe69435770655902676bc73caa。
+data[18,49)总31=payload16+metadata12+header/count3；6段payload为00ff00ff00、
+6100ff0062、00ff、00、空、616161。00FF00报告为00ff00/3B，命中(entry,payload,file)
+为(0,0,23)/(0,2,25)/(1,1,31)，size均3，分区6=matched2+unmatched4。custom的
+file15副本不计，段2/3不拼接。hex6161与文字aa均命中file46/47。
+
+真实CLI恰好4次退出0/0/0/1，uppercase文本Top1一行、lowercase JSON完整3命中/
+6条目、deadbeef无匹配不保存、已有哨兵拒绝无成功提示。固定Buffer核对位置/
+字节/长度/SHA及账本，输入和哨兵未变。证据
+_build/data-hex-search-verification/run-tz9ztu/含input、四日志、argv/状态、
+results.json及new-hex-search.json。必要接口/格式/native检查及一次release构建
+通过；本地未跑旧/全量套件、旧CLI/演示、探针、V8矩阵、性能/大模块或浏览器/PDF。
+CI保留原流程只加本四调用，推送后核对最终SHA。0.5.1与依赖未变，不发布
+Mooncakes；图片、AGENTS、规划和构建证据不提交。重叠长度不相加为独占量，
+文件偏移非内存地址，不推断编码/源码身份、使用情况或删除/gzip收益。

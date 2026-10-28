@@ -327,6 +327,10 @@ fn main {
     run_data_preview(options, index)
     return
   }
+  if options.find_data_hex is Some(query) {
+    run_data_hex_search(options, query)
+    return
+  }
   if options.find_data is Some(query) {
     run_data_search(options, query)
     return

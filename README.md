@@ -92,6 +92,7 @@ This source addition follows public 0.5.1; it has not been republished.
 ```sh
 moonsize app.wasm --find-data "assets/logo" --top 20
 moonsize app.wasm --find-data "assets/logo" --find-data-json new-search.json
+moonsize app.wasm --find-data-hex 00FF00 --find-data-json new-hex-search.json --top 1
 ```
 
 Search exact UTF-8 bytes inside each data payload, retaining overlapping hits.
@@ -101,6 +102,12 @@ addresses. Query text is included in reports. Top limits text only; JSON and
 counts remain complete, and memory grows with occurrences. Hits do not prove
 standalone strings, resource use or deletion savings; compiler encodings can
 differ. This independent mode accepts only Top and its own new JSON target.
+Alternatively, --find-data-hex accepts compact, nonempty, even-length ASCII hex
+pairs; case is equivalent and reports use lowercase. It matches actual bytes,
+including NUL and invalid UTF-8, without text conversion or encoding detection.
+The two queries are mutually exclusive. Shared --find-data-json exports
+moonsize-data-search for text and moonsize-data-hex-search for hex. No spaces,
+0x prefixes, separators or wildcards.
 See [matching rules, API and verified positions](docs/data-search.md).
 
 ## Bounded data payload preview
@@ -518,7 +525,8 @@ identify candidates for investigation.
   --data-limit <n> 1..4096 bytes, default 256; requires --data-preview
   --data-preview-json <path> returned window to a new .json; requires --data-preview
   --find-data <query> exact UTF-8 byte search within data payloads, including overlaps
-  --find-data-json <path> save every hit to a new .json; requires --find-data
+  --find-data-hex <hex> exact payload bytes from compact hex pairs; excludes --find-data
+  --find-data-json <path> save every hit to a new .json; requires either query
   --find-functions <query> case-sensitive literal search of local raw/display names
   --find-functions-json <path> save all matches to a new .json; requires a query
   --diff-functions-json <path> save full function/package comparison; implies diff-functions and requires baseline

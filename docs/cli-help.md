@@ -309,3 +309,17 @@ Top只限opcode表，不截断双侧摘要或完整JSON，不是资源限制。�
 行数，不是函数组数/资源上限，完整JSON不截断，命中多时结果仍可能很大。
 原统计/比较入口和格式不变。公开0.5.1后源码增量，尚未发布。
 [匹配规则、API与实际四位置](opcode-search.md)。
+
+
+## data主题：十六进制payload字节检索
+
+新增`--find-data-hex <hex>`，与UTF-8 --find-data二选一，复用--find-data-json。
+仅接受非空偶数位ASCII 0-9/a-f/A-F，不trim，不接受空格/冒号/0x/转义/?/通配符；
+大小写等价，报告小写。原UTF-8单空格仍合法。JSON必须有恰好一种query，
+hex/text分别使用moonsize-data-hex-search / moonsize-data-search格式，旧格式不改。
+输入前参数错误2、输入/输出错1、成功含无匹配0。仍独立，只允许Top和自身新JSON；
+未知选项、--与首参数帮助不变。data主题替换一个示例，保持七主题/21示例。
+共用KMP事实逻辑、各自构造一次模式，支持NUL/ff与重叠、不跨段、不误搜元数据；
+不猜UTF-16或自动转换编码，不输出payload上下文。Top限文本行，不限制完整JSON/
+扫描成本或结果内存。模式本身写入报告。公开0.5.1后源码增量，尚未发布。
+[实际三命中与API迁移](data-search.md#compact-hexadecimal-byte-search-source-addition-after-051)。

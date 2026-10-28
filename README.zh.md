@@ -38,6 +38,7 @@ moon build --target native --release
 ```sh
 moonsize app.wasm --find-data "assets/logo" --top 20
 moonsize app.wasm --find-data "assets/logo" --find-data-json new-search.json
+moonsize app.wasm --find-data-hex 00FF00 --find-data-json new-hex-search.json --top 1
 ```
 
 将查询文字编码为UTF-8，在每个data payload内大小写敏感地按字节检索；保留
@@ -45,6 +46,10 @@ moonsize app.wasm --find-data "assets/logo" --find-data-json new-search.json
 字节偏移，不是内存地址。查询文字本身会写入报告。Top只限制文本行，JSON和
 计数完整，内存需求随命中数增长。命中不证明独立字符串、资源用途或删除收益；
 编译器也可能采用其他编码。独立模式只接受Top和自身的新JSON目标。
+也可用`--find-data-hex`查询紧凑成对ASCII hex，支持NUL和无效UTF-8；大小写
+等价，报告规范为小写，不经过文字转换或自动识别编码。不接受空格、0x、
+分隔符或通配符。两种query互斥，共用`--find-data-json`，文字与hex分别输出
+moonsize-data-search和moonsize-data-hex-search格式。
 [匹配规则、API及实测位置](docs/data-search.md)。
 
 ### 数据段有限字节预览
@@ -256,7 +261,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --data-limit <n> 最多1..4096字节，默认256，需data-preview
   --data-preview-json <path> 完整返回窗口写入新的.json，需data-preview
   --find-data <query> data payload内UTF-8字面字节检索，保留重叠命中
-  --find-data-json <path> 全部命中写入新的.json，需显式query
+  --find-data-hex <hex> 紧凑成对hex字节检索，与--find-data互斥
+  --find-data-json <path> 全部命中写入新的.json，需显式提供一种query
   --find-functions <query> 本地raw/display名称的大小写敏感字面检索
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline

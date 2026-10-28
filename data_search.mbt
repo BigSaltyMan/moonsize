@@ -55,22 +55,13 @@ fn data_search_prefix(query : Bytes) -> Array[Int] {
 }
 
 ///|
-/// One structural inspection and query encoding. Linear in query bytes,
-/// payload bytes and occurrences; retains every hit, including overlaps.
-/// Payload bytes are neither copied nor decoded as text. No function decoding
-/// or graph analysis is performed beyond the inspector's module checks.
-pub fn search_data_segments(
+/// needle is nonempty and report belongs to data. One prefix table per search;
+/// each payload resets state, overlaps retain the longest proper suffix.
+fn data_search_matches(
   data : Bytes,
-  query : String,
-) -> Result[DataSearchReport, DataSearchError] {
-  if query.is_empty() {
-    return Err(EmptyDataSearchQuery)
-  }
-  let needle = @utf8.encode(query)
-  let report = match inspect_data_segments(data) {
-    Ok(value) => value
-    Err(error) => return Err(DataSearchInputError(error))
-  }
+  report : DataSegmentsReport,
+  needle : Bytes,
+) -> (Array[DataSearchMatch], Int) {
   let prefix = data_search_prefix(needle)
   let matches : Array[DataSearchMatch] = []
   let mut matched_segment_count = 0
@@ -102,6 +93,29 @@ pub fn search_data_segments(
       matched_segment_count += 1
     }
   }
+  (matches, matched_segment_count)
+}
+
+///|
+/// One structural inspection and query encoding. Linear in query bytes,
+/// payload bytes and occurrences; retains every hit, including overlaps.
+/// Payload bytes are neither copied nor decoded as text. No function decoding
+/// or graph analysis is performed beyond the inspector's module checks.
+pub fn search_data_segments(
+  data : Bytes,
+  query : String,
+) -> Result[DataSearchReport, DataSearchError] {
+  if query.is_empty() {
+    return Err(EmptyDataSearchQuery)
+  }
+  let needle = @utf8.encode(query)
+  let report = match inspect_data_segments(data) {
+    Ok(value) => value
+    Err(error) => return Err(DataSearchInputError(error))
+  }
+  let (matches, matched_segment_count) = data_search_matches(
+    data, report, needle,
+  )
   Ok({
     file_size: data.length(),
     sha256: experiment_sha256(data),
