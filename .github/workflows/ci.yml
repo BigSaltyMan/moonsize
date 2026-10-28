@@ -53,6 +53,8 @@ jobs:
         run: node scripts/test-imports-diff.mjs _build/native/release/build/cmd/main/main.exe
       - name: Imports CLI regressions (four cases)
         run: node scripts/test-imports.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Module-opcode-diff CLI regressions (four cases)
+        run: node scripts/test-module-opcode-diff.mjs _build/native/release/build/cmd/main/main.exe
       - name: Module-opcode CLI regressions (four cases)
         run: node scripts/test-module-opcodes.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-local-accesses CLI regressions (four cases)

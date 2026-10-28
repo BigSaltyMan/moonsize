@@ -151,6 +151,7 @@ Source addition after public 0.5.1; not republished:
 ```sh
 moonsize app.wasm --opcode-stats --top 20
 moonsize app.wasm --opcode-stats-json new-opcodes.json --top 1
+moonsize after.wasm --baseline before.wasm --diff-opcodes --top 20
 ```
 
 Decode every local body once and aggregate mnemonic counts, complete instruction
@@ -160,8 +161,12 @@ function total. Imports have no synthetic body; initializer expressions are
 excluded. One bad body fails the whole query, naming its full index. The result
 keeps only opcode groups and compact function summaries, without instruction
 lists or a matrix. Top limits text only, not all-body decoding cost or JSON.
-This standalone mode accepts Top and own new JSON only, without strict, baseline,
-HTML or budgets. Static statistics are not runtime hotspots or savings.
+Single-input statistics accept Top and own new JSON. For two complete modules,
+`--diff-opcodes` requires baseline and reuses `--opcode-stats-json` for a complete
+comparison. It separates instruction deltas from code header/count/prefix/locals
+overhead, without matching functions. Zero statistical deltas do not prove equal
+bytes or semantics. Neither mode accepts strict, HTML or budgets. Static
+statistics are not runtime hotspots or savings.
 [Code byte ledger, API and real output](docs/module-opcodes.md).
 
 ## Local access instruction encodings
@@ -523,7 +528,8 @@ identify candidates for investigation.
   --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
   --generics-json <path> write full groups to a new .json file; implies --generics
-  --opcode-stats aggregate all local function instruction encodings; Top/own JSON only
+  --opcode-stats aggregate all local function instruction encodings; Top/own JSON
+  --diff-opcodes compare both module aggregates; requires --baseline
   --opcode-stats-json <path> full opcode/function summaries to a new .json; implies mode
   --local-accesses <n> inspect local.get/set/tee encodings; Top/own JSON only
   --local-accesses-json <path> save full accesses/groups to a new .json; requires query

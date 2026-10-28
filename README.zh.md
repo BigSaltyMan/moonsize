@@ -91,14 +91,18 @@ location，默认格式不变。仍有结构/名称检查和整文件SHA成本�
 ```sh
 moonsize app.wasm --opcode-stats --top 20
 moonsize app.wasm --opcode-stats-json new-opcodes.json --top 1
+moonsize after.wasm --baseline before.wasm --diff-opcodes --top 20
 ```
 
 全部本地body各解码一次，汇总助记符次数、完整编码字节及不同函数数。字节包括
 subopcode和立即数，function_count在每函数内去重，不能跨组求和当函数总数。
 不按可达性过滤、不混入初始化表达式，导入不伪造body；任一坏函数导致整份
 失败并指出完整index。结果只保留分组与函数摘要，没有逐指令表或矩阵。
-Top只限制文本，不限制全部body解码成本或完整JSON。独立模式仅Top和自身新
-JSON，无strict、baseline、HTML或预算组合；静态次数不代表运行热点或收益。
+Top只限制文本，不限制全部body解码成本或完整JSON。单侧仅Top和自身新JSON；
+全模块比较使用`--diff-opcodes --baseline before.wasm`，复用`--opcode-stats-json`
+保存完整双侧结果，分开核算指令与段头/count/前缀/locals差值，不匹配函数。
+零统计差不证明字节或语义相同；两种模式均拒绝strict、HTML和预算组合。
+静态次数不代表运行热点或收益。
 [code账本、API及实测结果](docs/module-opcodes.md)。
 
 ### 单函数local访问编码清单
@@ -240,7 +244,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline
   --summary-json <path> 普通Analysis全量导出到新的.json，Top不截断
-  --opcode-stats 全部本地函数指令编码统计，仅Top和自身JSON
+  --opcode-stats 全部本地函数指令编码统计，Top和自身JSON
+  --diff-opcodes 双侧全模块汇总比较，必须提供--baseline
   --opcode-stats-json <path> 全量opcode分组/函数摘要写入新.json，隐含模式
   --local-accesses <n> 目标body的local.get/set/tee编码清单，仅Top和自身JSON
   --local-accesses-json <path> 全量访问/分组写入新的.json，需主查询

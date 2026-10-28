@@ -269,8 +269,8 @@ preview、baseline、strict、预算、HTML等在读取前拒绝2。输入/目�
 ## overview/functions主题：全模块opcode统计
 
 新增`--opcode-stats`及隐含启用模式的`--opcode-stats-json <new.json>`。独立模式
-仅输入、这两个选项及Top，baseline、strict、预算、HTML、单函数查询等在读取
-前拒绝2。成功含空态0，输入/任一body/输出错误1；坏body不部分成功、不建JSON。
+单侧仅输入、这两个选项及Top；baseline只在--diff-opcodes比较时允许。
+strict、预算、HTML、单函数查询等在读取前拒绝2。成功含空态0，输入/任一body/输出错误1；坏body不部分成功、不建JSON。
 只统计code中本地函数，全部各解码一次，不混入初始化表达式。完整字节包括
 subopcode和立即数；function_count每函数内去重，跨组求和不等于函数总数。
 结果没有全模块逐指令清单或矩阵。Top只限opcode文本表，JSON含全部函数摘要，
@@ -278,3 +278,20 @@ subopcode和立即数；function_count每函数内去重，跨组求和不等于
 overview与functions均补入口/范围，替换一个overview示例；七主题和原示例总数
 不变。缺失名称和范围在JSON为null，显示fallback单独保留，原帮助/--规则不变。
 公开0.5.1后源码增量，未发布。[使用及迁移](module-opcodes.md)。
+
+
+## overview/baseline主题：全模块opcode基线比较
+
+新增`--diff-opcodes`，要求非空baseline并隐含opcode-stats，允许显式再给stats。
+复用`--opcode-stats-json new-diff.json`，比较格式为moonsize-module-opcodes-diff，
+schema1；单侧格式不变。只允许这组模式、baseline、Top和自身JSON，无strict。
+示例：`moonsize after.wasm --baseline before.wasm --diff-opcodes --top 20`。
+参数错误2；任一侧输入/body/写入错误1；成功含自比0。没有diff的单侧stats仍
+拒绝baseline。首参数帮助、--与选项值约束不变。
+
+每侧各检查一次，按mnemonic union比较次数、完整编码字节及涉及不同函数数，
+不匹配函数、不对齐指令。完整保留file/code/non-code和code开销拆分；non-code
+不等于元数据。零统计差不证明字节或语义相同，function_count差不能跨组求和。
+Top只限opcode表，不截断双侧摘要或完整JSON，不是资源限制。保持七主题和21条
+示例，只替换一个baseline示例；仍属公开0.5.1后源码增量，尚未重新发布。
+[用法、实际账本和API迁移](module-opcodes.md#compare-complete-modules-source-addition-after-051)。

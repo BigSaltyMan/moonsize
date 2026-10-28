@@ -34,7 +34,7 @@ fn help_topics() -> Array[HelpTopic] {
         "-- ends option parsing; place a dash-prefixed input path after it (for example, moonsize -- --help). A single - is a filename, not stdin. Option value constraints are unchanged; use ./--name when needed.",
         "--locate-offset is independent, with its own JSON and optional --locate-decode only, no Top. Decimal offsets must identify a real byte; EOF fails. Ranges are half-open. Base code/data interiors are refined only when selected, without opcode decoding. --locate-decode completely decodes only the hit local body to locals/whole-instruction ownership; other regions are not_applicable. Target decode failure is an error, including locals queries. No runtime-address lookup. Example coordinates are placeholders.",
         "--summary-json does not support --baseline, --html or --compress; it exports ordinary analysis.",
-        "--opcode-stats decodes every local body once; one bad body fails the report. Initializer expressions are excluded. Complete instruction bytes include subopcodes and immediates; counts are static, not runtime heat. Only Top and own JSON; no strict. Top does not limit decoding cost or truncate JSON.",
+        "--opcode-stats decodes every local body once; one bad body fails the report. Initializer expressions are excluded. Complete instruction bytes include subopcodes and immediates; counts are static, not runtime heat. Only Top and own JSON, or --baseline with --diff-opcodes; no strict. Top does not limit decoding cost or truncate JSON.",
         "Whole-file gzip measures one complete stream. Independent section/function gzip sizes are not additive and are not transfer shares.",
         "Top limits text display; complete JSON is not truncated. Report destinations must be new paths.",
       ],
@@ -161,6 +161,7 @@ fn help_topics() -> Array[HelpTopic] {
       summary: "Compare files, function/package encodings, or explicitly selected functions.",
       options: [
         "--baseline <before.wasm>; --diff-functions; --diff-functions-json <new.json>",
+        "--diff-opcodes; --opcode-stats-json <new.json> (all local bodies, requires baseline)",
         "--instructions <current-index>; --baseline-instructions <baseline-index>; --instructions-json <new.json>",
         "--locals <current-index>; --baseline-locals <baseline-index>; --locals-json <new.json>",
         "--experiment <new.json|new.html>; --experiment-context <context.json>",
@@ -176,12 +177,13 @@ fn help_topics() -> Array[HelpTopic] {
           "--baseline-instructions", "17", "--instructions-json", "new-instructions-diff.json",
         ],
         [
-          "moonsize", "after.wasm", "--baseline", "before.wasm", "--experiment",
-          "new-experiment.json", "--experiment-context", "context.json",
+          "moonsize", "after.wasm", "--baseline", "before.wasm", "--diff-opcodes",
+          "--opcode-stats-json", "new-opcode-diff.json", "--top", "1",
         ],
       ],
       limits: [
         "--baseline alone compares file/section totals. Diff modes require baseline; run independent comparison modes separately. --summary-json does not support baseline.",
+        "--diff-opcodes compares complete module aggregates without function matching or instruction alignment. Code overhead is separate. Zero statistical deltas do not prove equal bytes or semantics; per-mnemonic function_count deltas are not additive function totals.",
         "Locals comparison requires both explicit indices and baseline; raw type_hex grouping is not variable matching. Quantity differences are exact decimal strings; body remainder stays undecoded.",
         "Instruction comparison requires both explicit indices and baseline; it does not automatically match functions. Symbol matches may be ambiguous or missing.",
         "Experiment context is user-declared evidence, not automatically verified business behavior. Encoded differences are not source identity, ABI checks or predicted gzip savings.",

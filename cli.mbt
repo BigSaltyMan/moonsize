@@ -47,6 +47,7 @@ pub struct Options {
   local_accesses_index : Int?
   local_accesses_json : String?
   /// Independent all-local-body opcode encoding statistics.
+  diff_opcodes : Bool
   opcode_stats : Bool
   opcode_stats_json : String?
   /// Independent bounded local declaration groups, without instruction decode.
@@ -148,6 +149,7 @@ pub fn Options::default(path : String) -> Options {
     calls_json: None,
     local_accesses_index: None,
     local_accesses_json: None,
+    diff_opcodes: false,
     opcode_stats: false,
     opcode_stats_json: None,
     locals_index: None,
@@ -404,6 +406,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut calls_json : String? = None
   let mut local_accesses_index : Int? = None
   let mut local_accesses_json : String? = None
+  let mut diff_opcodes = false
   let mut opcode_stats = false
   let mut opcode_stats_json : String? = None
   let mut locals_index : Int? = None
@@ -553,6 +556,10 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       }
       locals_json = Some(args[i + 1])
       i += 2
+    } else if arg == "--diff-opcodes" {
+      diff_opcodes = true
+      opcode_stats = true
+      i += 1
     } else if arg == "--opcode-stats" {
       opcode_stats = true
       i += 1
@@ -1009,6 +1016,16 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     Some(path) => path
     None => return Err(usage())
   }
+  if diff_opcodes {
+    match baseline {
+      Some(path) if !path.trim().is_empty() && !path.has_prefix("--") => ()
+      _ =>
+        return Err(
+          "moonsize: --diff-opcodes requires a non-empty --baseline path\n\n" +
+          usage(),
+        )
+    }
+  }
   if opcode_stats {
     if local_accesses_index is Some(_) ||
       local_accesses_json is Some(_) ||
@@ -1038,7 +1055,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       call_graph is Some(_) ||
       html is Some(_) ||
       summary_json is Some(_) ||
-      baseline is Some(_) ||
+      (baseline is Some(_) && !diff_opcodes) ||
       max_size is Some(_) ||
       diff_functions_json is Some(_) ||
       experiment is Some(_) ||
@@ -1073,7 +1090,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_md is Some(_) ||
       data_json is Some(_) {
       return Err(
-        "moonsize: --opcode-stats is an independent mode; only --top and --opcode-stats-json may be combined with it\n\n" +
+        "moonsize: --opcode-stats is an independent mode; only --top, --opcode-stats-json and (--diff-opcodes only) --baseline may be combined with it\n\n" +
         usage(),
       )
     }
@@ -2220,6 +2237,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     calls_json,
     local_accesses_index,
     local_accesses_json,
+    diff_opcodes,
     opcode_stats,
     opcode_stats_json,
     locals_index,

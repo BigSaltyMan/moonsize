@@ -274,3 +274,14 @@ inspector，不重复解析整个模块。汇总完整指令编码字节、次�
 因此单函数查询成功并不保证全模块可解码。Top不限制全部解码成本，不截断
 完整JSON；静态次数不是运行热点。该模式不构图、不算retained，无strict保证。
 [code账本、API迁移与真实8组](module-opcodes.md)。
+
+
+## 全模块指令构成基线比较
+
+`--diff-opcodes --baseline before.wasm`按助记符比较全部本地函数的聚合，
+`--opcode-stats-json new-diff.json`保存完整双侧报告。与显式指定两侧index的
+`--instructions --baseline-instructions`不同，不选择、匹配函数或对齐指令。
+次数差、完整编码字节差和涉及函数数差分开；次数不变时立即数变宽仍可增加
+字节，函数出现数不能跨组求和当函数总数。零统计差不证明内容、常量或语义相同。
+file/code/non-code与段头/count/前缀/locals/指令账本完整保留；Top只限文本。
+[实际+13 B文件差值与迁移](module-opcodes.md#compare-complete-modules-source-addition-after-051)。

@@ -9,8 +9,9 @@ moonsize app.wasm --opcode-stats-json new-opcodes.json --top 1
 ```
 
 The JSON option implies --opcode-stats. This independent mode accepts only
-input, these options and Top. Other analysis modes, baseline, strict, budgets,
-max-size, compression and HTML are rejected before file I/O. JSON destinations
+input, these options and Top. Baseline is allowed only with --diff-opcodes
+(see below). Other analysis modes, strict, budgets, max-size, compression and
+HTML are rejected before file I/O. JSON destinations
 must be nonempty new `.json` files. Existing unknown-option, separator and
 first-argument-only help rules remain unchanged.
 
@@ -155,3 +156,126 @@ suites/scripts, demos/probes, V8 matrix, performance/large-module benchmark,
 browser or PDF acceptance was run. CI retains old regressions and adds only
 the four-call script; verify the final pushed SHA. Version stays 0.5.1,
 without dependency changes or a Mooncakes publication.
+
+## Compare complete modules (source addition after 0.5.1)
+
+```sh
+moonsize after.wasm --baseline before.wasm --diff-opcodes --top 20
+moonsize after.wasm --baseline before.wasm --diff-opcodes \
+  --opcode-stats-json new-opcode-diff.json --top 1
+```
+
+--diff-opcodes implies opcode-stats and requires a nonempty baseline. Explicit
+--opcode-stats alongside it is allowed. Without diff, single-input statistics
+still reject baseline. Only input, these mode flags, baseline, Top and own JSON
+are allowed; strict, budgets, max-size, HTML and all other queries are rejected
+before I/O with exit 2. Success including self-comparison is 0; input/body/output
+errors are 1. Each side is read once and inspected once, without ordinary
+baseline analysis, function matching, instruction alignment or re-decoding.
+Any side failure aborts without a new JSON; the error retains baseline/current,
+full function index and original error position/reason. Existing protected output
+and exclusive creation are reused through the existing opcode_stats_json slot.
+
+This compares **all local bodies** by mnemonic. --instructions plus explicit
+--baseline-instructions instead compares a user-selected pair of functions.
+Neither establishes cross-build function identity. Counts are static; complete
+bytes include subopcodes and immediates. Equal counts with wider immediates can
+produce a positive byte delta. Distinct-function counts describe distribution
+per mnemonic; their differences neither identify added functions nor sum to a
+module function-count difference. Zero statistics do not prove equal bytes,
+constants, order or semantics. No runtime, retained, gzip or removal inference.
+
+Union rows use shared_opcode / baseline_only / current_only with zero values on
+the absent side. All deltas are signed current minus baseline. Sort by absolute
+encoded-byte delta descending, then absolute count delta descending, then full
+mnemonic lexical order. Top limits only text opcode rows. Both complete original
+reports, including every compact function summary, are retained in JSON:
+
+```json
+{
+  "format": "moonsize-module-opcodes-diff",
+  "schema_version": 1,
+  "baseline": {},
+  "current": {},
+  "delta": {},
+  "opcodes": [],
+  "scope": "..."
+}
+```
+
+The abbreviated objects above stand for complete reports, not strings. The
+single-input format/fields/signature remain unchanged; both renderers share a
+private Json constructor, with no stringify/parse round trip. Missing code/count
+remain null in the corresponding original report. An absent code contributes
+zero code bytes, whereas explicit empty code retains actual header/count widths.
+non_code_bytes = file_size - code_bytes includes the Wasm header and all non-code
+encodings, not just metadata. Deltas are quantities, not file ranges.
+
+```text
+delta(file_bytes) = delta(code_bytes) + delta(non_code_bytes)
+delta(code_bytes) = delta(code_header_bytes) + delta(count_encoding_bytes)
+                  + delta(body_prefix_bytes) + delta(locals_encoding_bytes)
+                  + delta(instruction_bytes)
+sum(opcode.encoded_bytes_delta) = delta(instruction_bytes)
+sum(opcode.count_delta) = delta(instruction_count)
+```
+
+Public additions: ModuleOpcodeChange, ModuleOpcodeDelta, ModuleOpcodeComparison,
+ModuleOpcodeComparisonError (BaselineModuleOpcodeError/CurrentModuleOpcodeError
+wrap the existing ModuleOpcodeError). Functions:
+
+```moonbit
+compare_module_opcodes(Bytes, Bytes)
+  -> Result[ModuleOpcodeComparison, ModuleOpcodeComparisonError]
+describe_module_opcode_comparison_error(ModuleOpcodeComparisonError) -> String
+render_module_opcode_comparison(ModuleOpcodeComparison, Int) -> String
+render_module_opcode_comparison_json(ModuleOpcodeComparison) -> String
+```
+
+Options adds only diff_opcodes=false. Complete external struct literals must add
+this field. Old public signatures and WasmError are unchanged. No new dependency,
+version bump or Mooncakes release.
+
+### Actual comparison evidence
+
+Baseline **44 B**, SHA-256
+`edb9f40d44260235c7acc1af1c901880eadb834952dbf8c7cd1687d539bacc36`;
+current **57 B**, SHA-256
+`e64d91985a9dd2d1d35d627a7bc744bcaedbcca0ec35fb153fc7d7aee75cfaf6`.
+Both have one import. Local functions change 2 -> 3. Code ranges are [28,44)
+and [29,57), with sizes 16 -> 28. Header widths 2 -> 3, function count encodings
+02 -> 8300 (1 -> 2 B), body prefix totals 2 -> 4 B, locals 2 -> 5 B, instructions
+9 -> 14 B and counts 7 -> 10. First body prefix 06 -> 8900; first locals
+00 -> 01017f; one i32.const immediate changes 00 -> 8001. Other instruction
+occurrences also change, so the total const count delta is +1, byte delta +3.
+
+| Mnemonic | Presence | Before/after count | Count delta | Before/after encoded B | Byte delta | Before/after functions | Function delta |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| i32.const | shared_opcode | 2 / 3 | +1 | 4 / 7 | +3 | 2 / 3 | +1 |
+| drop | shared_opcode | 2 / 3 | +1 | 2 / 3 | +1 | 2 / 3 | +1 |
+| end | shared_opcode | 2 / 3 | +1 | 2 / 3 | +1 | 2 / 3 | +1 |
+| nop | baseline_only | 1 / 0 | -1 | 1 / 0 | -1 | 1 / 0 | -1 |
+| unreachable | current_only | 0 / 1 | +1 | 0 / 1 | +1 | 0 / 1 | +1 |
+
+File: **+13 = code +12 + non-code +1**. Code: **+12 = header +1 + count +1 + body prefixes +2 + locals +3 + instructions +5**. Opcode byte deltas sum +5,
+count deltas sum +3. The per-mnemonic function deltas sum +3, while local function
+count changes +1: those are different measures.
+
+Three new combined unit tests passed: union/widths/ledgers, absent/empty code,
+self/zero-statistics with differing constants/SHA, second-function side-specific
+errors, routing/Top/full nested JSON and unchanged single-input format. A separate
+unit fixture holds const count constant while widening its immediate, yielding
+count delta 0 and byte delta +1.
+
+Exactly four real CLI calls returned **0 / 0 / 0 / 1**: Top1 comparison, full JSON
+with Top1, current/current self-comparison, existing sentinel refusal. Buffer
+checks independently verify actual widths, instructions, positions and SHA.
+All inputs and the sentinel remain unchanged. Self-comparison keeps all members
+and every aggregate/row delta is zero. No success save message on refusal.
+Evidence: `_build/module-opcode-diff-verification/run-wKD9CX/` contains both
+inputs, argv/status, four logs, results.json, new-diff.json and self.json.
+Necessary interface/fmt/native checks and one release build passed. No local
+old/full suites, old CLI/demos, probes, V8 matrix, performance/large-module or
+browser/PDF runs. Existing Linux CI retains its checks and adds only this script;
+confirm the exact final SHA after push. These are source additions, not a new
+public package release.

@@ -54,7 +54,7 @@ pub fn render_module_opcodes(report : ModuleOpcodeReport, top : Int) -> String {
 }
 
 ///|
-pub fn render_module_opcodes_json(report : ModuleOpcodeReport) -> String {
+fn module_opcodes_json_value(report : ModuleOpcodeReport) -> Json {
   let root : Map[String, Json] = Map([])
   root.set("format", Json::string("moonsize-module-opcodes"))
   root.set("schema_version", int_json(1))
@@ -141,5 +141,10 @@ pub fn render_module_opcodes_json(report : ModuleOpcodeReport) -> String {
     ),
   )
   root.set("scope", Json::string(report.scope))
-  Json::object(root).stringify(indent=2) + "\n"
+  Json::object(root)
+}
+
+///|
+pub fn render_module_opcodes_json(report : ModuleOpcodeReport) -> String {
+  module_opcodes_json_value(report).stringify(indent=2) + "\n"
 }

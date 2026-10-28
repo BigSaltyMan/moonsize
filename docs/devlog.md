@@ -1165,3 +1165,39 @@ new-opcodes.json及results.json。必要接口、格式、native检查与一次r
 通过；本地未跑旧套件/CLI/演示/探针、V8矩阵、性能/大模块基准或浏览器/PDF。
 CI保留旧流程，仅追加四调用脚本，无性能门禁，推送后确认最终SHA。版本仍
 0.5.1，不改依赖、不发布Mooncakes；原图片、AGENTS、规划及构建证据不提交。
+
+
+## 55. 全模块函数指令构成基线比较
+
+基于8a0bc3c新增compare_module_opcodes，每侧各调用一次inspect_module_opcodes，
+完整保留原报告，按mnemonic union汇总shared_opcode/baseline_only/current_only。
+缺失侧补零，分别保留次数、完整指令编码字节、每mnemonic涉及函数数及有符号
+current-baseline差值。按绝对字节差、绝对次数差降序，再按助记符字典序；比较
+排序键不相减。不匹配函数或自动对齐指令，不重新解码结果、构图或算retained。
+两侧错误包装保留baseline/current、完整index和原位置/原因；任一侧失败无新JSON。
+
+新增4类型/4函数，Options只增diff_opcodes=false。--diff-opcodes要求非空baseline，
+隐含stats；单侧stats+baseline仍拒绝。只允许Top/自身JSON及baseline，strict等
+在读取前拒绝2；成功0、输入/body/输出错1。main独立分发，每侧只读一次并检查
+一次；复用opcode_stats_json输出槽、统一preflight和独占创建，不增加writer。
+私有Json helper让旧单侧和新比较共用对象构造，嵌入完整对象而非字符串或反解析；
+旧格式和公开签名不变。Top只限opcode行，无code保留null、显式空code计真实开销。
+
+本地3个新组合单测通过，恰好4次CLI退出0/0/0/1。实际baseline44B -> current57B，
+SHA分别为
+edb9f40d44260235c7acc1af1c901880eadb834952dbf8c7cd1687d539bacc36 /
+e64d91985a9dd2d1d35d627a7bc744bcaedbcca0ec35fb153fc7d7aee75cfaf6。
+两侧一导入，本地2->3；code16->28B、non-code28->29B。差值账本
+file+13=code+12+non-code+1；code+12=header+1+count+1+prefix+2+locals+3+instruction+5。
+7->10条指令；i32.const次数2->3/字节4->7、drop及end各2->3/2->3B、nop1->0、
+unreachable0->1，各后两者1B。五组字节差合计+5，次数差合计+3；涉及函数数差
+合计+3不等于本地函数差+1。原count02->8300，首前缀06->8900，locals00->01017f。
+Top1文本一行、JSON完整双侧2/3函数摘要及五union组；自比保留四组且全部差值零。
+已有目标拒绝无成功提示，输入/哨兵未变，Buffer独立核对实际宽度/位置/指令/SHA。
+
+证据_build/module-opcode-diff-verification/run-wKD9CX/含输入、四日志、argv/状态、
+results.json、new-diff.json及self.json。必要接口/格式/native检查和一次release
+构建通过。没有本地旧/全量套件、旧CLI/演示、探针、V8矩阵、性能或浏览器/PDF。
+CI保留原流程只追加本四调用脚本，推送后核对最终SHA。overview/baseline帮助
+同步，七主题/21示例不变。0.5.1和依赖不变，不发布Mooncakes；图片/AGENTS/规划/
+构建证据不提交。统计差不证明身份、内容、语义或重编译/gzip收益。
