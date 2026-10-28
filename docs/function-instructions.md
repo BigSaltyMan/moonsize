@@ -285,3 +285,12 @@ inspector，不重复解析整个模块。汇总完整指令编码字节、次�
 字节，函数出现数不能跨组求和当函数总数。零统计差不证明内容、常量或语义相同。
 file/code/non-code与段头/count/前缀/locals/指令账本完整保留；Top只限文本。
 [实际+13 B文件差值与迁移](module-opcodes.md#compare-complete-modules-source-addition-after-051)。
+
+
+## 从opcode查询进入单函数明细
+
+先独立运行`--find-opcode i32.const`，取返回的完整函数index，再用`--instructions`
+查看该函数。查询保留全指令序列的ordinal，不按过滤结果重编号；file offset也可
+交给`--locate-offset --locate-decode`。这些是分开的命令，不在一次调用中自动
+多轮分析。查询检查全部body，单函数inspector仍只解码所选body；立即数和名称
+不会伪造命中。Top只限全局命中行，不截断JSON。[实际四位置](opcode-search.md)。

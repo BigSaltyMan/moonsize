@@ -299,6 +299,10 @@ fn main {
       return
     }
   }
+  if options.find_opcode is Some(_) {
+    run_opcode_search(options)
+    return
+  }
   if options.opcode_stats {
     run_module_opcode_stats(options)
     return

@@ -18,12 +18,13 @@ fn help_topics() -> Array[HelpTopic] {
       title: "Ordinary analysis and reports",
       summary: "Inspect sections and function/module sizes, then save a report.",
       options: [
+        "--find-opcode <mnemonic>; --find-opcode-json <new.json> (exact decoded locations)",
         "--opcode-stats; --opcode-stats-json <new.json> (independent all-local-body encoding totals)",
         "--top <n>; --compress", "--html <new.html>; --summary-json <new.json>",
         "--locate-offset <decimal byte offset>; --locate-decode; --locate-offset-json <new.json>",
       ],
       examples: [
-        ["moonsize", "app.wasm", "--opcode-stats", "--top", "20"],
+        ["moonsize", "app.wasm", "--find-opcode", "i32.const", "--top", "20"],
         ["moonsize", "app.wasm", "--html", "new-report.html"],
         [
           "moonsize", "app.wasm", "--locate-offset", "31", "--locate-decode", "--locate-offset-json",
@@ -34,6 +35,7 @@ fn help_topics() -> Array[HelpTopic] {
         "-- ends option parsing; place a dash-prefixed input path after it (for example, moonsize -- --help). A single - is a filename, not stdin. Option value constraints are unchanged; use ./--name when needed.",
         "--locate-offset is independent, with its own JSON and optional --locate-decode only, no Top. Decimal offsets must identify a real byte; EOF fails. Ranges are half-open. Base code/data interiors are refined only when selected, without opcode decoding. --locate-decode completely decodes only the hit local body to locals/whole-instruction ownership; other regions are not_applicable. Target decode failure is an error, including locals queries. No runtime-address lookup. Example coordinates are placeholders.",
         "--summary-json does not support --baseline, --html or --compress; it exports ordinary analysis.",
+        "Copy a mnemonic from --opcode-stats, then run --find-opcode separately and use its function index/file offset with --instructions or --locate-offset --locate-decode. These are separate commands, not an automatic multi-pass query.",
         "--opcode-stats decodes every local body once; one bad body fails the report. Initializer expressions are excluded. Complete instruction bytes include subopcodes and immediates; counts are static, not runtime heat. Only Top and own JSON, or --baseline with --diff-opcodes; no strict. Top does not limit decoding cost or truncate JSON.",
         "Whole-file gzip measures one complete stream. Independent section/function gzip sizes are not additive and are not transfer shares.",
         "Top limits text display; complete JSON is not truncated. Report destinations must be new paths.",
@@ -46,6 +48,7 @@ fn help_topics() -> Array[HelpTopic] {
       summary: "Locate a local index, inspect its encoding, or query model references.",
       options: [
         "--find-functions <literal>; --find-functions-json <new.json>", "--instructions <index>; --instructions-json <new.json>; --baseline-instructions <index>",
+        "--find-opcode <mnemonic>; --find-opcode-json <new.json> (all-body exact mnemonic search)",
         "--opcode-stats; --opcode-stats-json <new.json> (all local functions, no instruction list)",
         "--local-accesses <index>; --local-accesses-json <new.json> (actual local.get/set/tee encodings)",
         "--locals <index>; --locals-json <new.json>; --baseline-locals <before-index> with --baseline (explicit pair)",
@@ -67,6 +70,7 @@ fn help_topics() -> Array[HelpTopic] {
         ],
       ],
       limits: [
+        "--find-opcode matches complete decoded mnemonics, case-sensitively, without trimming or numeric syntax. Empty/whitespace queries fail; unknown nonempty names may have no matches. Every local body is decoded once; any bad body fails. Only Top and own JSON, no strict. Top limits global location rows, not scan cost or full JSON; only matching records are retained and memory grows with matches. Initializer expressions and raw payload/name/immediate bytes are not searched.",
         "Module opcode statistics decode all local functions and fail on any unsupported body. function_count deduplicates each mnemonic per function, not a total to sum across groups. No graph/retained or runtime-frequency claim.",
         "Run independent queries separately. --instructions-json requires --instructions; instruction inspection requires a local body. Imports may have no local body.",
         "--why-root must be an actual model root; element functions are conservative roots. --why-index does not accept --top.",

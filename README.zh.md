@@ -84,6 +84,23 @@ location，默认格式不变。仍有结构/名称检查和整文件SHA成本�
 地址或完整语义验证。
 [九种区域、API及实测记录](docs/file-offset.md)。
 
+### 按opcode定位函数与指令位置
+
+公开0.5.1后的源码增量，尚未重新发布：
+
+```sh
+moonsize app.wasm --find-opcode i32.const --top 20
+moonsize app.wasm --find-opcode i32.const --find-opcode-json new-matches.json --top 1
+```
+
+按完整解码mnemonic精确、区分大小写匹配，保留完整函数index、原指令ordinal、
+文件及body相对偏移；不从立即数、初始化表达式、名称或payload文字猜opcode。
+每个本地body解码一次，任一坏body整份失败。Top只限一张全局位置表的行数，
+不限制扫描成本或完整JSON；仅允许查询、Top和自身新JSON，无strict或baseline。
+未知非空名称可正常无匹配，空结果不说明模块其他区域。可分次从opcode统计
+复制mnemonic查询，再以index/文件offset调用instructions或locate-decode，不自动
+多轮分析。[匹配规则、实际位置与API](docs/opcode-search.md)。
+
 ### 全模块函数指令编码统计
 
 公开0.5.1后的源码增量，尚未重新发布：
@@ -244,6 +261,8 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --find-functions-json <path> 完整匹配写入新的.json，需显式query
   --diff-functions-json <path> 完整函数/模块比较写入新的.json，隐含diff-functions且需baseline
   --summary-json <path> 普通Analysis全量导出到新的.json，Top不截断
+  --find-opcode <mnemonic> 精确匹配全部本地函数的解码指令位置
+  --find-opcode-json <path> 全量匹配写入新.json，需显式query
   --opcode-stats 全部本地函数指令编码统计，Top和自身JSON
   --diff-opcodes 双侧全模块汇总比较，必须提供--baseline
   --opcode-stats-json <path> 全量opcode分组/函数摘要写入新.json，隐含模式

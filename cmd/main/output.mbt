@@ -40,6 +40,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
       options.locals_json,
       options.local_accesses_json,
       options.opcode_stats_json,
+      options.find_opcode_json,
       options.generics_json,
       options.entrypoints_json,
       options.duplicates_json,

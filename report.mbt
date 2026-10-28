@@ -521,6 +521,8 @@ pub fn usage() -> String {
   "  --generics          group supported raw generic symbols by encoded function bytes\n" +
   "  --generics-json <path> write full groups to a new .json file; implies --generics\n" +
   "                       independent mode: only --top and --generics-json allowed\n" +
+  "  --find-opcode <mnemonic> exact decoded-mnemonic positions in all local functions\n" +
+  "  --find-opcode-json <path> full matching sites to a new .json; requires query\n" +
   "  --opcode-stats      aggregate all local function instruction encodings (Top/own JSON)\n" +
   "  --diff-opcodes      compare all-local opcode aggregates; requires --baseline\n" +
   "  --opcode-stats-json <path> save complete opcode/function summaries to a new .json\n" +

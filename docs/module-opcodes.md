@@ -279,3 +279,15 @@ old/full suites, old CLI/demos, probes, V8 matrix, performance/large-module or
 browser/PDF runs. Existing Linux CI retains its checks and adds only this script;
 confirm the exact final SHA after push. These are source additions, not a new
 public package release.
+
+
+## From totals to actual sites
+
+Copy the complete mnemonic from these aggregate tables, then separately run
+`moonsize app.wasm --find-opcode i32.const --top 20`. This decodes all local
+bodies once and retains matching original ordinals/file offsets, not raw byte
+hits. It does not first run this statistics query. --find-opcode cannot combine
+with --opcode-stats or --diff-opcodes. Continue with --instructions or
+--locate-offset --locate-decode in a separate call using returned coordinates.
+Top limits location rows, not matched functions or complete JSON.
+[Exact rules, positions, resource boundaries and migration](opcode-search.md).

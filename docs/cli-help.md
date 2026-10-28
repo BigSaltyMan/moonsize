@@ -295,3 +295,17 @@ schema1；单侧格式不变。只允许这组模式、baseline、Top和自身JS
 Top只限opcode表，不截断双侧摘要或完整JSON，不是资源限制。保持七主题和21条
 示例，只替换一个baseline示例；仍属公开0.5.1后源码增量，尚未重新发布。
 [用法、实际账本和API迁移](module-opcodes.md#compare-complete-modules-source-addition-after-051)。
+
+
+## overview/functions主题：精确opcode位置查询
+
+新增`--find-opcode <mnemonic>`与`--find-opcode-json <new.json>`，JSON要求query。
+仅允许本查询、Top、自身JSON和输入，拒绝stats/diff、baseline、strict、预算及其他
+查询。缺值/空白query/非法组合在读取前返回2；结构/body/输出失败1；成功含无匹配0。
+完整助记符精确、区分大小写，不trim、不支持子串/正则/数值语法；未知名称可无匹配。
+首参数帮助、--、未知选项和值约束保持，七主题/21示例不变，只替换一个overview
+示例。手动衔接：opcode统计→复制mnemonic查询→以index/offset查函数或原文件。
+每body一次解码，只有命中记录留在结果；ordinal来自完整指令序列。Top限全局位置
+行数，不是函数组数/资源上限，完整JSON不截断，命中多时结果仍可能很大。
+原统计/比较入口和格式不变。公开0.5.1后源码增量，尚未发布。
+[匹配规则、API与实际四位置](opcode-search.md)。

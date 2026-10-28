@@ -246,3 +246,14 @@ Unlike `--locate-decode`, it can succeed with an unknown opcode after valid
 locals; it does not validate that remainder or resolve local indices including
 parameters. These standalone queries cannot be combined. See the
 [group ranges, precision and API](function-locals.md).
+
+
+## Locate a returned opcode site
+
+The source-only --find-opcode query returns decoded mnemonic sites with original
+file offsets, full function indices and full-sequence ordinals. Copy a returned
+offset into a separate --locate-offset / --locate-decode command; do not combine
+the independent modes. No raw-byte opcode inference or runtime address lookup
+is performed. On the documented 168 B fixture, query i32.const returns file
+49/52/77/80; 49 is the complete instruction at function1 ordinal2, not its
+following immediate. [Query contract and original bytes](opcode-search.md).

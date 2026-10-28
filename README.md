@@ -144,6 +144,25 @@ location nested; default JSON is unchanged. No runtime-address lookup or full
 semantic validation is claimed. Base structure checks and whole-file SHA
 still scan the input. See [nine regions, API and actual ranges](docs/file-offset.md).
 
+## Find opcode locations
+
+Source addition after public 0.5.1; not republished:
+
+```sh
+moonsize app.wasm --find-opcode i32.const --top 20
+moonsize app.wasm --find-opcode i32.const --find-opcode-json new-matches.json --top 1
+```
+
+Match a complete decoded mnemonic, case-sensitively, in all local functions.
+Results retain full function indices, original instruction ordinals and file/body
+positions. Immediates, initializer expressions, names and payload text do not
+become opcode sites. Every body is decoded once; any bad body fails the query.
+Top limits global location rows, not scan cost or complete JSON. Only query,
+Top and own new JSON may be combined; no strict or baseline. Empty results do
+not describe other module regions. [Rules, actual positions and API](docs/opcode-search.md).
+Use separate commands to go from opcode statistics to this query, then to
+--instructions or --locate-offset --locate-decode. No automatic multi-pass mode.
+
 ## Module-wide function opcode statistics
 
 Source addition after public 0.5.1; not republished:
@@ -528,6 +547,8 @@ identify candidates for investigation.
   --entrypoints-json <path> write complete results to a new .json file
   --generics          group supported raw symbols by encoded function bytes
   --generics-json <path> write full groups to a new .json file; implies --generics
+  --find-opcode <mnemonic> exact decoded locations in all local bodies
+  --find-opcode-json <path> all matching sites to a new .json; requires query
   --opcode-stats aggregate all local function instruction encodings; Top/own JSON
   --diff-opcodes compare both module aggregates; requires --baseline
   --opcode-stats-json <path> full opcode/function summaries to a new .json; implies mode
