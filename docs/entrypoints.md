@@ -134,3 +134,11 @@ node scripts/test-entrypoints.mjs _build/native/release/build/cmd/main/main.exe
 脚本只启动分析器四次：文本Top1、完整JSON、strict3且无报告、已有JSON1且字节
 不变。不重复路径/链接保护矩阵，不生成源码探针，不跑本地旧套件或视觉/性能
 验收。CI只追加同一轻量脚本，旧回归仍由既有CI执行，最终状态按目标SHA核对。
+
+## Cycles are independent of entry reachability
+
+`--cycles` (source addition after public 0.5.1) does not filter by exported entry
+reachability or manufacture edges from start/element roots. It reports SCCs
+and self-loops using the existing reference graph. Disjoint component local
+encoded bytes may be added, but are neither entry-exclusive bytes nor retained
+or deletion savings. [Evidence and limits](function-cycles.md).

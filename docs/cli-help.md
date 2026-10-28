@@ -350,3 +350,12 @@ data/baseline主题已同步，只替换一个data示例，仍七主题/21示例
 不与locate-offset/decode、preview、baseline、strict、预算、HTML等组合。
 成功0、越界/结构/归属/输出失败1、参数错2；独占创建保护不变。
 不解码opcode，不输出运行时地址或收益。[详细账本与接口](file-range.md)。
+
+## functions主题：引用图循环分量
+
+公开0.5.1后的源码增量，七主题/21示例数量保持不变。`--cycles`输出多成员SCC和
+有自环的单成员，包含不可达函数；`--cycles-json new.json`隐含模式。仅Top、自身
+JSON和strict可组合。Top不截断已展示成员或完整JSON，strict不完整图先拒写。
+成功（含空结果）0、输入/图证据/输出错1、参数错2、strict拒绝3。三类边保留，
+候选循环不等于实际递归；编码字节不是retained或删除收益。
+[完整规则、边证据与迁移](function-cycles.md)。

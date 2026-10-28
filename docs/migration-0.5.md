@@ -404,3 +404,14 @@ verdicts. target_index_changed is boolean only for same-kind matches, otherwise
 null. Full declarations and per-input alias groups are retained without cross-build
 target pairing. Version stays 0.5.1; no Mooncakes publication. See [measured
 ledgers, renumbering and scope](exports.md#导出接口清单基线比较).
+
+## Source-only reference cycle query after public 0.5.1
+
+Adds FunctionCycleComponent, FunctionCyclesReport, FunctionCyclesError and four
+functions: function_cycles, describe_function_cycles_error, render_function_cycles,
+render_function_cycles_json. Existing FunctionPathNode/CallEdge types are reused;
+no old signatures, WasmError variants or graph semantics change. Options adds
+cycles=false and cycles_json=None; exhaustive record construction must supply
+them. The independent JSON is moonsize-function-cycles/schema_version1. Local
+component bytes are not retained size or savings; SCC evidence includes reference
+and indirect candidates. This is not republished. [API and scope](function-cycles.md).

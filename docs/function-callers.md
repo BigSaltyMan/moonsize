@@ -102,3 +102,11 @@ HTML、递归查询、限额体系、源码演示或性能基准。
 过滤，因此二者不是简单的图反转。calls不提供graph_complete、unresolved_count
 或strict保证。Top仅限制调用行，JSON始终完整；导入目标没有本地body，明确
 拒绝，不伪造空清单。[单函数调用清单与实际记录](function-calls.md)。
+
+## Whole-module cycle components
+
+Source addition after public 0.5.1: `--cycles` finds SCCs across all inventory
+functions, including unreachable ones, while callers lists only one target's
+incoming instruction evidence. Cycles preserve direct/reference/candidate kinds
+and full module diagnostics; they do not prove actual recursion. Use separate
+commands. [SCCs, self-loops, bytes and API migration](function-cycles.md).

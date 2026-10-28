@@ -1341,3 +1341,34 @@ Buffer固定边界/字节/上下文/SHA/连续性/相对偏移检查通过，输
 仅追加本四调用；最终SHA状态单独核对。七帮助主题/21示例不变，版本0.5.1不变，
 不改依赖、不发布Mooncakes。原图片、AGENTS、规划、构建证据不提交。
 详见[file-range](file-range.md)；不推断内存地址、完整语义、源码身份或删除收益。
+
+## 60. 引用图循环分量（0.5.1后源码增量）
+
+新增function_cycles，复用parse_module/path_inventory并只build一次；不调用analyze、
+retained、callers、逐目标BFS或简单环枚举。显式栈Kosaraju两遍，拓扑邻接去重而
+原CallEdge证据全保留；校验两端完整索引、caller非导入及文件offset。SCC后筛选
+多成员和自环单成员，不按根可达性过滤。ID取最小index，成员升序，分量按编码
+字节降序/ID升序，内部边按caller/offset/callee/固定kind顺序。不重新解码opcode。
+3新类型、4新函数，Options仅cycles/cycles_json；旧签名和WasmError/图语义不变。
+
+新3项组合单测首轮3/3通过；初次类型检查修正新变量member为工具链非预留node，
+未运行旧套件。恰好4次CLI返回0/0/3/1，原始图/Buffer验证完整分量、边位置和账本。
+128B SHA4f874186738dda2f384fc38b841fe59b9c208937fadc96754b4286d9948615c7，
+本地body起点68/75/86/91/96/99/105。分量(2,3)16B含D1/R1/I1，(1)7B含D2，
+(6)6B含R1；1未导出/未在element中仍保留。8=导入1+本地7=循环4+非循环4；
+40B=循环29B+其他11B，29=16+7+6，内部边6=D3+R2+I1。Top1完整展示2/3成员，
+JSON全3分量/6边。分量2证据file76 ref.func、81 call_indirect、87 call；分量1
+file69/71两处call，分量6 file100 ref.func。单向4→5与孤立7不形成分量。
+
+132B缺口样本SHA82845683c910013b94d2b39ace7a770702d3dae4167d486e67fb54b8adb0503d，
+函数7/file108 call_ref在全部分量外，模块诊断仍保留，不猜目标；unresolved_count
+仍0。strict返回3且strict.json不存在；已有哨兵拒绝1，输入和旧输出不变。证据
+_build/function-cycles-verification/run-Lxw96w/；接口审查review-w54q02yr/。
+
+本地仅新3项单测/4次CLI、必要info/fmt/nativecheck和一次release构建。未跑旧/全量
+套件、旧CLI/演示、探针、V8矩阵、性能/大模块、浏览器/PDF。CI保留原完整流程，
+只追加四调用，最终SHA状态另核对。七主题/21示例不变，版本0.5.1与依赖不变，
+未发布Mooncakes；原图片/AGENTS/规划/构建证据不提交。现有路径文档位于双README
+的引入路径章节，本次在那里同步说明，不引用不存在的docs/function-path.md。
+详见[function-cycles](function-cycles.md)。模型循环不证明真实递归；组件字节不是
+retained、完整code大小或重编译/gzip/删除收益；候选边数也不是调用点数。

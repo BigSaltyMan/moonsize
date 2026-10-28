@@ -136,6 +136,23 @@ default to zero and a common limit clips each side. Missing bytes are null (--),
 not 00. No resource matching or insertion/deletion alignment. --diff-data instead
 groups complete payload content. See [byte contract, API and actual ranges](docs/data-preview.md).
 
+## Reference cycle components
+
+Source addition after public 0.5.1: query strongly connected components in the
+current reference graph, including unreachable functions and self-loops.
+Direct calls, references taken and indirect candidates remain distinct.
+Model cycles do not prove runtime recursion; component encoded bytes are not
+retained or deletion savings. Only Top, own JSON and strict may combine.
+
+```sh
+moonsize app.wasm --cycles --top 10
+moonsize app.wasm --cycles-json new-cycles.json --top 1
+```
+
+Top limits components in text, not their members or complete JSON. Strict
+refuses incomplete graphs before output creation. [Actual components, edge
+positions, ledgers and API migration](docs/function-cycles.md).
+
 ## File range ownership
 
 Source addition after public 0.5.1: `--locate-range OFFSET LENGTH` explains a
@@ -594,6 +611,8 @@ identify candidates for investigation.
   --baseline-locals <n> baseline target; requires locals and baseline
   --calls <n> list call instructions in one local body; Top/own JSON only
   --calls-json <path> save all call sites to a new .json; requires calls
+  --cycles             query reference-model cyclic components; Top/strict allowed
+  --cycles-json <path> complete cycles JSON to a new .json; implies cycles
   --callers <n>        list recorded one-hop incoming instruction sources
   --callers-json <path> write full callers JSON to a new .json file; requires --callers
   --why-index <n>      explain a shortest model reference path to function n
@@ -907,6 +926,12 @@ Family keys apply within one artifact; totals do not predict removable bytes.
 See [the observed encoding, size ledger and limits](docs/generic-instances.md).
 
 ## Explaining a function's reference path
+
+For whole-module mutually reachable groups instead of one root path, run
+`--cycles` separately. It includes unreachable functions and model self-loops;
+reference/candidate cycles do not prove runtime recursion. Component weights
+are local encoded bytes, not retained size. [Cycle query](docs/function-cycles.md).
+
 
 After locating a large function's index in the report, ask which modeled entry
 can introduce it:

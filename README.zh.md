@@ -76,6 +76,21 @@ offset各自默认0、共用limit并各自裁剪。缺字节为null（文本--�
 不匹配资源身份或进行插入删除对齐；diff-data仍按完整payload内容分桶。
 [范围规则、API与实测字节](docs/data-preview.md)。
 
+### 引用图循环分量查询
+
+公开0.5.1后的源码增量：查询当前引用图的强连通分量，包含不可达函数和自环。
+直接调用、取引用和间接候选边分别保留；模型循环不证明运行时递归，分量编码
+字节不是retained或删除收益。独立模式只允许Top、自身JSON和strict。
+
+```sh
+moonsize app.wasm --cycles --top 10
+moonsize app.wasm --cycles-json new-cycles.json --top 1
+```
+
+Top只限制文本分量数，已展示分量成员及完整JSON不截断。strict对不完整图在创建
+报告前拒绝。[实际分量、边位置、账本及API迁移](docs/function-cycles.md)。
+版本仍为0.5.1，未重新发布Mooncakes。
+
 ### 文件范围归属分解
 
 公开0.5.1后的源码增量：`--locate-range OFFSET LENGTH`按文件offset+length分解
@@ -273,6 +288,8 @@ moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
 moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
+  --cycles             引用图循环分量，允许Top/strict
+  --cycles-json <path> 完整分量写入新的.json，隐含cycles
   --top <n>            排名显示多少个函数（默认 10）
   --locate-range <offset> <length> 文件范围分解，EOF空范围合法
   --locate-range-json <path> 完整归属写入新的.json
@@ -712,6 +729,11 @@ moonsize app.wasm --generics-json new-generics.json
 总量不是可删除字节。[实际符号、闭合账本与范围](docs/generic-instances.md)。
 
 ## 查询函数引入路径
+
+需要查看全模块互相可达的分量时，单独运行`--cycles`；它保留不可达函数和模型
+自环，不按根过滤。取引用/候选循环不证明真实递归，分量编码量也不是retained。
+[循环分量规则](docs/function-cycles.md)。
+
 
 从报告中找到大函数的 index 后，可以查询哪个模型入口引用了它：
 

@@ -319,6 +319,10 @@ fn main {
     run_function_calls(options, index)
     return
   }
+  if options.cycles {
+    run_function_cycles(options)
+    return
+  }
   if options.locate_range_offset is Some(offset) {
     run_file_range(options, offset, options.locate_range_length.unwrap())
     return

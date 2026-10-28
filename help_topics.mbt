@@ -49,6 +49,7 @@ fn help_topics() -> Array[HelpTopic] {
       title: "Find and explain functions",
       summary: "Locate a local index, inspect its encoding, or query model references.",
       options: [
+        "--cycles; --cycles-json <new.json> (reference SCCs, Top/strict allowed)",
         "--find-functions <literal>; --find-functions-json <new.json>", "--instructions <index>; --instructions-json <new.json>; --baseline-instructions <index>",
         "--find-opcode <mnemonic>; --find-opcode-json <new.json> (all-body exact mnemonic search)",
         "--opcode-stats; --opcode-stats-json <new.json> (all local functions, no instruction list)",
@@ -72,6 +73,7 @@ fn help_topics() -> Array[HelpTopic] {
         ],
       ],
       limits: [
+        "--cycles includes unreachable model functions, multi-member SCCs and self-loops; reference/indirect candidate cycles are not runtime recursion. Local encoded component bytes are not retained or deletion savings. Only Top, own JSON and strict; Top never truncates members or JSON.",
         "--find-opcode matches complete decoded mnemonics, case-sensitively, without trimming or numeric syntax. Empty/whitespace queries fail; unknown nonempty names may have no matches. Every local body is decoded once; any bad body fails. Only Top and own JSON, no strict. Top limits global location rows, not scan cost or full JSON; only matching records are retained and memory grows with matches. Initializer expressions and raw payload/name/immediate bytes are not searched.",
         "Module opcode statistics decode all local functions and fail on any unsupported body. function_count deduplicates each mnemonic per function, not a total to sum across groups. No graph/retained or runtime-frequency claim.",
         "Run independent queries separately. --instructions-json requires --instructions; instruction inspection requires a local body. Imports may have no local body.",
