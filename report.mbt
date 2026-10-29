@@ -533,6 +533,8 @@ pub fn usage() -> String {
   "  --baseline-locals <n> baseline target index; requires --locals and --baseline\n" +
   "  --calls <n>          list call instructions in one local function (Top/own JSON only)\n" +
   "  --calls-json <path>  save all call sites to a new .json; requires --calls\n" +
+  "  --dependencies <n>   list transitive model dependencies from any function (Top/strict)\n" +
+  "  --dependencies-json <path.json> save full closure to a new .json; requires index\n" +
   "  --cycles             query reference-model cyclic components (Top/strict allowed)\n" +
   "  --cycle-witness      add one deterministic closed model path per component (requires cycles)\n" +
   "  --cycles-json <path.json> save all components to a new .json; implies --cycles\n" +

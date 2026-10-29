@@ -427,3 +427,15 @@ moonsize-function-cycle-witnesses/schema1 and nests the original complete cycles
 object through private builders. Errors wrap old cycles errors or component ID,
 optional actual edge offset and reason; old enums are unchanged. No new output
 slot, opcode decoder, byte metric or package version. [Selection and migration](function-cycles.md#optional-closed-evidence-paths-source-addition-after-public-051).
+
+## Source-only function dependency closure after public 0.5.1
+
+Adds FunctionDependencyNode, FunctionDependenciesReport, FunctionDependenciesError
+and four functions: function_dependencies, describe_function_dependencies_error,
+render_function_dependencies, render_function_dependencies_json. Options adds only
+dependencies=None and dependencies_json=None. Existing FunctionPathNode/CallEdge
+records are reused. No old public signatures, WasmError variants or JSON formats
+change; new JSON is moonsize-function-dependencies/schema1. An import's encoded
+size stays null; target_local_encoded_bytes=0 is only its local accounting weight.
+Full graph validation and module diagnostics apply even to an import target.
+This is not republished. [Contract and evidence](function-dependencies.md).

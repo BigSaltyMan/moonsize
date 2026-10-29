@@ -369,3 +369,15 @@ index选一条闭合模型路径，可能只经过部分成员，不承诺全局
 嵌套完整cycles对象；不启用时原格式不变。退出0/1/2/strict3，原目标独占保护不变。
 需实际opcode可单独按offset使用locate-decode，不额外解码。七主题/21示例数量不变。
 公开0.5.1后的源码增量，未重新发布。[详细规则与证据](function-cycles.md#optional-closed-evidence-paths-source-addition-after-public-051)。
+
+## functions主题：任意函数的传递引用闭包
+
+`--dependencies INDEX`接受完整函数index，目标可本地或导入，不要求导出/根可达。
+`--dependencies-json new.json`必须配主查询；只允许Top、自身JSON和strict。目标
+单独展示不占Top；Top不截断全部节点/边/诊断或JSON，不是遍历资源限制。
+层数是三类模型边的最少步数，前驱是一条首次发现原边；完整闭包边保留平行/
+自环/回指/交叉证据。导入encoded_size为null，零本地贡献不是宿主无成本。
+成功0，读取/结构/索引/图证据/输出错1，参数错2，全模块strict拒绝3且先于预检创建。
+calls查单函数调用点，callers查一跳来源，why-index查根到目标一条路径，entrypoints
+查导出入口归因；dependencies查任意目标传递闭包。七主题/21示例不变。
+公开0.5.1后源码增量，未发布。[实际层数、账本和迁移](function-dependencies.md)。

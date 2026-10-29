@@ -1405,3 +1405,36 @@ Options仅一字段；旧JSON字段/类型不变。必要fmt/native检查、一�
 CI仅追加本四调用并保留原流程，核对最终SHA。七主题/21示例不变。路径说明同步
 现有README章节；版本0.5.1及依赖不变，不发布Mooncakes，图片/AGENTS/规划/
 构建证据不提交。代表路径不是全成员巡回、唯一环或真实执行递归。
+
+## 62. 指定函数的传递引用依赖清单（0.5.1后源码增量）
+
+新增function_dependencies，parse_module/path_inventory准备一次清单、build一次，
+保留已有内部解析，不宣称全流程只parse一次。不调用analyze/retained/SCC或逐目标
+callers，不额外解码opcode。全图先验证caller本地、两端完整索引和文件offset，
+闭包外坏边也失败；邻接按callee/D/R/I/offset排序，head索引队列一次BFS，首次入队
+保留depth/完整前驱边，不复制完整路径。最后筛caller在闭包的全部原边，校验callee
+也在闭包；边按caller/offset/callee/kind、节点按depth/index排序，平行证据不丢。
+目标含自身且depth0/前驱null不被自环/回指覆盖。3新类型、4函数，Options仅
+ dependencies/dependencies_json，旧签名/JSON不变。新输出复用统一预检及独占writer。
+
+新3项组合单测首轮3/3通过；恰好4次CLI退出0/0/3/1，未跑旧套件。正常130B SHA
+bef050f03cb12940e1b153c40de0f2ba54cda02e658719bd87a79d220cc93dc8；
+目标1闭包顺序1/2/3/0/4，depth0/1/1/2/2。前驱2←1 direct67，3←1 reference71，
+0←2 direct86，4←2 direct84；平行direct69、candidate76、自环79与回指98仍在
+全10边，不用4条树边替代。全边D8/R1/I1，输入body起点66/83/90/97/102/105。
+7函数=本地6+导入1=闭包5+其他2；闭包5=本地4+导入1，依赖4=5-1；
+本地42B=闭包36B+其他6B，36=目标17+依赖19。导入节点encoded_size保持null。
+导入0查询只含自身但照常全图检查；local5孤立查询编码3B/依赖0。新helper重排边
+结果确定，闭包外坏索引/offset拒绝。Top1只一依赖行，目标不占名额，JSON全5节点/
+10边及完整诊断。原字节验证index/kind/offset/前驱/最少层数与全部等式，输入哨兵未变。
+
+缺口134B SHA4368f888598462ad6601e8cc1115ea15444d3a5487ad7507acb482489bf63bbe，
+函数6/file108 call_ref在目标闭包外，仍保留全模块诊断；unresolved_count仍0。
+strict3在预检前拒写，strict.json不存在；已有sentinel拒绝1且无成功提示。
+证据_build/function-dependencies-verification/run-eTi67B/含四日志/argv/状态/JSON，
+接口review-5yzvgveg/用当前moon-info及可读HEAD声明审查，未改ACL/重建历史。
+必要info/fmt/nativecheck、精确新测试、一次release和新脚本通过；本地未跑旧/全量
+套件、旧CLI、演示、探针、V8、性能/大模块或浏览器/PDF。CI保留原流程仅追加
+本四调用，核对最终SHA。七主题/21示例不变，版本0.5.1及依赖不变，未发布Mooncakes。
+原图片/AGENTS/规划/构建证据不提交。模型闭包不代表执行热度、必需保留量或
+删除/重编译/gzip收益；不同目标闭包可重叠，不可直接相加；depth不是调用栈深度。

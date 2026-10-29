@@ -136,6 +136,25 @@ default to zero and a common limit clips each side. Missing bytes are null (--),
 not 00. No resource matching or insertion/deletion alignment. --diff-data instead
 groups complete payload content. See [byte contract, API and actual ranges](docs/data-preview.md).
 
+## Transitive function model dependencies
+
+Source addition after public 0.5.1: start at any full function index, including
+imports, and list its transitive reference-model closure. The target is included
+once; other nodes keep minimum model depth and one first-discovery edge. Full
+closure evidence retains parallel/direct/reference/candidate edges separately
+from the predecessor tree. Local bytes are unique per index, not retained or
+removal savings; imported encoded sizes remain null.
+
+```sh
+moonsize app.wasm --dependencies 12 --top 20
+moonsize app.wasm --dependencies 12 --dependencies-json new-dependencies.json --top 1
+```
+
+Index12 is a placeholder. Only Top, own JSON and strict combine; strict uses
+whole-module diagnostics, including outside the target closure. Top limits text
+rows, not traversal or full JSON. [Actual depths, byte ledgers, related queries
+and migration](docs/function-dependencies.md).
+
 ## Reference cycle components
 
 Add `--cycle-witness` to cycles or cycles-json for one deterministic closed
@@ -625,6 +644,8 @@ identify candidates for investigation.
   --baseline-locals <n> baseline target; requires locals and baseline
   --calls <n> list call instructions in one local body; Top/own JSON only
   --calls-json <path> save all call sites to a new .json; requires calls
+  --dependencies <n>   transitive model closure from any function; Top/strict allowed
+  --dependencies-json <path> full closure to a new .json; requires dependencies
   --cycles             query reference-model cyclic components; Top/strict allowed
   --cycle-witness      add one closed model path per component; requires cycles
   --cycles-json <path> complete cycles JSON to a new .json; implies cycles

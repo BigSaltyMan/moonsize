@@ -49,6 +49,7 @@ fn help_topics() -> Array[HelpTopic] {
       title: "Find and explain functions",
       summary: "Locate a local index, inspect its encoding, or query model references.",
       options: [
+        "--dependencies <index>; --dependencies-json <new.json> (transitive model closure, Top/strict)",
         "--cycles; --cycles-json <new.json>; --cycle-witness (closed model evidence, Top/strict allowed)",
         "--find-functions <literal>; --find-functions-json <new.json>", "--instructions <index>; --instructions-json <new.json>; --baseline-instructions <index>",
         "--find-opcode <mnemonic>; --find-opcode-json <new.json> (all-body exact mnemonic search)",
@@ -73,6 +74,7 @@ fn help_topics() -> Array[HelpTopic] {
         ],
       ],
       limits: [
+        "--dependencies starts at any full function index and includes itself, imports and three model edge kinds. Depth is minimum model steps, not stack depth. First-discovery predecessors are separate from all closure edges. Unique local bytes are not retained or removal savings; closures may overlap. Only Top, own JSON and strict; Top does not limit traversal or JSON.",
         "--cycle-witness requires cycles or cycles-json. Each component gets one deterministic closed path from its minimum index, possibly a member subset; not globally shortest or runtime recursion. Full base evidence stays intact. Top never truncates displayed steps or JSON; no extra opcode decoding.",
         "--cycles includes unreachable model functions, multi-member SCCs and self-loops; reference/indirect candidate cycles are not runtime recursion. Local encoded component bytes are not retained or deletion savings. Only Top, own JSON and strict; Top never truncates members or JSON.",
         "--find-opcode matches complete decoded mnemonics, case-sensitively, without trimming or numeric syntax. Empty/whitespace queries fail; unknown nonempty names may have no matches. Every local body is decoded once; any bad body fails. Only Top and own JSON, no strict. Top limits global location rows, not scan cost or full JSON; only matching records are retained and memory grows with matches. Initializer expressions and raw payload/name/immediate bytes are not searched.",

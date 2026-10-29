@@ -76,6 +76,21 @@ offset各自默认0、共用limit并各自裁剪。缺字节为null（文本--�
 不匹配资源身份或进行插入删除对齐；diff-data仍按完整payload内容分桶。
 [范围规则、API与实测字节](docs/data-preview.md)。
 
+### 指定函数的传递引用依赖
+
+公开0.5.1后的源码增量：从任意完整函数index（含导入）查看模型传递闭包，目标
+自身只计一次。其他节点保留最少模型层数和首次发现边；完整边另保留平行位置、
+取引用和间接候选。唯一函数编码量不是retained或删除收益；导入编码量保持null。
+
+```sh
+moonsize app.wasm --dependencies 12 --top 20
+moonsize app.wasm --dependencies 12 --dependencies-json new-dependencies.json --top 1
+```
+
+index12仅示范语法。独立模式只允许Top、自身JSON和strict；strict依据全模块诊断，
+即使缺口在闭包外也会拒写。Top只限制文本依赖行，不限制遍历或完整JSON。
+[实际层数、账本、查询区别及迁移](docs/function-dependencies.md)。未重新发布包。
+
 ### 引用图循环分量查询
 
 配合`--cycle-witness`可为每个分量展示一条从最小index出发再返回的闭合模型路径。
@@ -300,6 +315,8 @@ moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
 moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
+  --dependencies <n>   任意函数的传递模型闭包，允许Top/strict
+  --dependencies-json <path> 完整闭包写入新的.json，需dependencies
   --cycles             引用图循环分量，允许Top/strict
   --cycle-witness      每个分量一条闭合模型路径，需cycles或cycles-json
   --cycles-json <path> 完整分量写入新的.json，隐含cycles

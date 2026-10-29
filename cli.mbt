@@ -37,6 +37,9 @@ pub struct Options {
   why_index : Int?
   why_root : Int?
   why_json : String?
+  /// Independent transitive model-reference closure from any function.
+  dependencies : Int?
+  dependencies_json : String?
   /// Independent reference-model SCC query.
   cycles : Bool
   cycle_witness : Bool
@@ -156,6 +159,8 @@ pub fn Options::default(path : String) -> Options {
     why_index: None,
     why_root: None,
     why_json: None,
+    dependencies: None,
+    dependencies_json: None,
     cycles: false,
     cycle_witness: false,
     cycles_json: None,
@@ -424,6 +429,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut why_index : Int? = None
   let mut why_root : Int? = None
   let mut why_json : String? = None
+  let mut dependencies : Int? = None
+  let mut dependencies_json : String? = None
   let mut cycles = false
   let mut cycle_witness = false
   let mut cycles_json : String? = None
@@ -677,6 +684,32 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         )
       }
       calls_json = Some(args[i + 1])
+      i += 2
+    } else if arg == "--dependencies" {
+      if i + 1 >= args.length() {
+        return Err(
+          "moonsize: --dependencies needs a nonnegative decimal function index\n\n" +
+          usage(),
+        )
+      }
+      dependencies = match parse_path_index(args[i + 1]) {
+        Some(value) => Some(value)
+        None =>
+          return Err(
+            "moonsize: --dependencies wants a nonnegative decimal function index\n\n" +
+            usage(),
+          )
+      }
+      i += 2
+    } else if arg == "--dependencies-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --dependencies-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      dependencies_json = Some(args[i + 1])
       i += 2
     } else if arg == "--cycle-witness" {
       cycle_witness = true
@@ -1148,6 +1181,97 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       "moonsize: --cycle-witness requires --cycles or --cycles-json\n\n" +
       usage(),
     )
+  }
+  if dependencies_json is Some(_) && dependencies is None {
+    return Err(
+      "moonsize: --dependencies-json requires --dependencies\n\n" + usage(),
+    )
+  }
+  if dependencies is Some(_) {
+    if cycles ||
+      cycle_witness ||
+      cycles_json is Some(_) ||
+      locate_range_offset is Some(_) ||
+      locate_range_length is Some(_) ||
+      locate_range_json is Some(_) ||
+      find_opcode is Some(_) ||
+      find_opcode_json is Some(_) ||
+      baseline_data_preview_index is Some(_) ||
+      baseline_data_offset is Some(_) ||
+      opcode_stats ||
+      diff_opcodes ||
+      opcode_stats_json is Some(_) ||
+      local_accesses_index is Some(_) ||
+      local_accesses_json is Some(_) ||
+      calls_index is Some(_) ||
+      calls_json is Some(_) ||
+      locals_index is Some(_) ||
+      locals_json is Some(_) ||
+      baseline_locals_index is Some(_) ||
+      retained ||
+      dead_code ||
+      compress ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      exports ||
+      diff_exports ||
+      metadata ||
+      diff_metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      locate_decode ||
+      call_graph is Some(_) ||
+      html is Some(_) ||
+      summary_json is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      diff_functions_json is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      generics_json is Some(_) ||
+      entrypoints_json is Some(_) ||
+      duplicates_json is Some(_) ||
+      exports_json is Some(_) ||
+      metadata_json is Some(_) ||
+      imports_json is Some(_) ||
+      data_duplicates_json is Some(_) ||
+      instructions_index is Some(_) ||
+      instructions_json is Some(_) ||
+      baseline_instructions_index is Some(_) ||
+      find_functions is Some(_) ||
+      find_functions_json is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
+      find_data_json is Some(_) ||
+      data_preview_index is Some(_) ||
+      data_offset is Some(_) ||
+      data_limit is Some(_) ||
+      data_preview_json is Some(_) ||
+      locate_offset is Some(_) ||
+      locate_offset_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) ||
+      data_json is Some(_) {
+      return Err(
+        "moonsize: --dependencies is an independent mode; only --top, --strict and --dependencies-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if dependencies_json is Some(target) && !target.has_suffix(".json") {
+      return Err(
+        "moonsize: --dependencies-json wants a .json path\n\n" + usage(),
+      )
+    }
   }
   if cycles {
     if locate_range_offset is Some(_) ||
@@ -2637,6 +2761,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     why_index,
     why_root,
     why_json,
+    dependencies,
+    dependencies_json,
     cycles,
     cycle_witness,
     cycles_json,
