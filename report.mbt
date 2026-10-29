@@ -533,6 +533,8 @@ pub fn usage() -> String {
   "  --baseline-locals <n> baseline target index; requires --locals and --baseline\n" +
   "  --calls <n>          list call instructions in one local function (Top/own JSON only)\n" +
   "  --calls-json <path>  save all call sites to a new .json; requires --calls\n" +
+  "  --compare-dependencies <left> <right> compare two model closures in one file (Top/strict)\n" +
+  "  --compare-dependencies-json <path.json> save complete sets/evidence; requires pair\n" +
   "  --path-between <from> <to> one shortest model path between full indices (strict allowed)\n" +
   "  --path-between-json <path.json> save full path; requires explicit FROM and TO\n" +
   "  --dependents <n>     list transitive model sources reaching any function (Top/strict)\n" +

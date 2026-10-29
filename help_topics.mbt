@@ -49,6 +49,7 @@ fn help_topics() -> Array[HelpTopic] {
       title: "Find and explain functions",
       summary: "Locate a local index, inspect its encoding, or query model references.",
       options: [
+        "--compare-dependencies <left> <right>; --compare-dependencies-json <new.json> (two closures, Top/strict)",
         "--path-between <from> <to>; --path-between-json <new.json> (explicit model path, strict only)",
         "--dependents <index>; --dependents-json <new.json> (reverse model closure, Top/strict)",
         "--dependencies <index>; --dependencies-json <new.json> (transitive model closure, Top/strict)",
@@ -76,6 +77,7 @@ fn help_topics() -> Array[HelpTopic] {
         ],
       ],
       limits: [
+        "--compare-dependencies partitions two outgoing closures of one input into shared/left_only/right_only/neither by full index, including both starts. One build, at most two existing helper BFS calls. Single-side is not global exclusive; neither is not dead code or removal benefit. Top limits each of the first three tables, not JSON; no baseline.",
         "--path-between allows any full source/destination indices, not only roots. Reconstructs one deterministic shortest model path from the complete dependencies closure, not a new search or early-stop query. Zero steps is not a cycle; not-found is within-model only. Only own JSON and strict; explicit Top is rejected.",
         "--dependents finds all modeled sources reaching any full index, including imports. Edges retain caller -> callee direction; next_edge points toward the target and lowers depth. This is not source-change impact. Only Top, own JSON and strict; Top does not truncate JSON or limit traversal.",
         "--dependencies starts at any full function index and includes itself, imports and three model edge kinds. Depth is minimum model steps, not stack depth. First-discovery predecessors are separate from all closure edges. Unique local bytes are not retained or removal savings; closures may overlap. Only Top, own JSON and strict; Top does not limit traversal or JSON.",

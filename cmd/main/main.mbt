@@ -319,6 +319,10 @@ fn main {
     run_function_calls(options, index)
     return
   }
+  if options.compare_dependencies is Some((left, right)) {
+    run_dependency_overlap(options, left, right)
+    return
+  }
   if options.path_between is Some((source, target)) {
     run_function_path_between(options, source, target)
     return

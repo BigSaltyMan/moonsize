@@ -470,3 +470,19 @@ limits. Not-found has no fabricated destination node and null hops; same-index
 has one node/zero hops. Only strict/own JSON combine; explicit Top is rejected.
 Version/dependencies unchanged, no package publication.
 [Contract and evidence](function-path-between.md).
+
+## Source-only two-function dependency overlap after public 0.5.1
+
+Adds DependencyOverlapGroup, DependencyOverlapReport, DependencyOverlapError,
+and four functions: compare_function_dependencies, describe_dependency_overlap_error,
+render_dependency_overlap, render_dependency_overlap_json. Options adds only
+compare_dependencies: (Int,Int)?=None and compare_dependencies_json: String?=None.
+Group.kind is shared/left_only/right_only/neither, storing ascending indices
+into one identity list. Old public signatures, report types, errors and JSON
+formats are unchanged. New format: moonsize-dependency-overlap/schema1. Input
+errors wrap WasmError; target errors retain left/right, index and count; evidence
+errors wrap FunctionDependenciesError with its original position/reason.
+One build, two old helper traversals at most, one for identical starts. Only
+Top/own JSON/strict combine. No baseline/global exclusivity or savings metric.
+Version/dependencies unchanged; no package publication.
+[Contract and evidence](dependency-overlap.md).

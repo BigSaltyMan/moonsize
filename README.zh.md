@@ -76,6 +76,21 @@ offset各自默认0、共用limit并各自裁剪。缺字节为null（文本--�
 不匹配资源身份或进行插入删除对齐；diff-data仍按完整payload内容分桶。
 [范围规则、API与实测字节](docs/data-preview.md)。
 
+### 双函数依赖集合对照
+
+公开0.5.1后的源码增量：比较同一输入的两个完整函数索引（含导入），各自闭包包含起点。
+
+```sh
+moonsize app.wasm --compare-dependencies 12 47 --top 20
+moonsize app.wasm --compare-dependencies 12 47 --compare-dependencies-json new-overlap.json --top 1
+```
+
+索引仅示范语法。shared/left_only/right_only/neither四组覆盖全部索引，数量与本地
+编码账本闭合。单侧只是相对这两个起点，不是全局独占；neither不是死代码或删除收益。
+只允许Top、自身JSON和strict，不使用baseline。Top分别限制三张文本表，JSON保留
+全部四组和双侧完整边。一次建图，最多两次旧闭包BFS；相同索引只算一次。
+[实测集合、账本、与entrypoints的区别及API](docs/dependency-overlap.md)。未重新发布包。
+
 ### 任意双函数之间的模型路径
 
 公开0.5.1后的源码增量：显式指定完整索引FROM和TO（含导入），起点不必是模型根。
@@ -345,6 +360,8 @@ moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
 moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
+  --compare-dependencies <left> <right> 同文件两出向闭包对照，允许Top/strict
+  --compare-dependencies-json <path> 全部集合写入新.json，需显式双索引
   --path-between <from> <to> 双函数最短模型路径，仅strict/自身JSON，拒绝Top
   --path-between-json <path> 路径写入新.json，需显式双索引
   --dependents <n>     到达任意目标的传递模型来源，允许Top/strict

@@ -35,6 +35,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
       options.call_graph,
       options.experiment,
       options.why_json,
+      options.compare_dependencies_json,
       options.path_between_json,
       options.dependents_json,
       options.dependencies_json,

@@ -136,6 +136,24 @@ default to zero and a common limit clips each side. Missing bytes are null (--),
 not 00. No resource matching or insertion/deletion alignment. --diff-data instead
 groups complete payload content. See [byte contract, API and actual ranges](docs/data-preview.md).
 
+## Compare two function dependency sets
+
+Source addition after public0.5.1: compare two arbitrary full function indices
+in one input, including imports and each start itself.
+
+```sh
+moonsize app.wasm --compare-dependencies 12 47 --top 20
+moonsize app.wasm --compare-dependencies 12 47 --compare-dependencies-json new-overlap.json --top 1
+```
+
+Indices are placeholders. shared/left_only/right_only/neither partition the
+full index space with count and local-byte ledgers. Single-side is relative to
+these starts, not global exclusive attribution; neither is not dead code or
+removal savings. Only Top, own JSON and strict combine; no baseline. Top applies
+to each of three text tables; JSON retains all groups and both complete edges.
+One build, at most two old closure BFS calls (one for equal starts).
+[Actual sets, byte ledgers, entrypoint distinction and API](docs/dependency-overlap.md).
+
 ## A model path between any two functions
 
 Source addition after public0.5.1: explicitly choose FROM and TO in the full
@@ -679,6 +697,8 @@ identify candidates for investigation.
   --baseline-locals <n> baseline target; requires locals and baseline
   --calls <n> list call instructions in one local body; Top/own JSON only
   --calls-json <path> save all call sites to a new .json; requires calls
+  --compare-dependencies <left> <right> two outgoing closures in one input; Top/strict
+  --compare-dependencies-json <path> full sets to a new .json; requires pair
   --path-between <from> <to> one shortest model path; strict/own JSON only, no Top
   --path-between-json <path> full path to a new .json; requires explicit pair
   --dependents <n>     transitive model referrers to any function; Top/strict

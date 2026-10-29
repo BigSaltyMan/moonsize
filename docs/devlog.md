@@ -1498,3 +1498,38 @@ _build/function-path-between-verification/run-YATz7z/（argv/log/JSON/results）
 审查，不改ACL/重建历史。CI仅追加轻量脚本，正常推送后核对最终SHA；未本地跑
 旧/全量套件、旧CLI、演示、探针、V8、性能或浏览器/PDF。七主题/原示例不变。
 版本0.5.1/依赖不变、不发布Mooncakes；原图片/AGENTS/规划/构建证据不提交。
+
+## 65. 双函数引用依赖集合对照（公开0.5.1后源码增量）
+
+基于38aaebf新增compare_function_dependencies及--compare-dependencies LEFT RIGHT。
+同一输入，任意完整索引含导入，各自含起点；一份inventory，一次build，不调用两次
+公开dependencies。左右不同各调用旧dependencies_closure一次，同索引复用结果。
+旧helper仍各自验证/排序，不宣称全准备一次或全流程解析一次。不调用analyze/
+entrypoints/retained/SCC、不额外解码。索引Set后单次扫描inventory生成四组，固定
+shared/left_only/right_only/neither顺序，各组/左右indices升序；身份完整清单只存一次。
+原方向完整边保留平行位置/种类、自环/回边/候选，不相加为唯一调用点。
+
+新3项组合单测首次执行3/3通过，恰好4次CLI为0/0/3/1。正常134B SHA
+4bc13ffc04a8eefd9122f4f05a7c3ea3f09b138af45c6bbfb5141691152e0f76；左1闭包
+[0,1,3,4]，右2闭包[0,2,3,4,7]。四组[0,3,4]/[1]/[2,7]/[5,6]，函数8=3+1+2+2，
+本地45B=12+17+10+6；左4=1+3、右5=2+3、并集6=1+2+3、全8=6+2；字节
+左29=17+12、右22=10+12、并集39=17+10+12、全45=39+6。导入0身份encoded_size
+保持null，shared12只计本地3/4；neither含导出5，不能称死代码。左全8边D6/R1/I1，
+右全5边D5；文件68/70平行D，72引用、77候选、80自环，92/94/99共享/回边。
+
+交换左右、同索引、互相可达3/4同闭包、导入起点/空组均在新单测核对。第二测一次
+准备inventory/graph及私有helper结果对分区；callee8非法证据保留file68原因，角色
+越界/输入错误区分。Top1分别限制三表，neither仅文本汇总；JSON全8身份/四组及双侧
+完整边，渲染前后JSON不变，文本副本按本地大小排序、导入在后。新3类型、4函数、
+Options两字段，旧类型/签名/JSON不变，新增独立schema1，不改旧dependencies。
+
+138B缺口SHA60f19584f36ac1f2fa5386d317f7fc1b16fc5c6f1b9d26780cad3df1e4ecdcea，
+两闭包外function6/file109 call_ref诊断只保存一次，unresolved_count保持0。
+strict先于预检/创建返回3，无strict.json；已有sentinel返回1、无成功提示，所有
+进程验证输入和原输出不变。证据_build/dependency-overlap-verification/run-ozAmeH/。
+接口审查用当前moon-info/可读HEAD，不改ACL/构建历史；CI仅追加轻量脚本，正常
+推送后确认最终SHA。本地未跑旧/全量套件、旧CLI、演示、探针、V8、性能或浏览器/PDF。
+只允许Top、自身JSON、strict，baseline等I/O前拒绝；复用独占writer及现有非事务边界。
+七主题/原示例不变，版本0.5.1及依赖不变，不发布。图片/AGENTS/规划/构建证据排除。
+单侧仅相对这两个起点，不借用entrypoints的全根独占/共享定义，也不是跨构建比较；
+不预测执行、retained、去重/拆包、删除、重编译或gzip收益，不新增左右字节和指标。

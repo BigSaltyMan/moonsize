@@ -142,3 +142,12 @@ reachability or manufacture edges from start/element roots. It reports SCCs
 and self-loops using the existing reference graph. Disjoint component local
 encoded bytes may be added, but are neither entry-exclusive bytes nor retained
 or deletion savings. [Evidence and limits](function-cycles.md).
+
+## Two arbitrary starts in one input (source addition after public 0.5.1)
+
+`--compare-dependencies LEFT RIGHT` compares two outgoing closures, each including
+its start, partitioning the full index space into shared/left_only/right_only/
+neither. It is not a cross-build comparison or global exclusive attribution.
+entrypoints uses all function exports and start/element roots; this query does
+not examine third-party roots or reuse that exclusive/shared definition.
+Only Top, own JSON and strict combine. [Sets, actual ledgers and complete evidence](dependency-overlap.md).

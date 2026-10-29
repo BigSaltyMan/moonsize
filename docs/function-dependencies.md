@@ -216,3 +216,12 @@ run another graph search or relax why-root. Not-found has empty paths/null hops;
 same-index has zero hops. No Top; only own JSON and strict combine. Workflow:
 name search -> dependencies/dependents sets -> explicit pair path -> locate-decode
 for actual instruction offsets. [Contract and real evidence](function-path-between.md).
+
+## Two arbitrary starts in one input (source addition after public 0.5.1)
+
+`--compare-dependencies LEFT RIGHT` compares two outgoing closures, each including
+its start, partitioning the full index space into shared/left_only/right_only/
+neither. It is not a cross-build comparison or global exclusive attribution.
+entrypoints uses all function exports and start/element roots; this query does
+not examine third-party roots or reuse that exclusive/shared definition.
+Only Top, own JSON and strict combine. [Sets, actual ledgers and complete evidence](dependency-overlap.md).

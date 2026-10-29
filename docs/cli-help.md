@@ -404,3 +404,14 @@ JSON需显式双索引、新的非空.json。参数2、输入/索引/坏链/写�
 先名称检索索引，再dependencies/dependents看集合，用path-between查关系，最后
 locate-decode核对指令。why-root仍只接受根，七主题及原21示例不变。
 [实际路径、计数、接口及成本](function-path-between.md)。版本未变，未重新发布。
+
+## functions主题：双函数依赖集合（公开0.5.1后源码增量）
+
+`--compare-dependencies LEFT RIGHT`只比较同一输入的两个完整函数索引，各自包含起点，
+允许导入/非根/根不可达函数。只允许Top、strict和自身JSON；JSON需显式双索引及
+新的非空.json。参数/组合错误2，输入/目标/证据/写入1，完成0，strict拒绝3。
+四组shared/left_only/right_only/neither互斥覆盖全索引；不是entrypoints的全局归因，
+不使用baseline，不推断死代码或优化收益。Top分别限制前三组文本行，neither文本
+仅汇总，JSON全成员及两侧完整边。一次build，最多两次旧helper BFS，同索引复用。
+helper仍各自检查/排序，不声称全准备或全流程解析一次；全模块诊断仅保存一份。
+七个主题/原示例不变。[实测集合、账本及迁移](dependency-overlap.md)。版本未变，未发布。
