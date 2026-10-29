@@ -453,3 +453,20 @@ import encoded_size stays null. Full module diagnostics govern strict before
 output preflight/create. Independent mode only allows Top, own JSON and strict.
 No source-change impact or removal benefit is computed. No version/dependency
 change or package publication. [Contract and evidence](function-dependents.md).
+
+## Source-only explicit function-pair path after public 0.5.1
+
+Adds FunctionPathBetweenStatus (BetweenPathFound/BetweenPathNotFound, Eq),
+FunctionPathBetweenReport and FunctionPathBetweenError. Four new functions:
+function_path_between, describe_function_path_between_error,
+render_function_path_between, render_function_path_between_json. Options adds
+only path_between: (Int, Int)?=None and path_between_json: String?=None.
+Errors wrap the original FunctionDependenciesError, invalid TO/count, or optional
+actual caller/callee/file-offset evidence with a reconstruction reason. No old
+public signatures, error variants or JSON formats change. New JSON format is
+moonsize-function-path-between/schema1, distinct from original model-root paths.
+One complete dependencies query is reused; no extra BFS/build/decode or old why
+limits. Not-found has no fabricated destination node and null hops; same-index
+has one node/zero hops. Only strict/own JSON combine; explicit Top is rejected.
+Version/dependencies unchanged, no package publication.
+[Contract and evidence](function-path-between.md).

@@ -319,6 +319,10 @@ fn main {
     run_function_calls(options, index)
     return
   }
+  if options.path_between is Some((source, target)) {
+    run_function_path_between(options, source, target)
+    return
+  }
   if options.dependents is Some(index) {
     run_function_dependents(options, index)
     return

@@ -1468,3 +1468,33 @@ check、精确新测试、一次release及四调用通过；CI只追加轻量脚
 未跑本地旧/全量套件、旧CLI、演示、探针、V8、性能/浏览器/PDF。版本0.5.1和
 依赖不变，未发布Mooncakes；原图片/AGENTS/规划/构建证据不提交。此为模型来源，
 不是源码修改影响、实际执行、必需保留量或删除/重编译/gzip收益；不同目标不可相加。
+
+## 64. 任意双函数引用路径（公开0.5.1后源码增量）
+
+基于93509c8新增function_path_between及独立--path-between FROM TO，完整索引含
+导入，两侧无需模型根资格。仅strict及自身JSON，显式Top/其他模式I/O前拒绝。
+仅调用一次function_dependencies，TO用返回function_count校验；一次节点Map及
+完整边tuple Set，沿前驱迭代回FROM后反转。每步验证callee/parent/depth降1/完整边
+caller-callee-kind-offset存在，节点数上界保证坏链/环不返回部分成功。起点0层/null，
+同点一节点/零边/hops0；未找到空路径/hopsnull，保留请求TO但不重新读/捏造身份。
+不再建图/BFS/解码，不调用analyze/retained/SCC/dependents/why，不冒称找到即停止；
+prepared_closure_function_count说明完整原查询成本，why限额不适用。原API/JSON未改。
+
+初次native检查仅新测试状态assert_eq缺Debug，改成模式断言，没有新增公共Debug；
+随后新3项组合单测首次执行3/3通过，恰好4次CLI为0/0/3/1，一次release构建。
+实测130B SHA bef050f03cb12940e1b153c40de0f2ba54cda02e658719bd87a79d220cc93dc8。
+export仅5、无start、element为3/0，直接证明FROM1非模型根；不调用旧why求预期。
+路径1→2→4，两边Direct/file67和84，hops2；3节点=2边+1，完整准备5节点/全7函数。
+等长经3路线不选，平行67早于69；Reference71早于candidate76。单测另核对导入终点
+1→2→0、反向0→1未找到、同点0/1零步、断链/坏端点/depth/证据/环和原错误包装。
+没有累计路径编码量或推算执行/收益，CallEdge无opcode，不猜call/return_call。
+
+134B缺口SHA4368f888598462ad6601e8cc1115ea15444d3a5487ad7507acb482489bf63bbe，
+路径外function6/file108 call_ref完整保留，unresolved_count0。单测三种状态均保留
+不完整；共用strict分支先于预检，CLI found样本返回3且strict.json不存在。已有
+sentinel拒绝1、无保存成功提示，原文件及输入哈希不变。证据在
+_build/function-path-between-verification/run-YATz7z/（argv/log/JSON/results）。
+接口仅3类型（状态Eq）、4函数、Options两字段，旧签名/JSON保留；可读HEAD声明
+审查，不改ACL/重建历史。CI仅追加轻量脚本，正常推送后核对最终SHA；未本地跑
+旧/全量套件、旧CLI、演示、探针、V8、性能或浏览器/PDF。七主题/原示例不变。
+版本0.5.1/依赖不变、不发布Mooncakes；原图片/AGENTS/规划/构建证据不提交。

@@ -207,3 +207,12 @@ next_edge toward the target. `--dependencies INDEX` lists the outgoing closure;
 `--why-index INDEX` gives one path from model roots. None is an execution trace
 or source-change impact analysis. Use separate commands, not combined modes.
 [Reverse closure contract and evidence](function-dependents.md).
+
+## Explicit pair path (source addition after public 0.5.1)
+
+`--path-between FROM TO` reconstructs one deterministic shortest path from one
+complete dependencies query, allowing non-root/imported endpoints. It does not
+run another graph search or relax why-root. Not-found has empty paths/null hops;
+same-index has zero hops. No Top; only own JSON and strict combine. Workflow:
+name search -> dependencies/dependents sets -> explicit pair path -> locate-decode
+for actual instruction offsets. [Contract and real evidence](function-path-between.md).

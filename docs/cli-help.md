@@ -392,3 +392,15 @@ caller→callee方向不反转，next_edge从当前节点走向目标、depth逐
 callers是一跳入边，dependencies是出向闭包，why-index是一条根路径。来源集合
 不是源码修改影响分析或删除收益。七主题及既有21示例不变，不新增主题。
 [实际命令、账本、退出码及接口](function-dependents.md)。版本未变，未重新发布。
+
+## functions主题：显式双函数模型路径（公开0.5.1后源码增量）
+
+`--path-between FROM TO`允许任意有效完整索引（含导入），不要求起点为模型根。
+一次dependencies完整闭包查询后还原前驱，不再建图/BFS/解码，不是找到即停止。
+仅自身`--path-between-json new.json`和strict可组合；显式Top/其他模式在I/O前拒绝。
+JSON需显式双索引、新的非空.json。参数2、输入/索引/坏链/写入1、完成0、strict3。
+同点是零步，不证明非空循环；未找到是模型内该方向未记录路径，hop_count为null，
+不伪造目标身份。全模块诊断对找到/未找到/零步同样约束strict，先于预检与创建。
+先名称检索索引，再dependencies/dependents看集合，用path-between查关系，最后
+locate-decode核对指令。why-root仍只接受根，七主题及原21示例不变。
+[实际路径、计数、接口及成本](function-path-between.md)。版本未变，未重新发布。

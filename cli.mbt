@@ -37,6 +37,9 @@ pub struct Options {
   why_index : Int?
   why_root : Int?
   why_json : String?
+  /// Independent explicit FROM -> TO model path; no Top.
+  path_between : (Int, Int)?
+  path_between_json : String?
   /// Independent reverse reference-model closure reaching any function.
   dependents : Int?
   dependents_json : String?
@@ -162,6 +165,8 @@ pub fn Options::default(path : String) -> Options {
     why_index: None,
     why_root: None,
     why_json: None,
+    path_between: None,
+    path_between_json: None,
     dependents: None,
     dependents_json: None,
     dependencies: None,
@@ -434,6 +439,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut why_index : Int? = None
   let mut why_root : Int? = None
   let mut why_json : String? = None
+  let mut path_between : (Int, Int)? = None
+  let mut path_between_json : String? = None
   let mut dependents : Int? = None
   let mut dependents_json : String? = None
   let mut dependencies : Int? = None
@@ -691,6 +698,33 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
         )
       }
       calls_json = Some(args[i + 1])
+      i += 2
+    } else if arg == "--path-between" {
+      if i + 2 >= args.length() {
+        return Err(
+          "moonsize: --path-between needs FROM and TO nonnegative decimal function indices\n\n" +
+          usage(),
+        )
+      }
+      path_between = match
+        (parse_path_index(args[i + 1]), parse_path_index(args[i + 2])) {
+        (Some(source), Some(target)) => Some((source, target))
+        _ =>
+          return Err(
+            "moonsize: --path-between wants FROM and TO nonnegative decimal function indices\n\n" +
+            usage(),
+          )
+      }
+      i += 3
+    } else if arg == "--path-between-json" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --path-between-json needs a new .json path\n\n" + usage(),
+        )
+      }
+      path_between_json = Some(args[i + 1])
       i += 2
     } else if arg == "--dependents" {
       if i + 1 >= args.length() {
@@ -1214,6 +1248,102 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       "moonsize: --cycle-witness requires --cycles or --cycles-json\n\n" +
       usage(),
     )
+  }
+  if path_between_json is Some(_) && path_between is None {
+    return Err(
+      "moonsize: --path-between-json requires --path-between\n\n" + usage(),
+    )
+  }
+  if path_between is Some(_) {
+    if top_seen ||
+      dependents is Some(_) ||
+      dependents_json is Some(_) ||
+      dependencies is Some(_) ||
+      dependencies_json is Some(_) ||
+      cycles ||
+      cycle_witness ||
+      cycles_json is Some(_) ||
+      locate_range_offset is Some(_) ||
+      locate_range_length is Some(_) ||
+      locate_range_json is Some(_) ||
+      find_opcode is Some(_) ||
+      find_opcode_json is Some(_) ||
+      baseline_data_preview_index is Some(_) ||
+      baseline_data_offset is Some(_) ||
+      opcode_stats ||
+      diff_opcodes ||
+      opcode_stats_json is Some(_) ||
+      local_accesses_index is Some(_) ||
+      local_accesses_json is Some(_) ||
+      calls_index is Some(_) ||
+      calls_json is Some(_) ||
+      locals_index is Some(_) ||
+      locals_json is Some(_) ||
+      baseline_locals_index is Some(_) ||
+      retained ||
+      dead_code ||
+      compress ||
+      data_segments ||
+      diff_data ||
+      diff_functions ||
+      generics ||
+      entrypoints ||
+      duplicates ||
+      exports ||
+      diff_exports ||
+      metadata ||
+      diff_metadata ||
+      imports ||
+      diff_imports ||
+      data_duplicates ||
+      locate_decode ||
+      call_graph is Some(_) ||
+      html is Some(_) ||
+      summary_json is Some(_) ||
+      baseline is Some(_) ||
+      max_size is Some(_) ||
+      diff_functions_json is Some(_) ||
+      experiment is Some(_) ||
+      experiment_context is Some(_) ||
+      why_index is Some(_) ||
+      why_root is Some(_) ||
+      why_json is Some(_) ||
+      callers_index is Some(_) ||
+      callers_json is Some(_) ||
+      generics_json is Some(_) ||
+      entrypoints_json is Some(_) ||
+      duplicates_json is Some(_) ||
+      exports_json is Some(_) ||
+      metadata_json is Some(_) ||
+      imports_json is Some(_) ||
+      data_duplicates_json is Some(_) ||
+      instructions_index is Some(_) ||
+      instructions_json is Some(_) ||
+      baseline_instructions_index is Some(_) ||
+      find_functions is Some(_) ||
+      find_functions_json is Some(_) ||
+      (find_data is Some(_) || find_data_hex is Some(_)) ||
+      find_data_json is Some(_) ||
+      data_preview_index is Some(_) ||
+      data_offset is Some(_) ||
+      data_limit is Some(_) ||
+      data_preview_json is Some(_) ||
+      locate_offset is Some(_) ||
+      locate_offset_json is Some(_) ||
+      budget is Some(_) ||
+      budget_json is Some(_) ||
+      budget_md is Some(_) ||
+      data_json is Some(_) {
+      return Err(
+        "moonsize: --path-between is an independent mode; only --strict and --path-between-json may be combined with it\n\n" +
+        usage(),
+      )
+    }
+    if path_between_json is Some(target) && !target.has_suffix(".json") {
+      return Err(
+        "moonsize: --path-between-json wants a .json path\n\n" + usage(),
+      )
+    }
   }
   if dependents_json is Some(_) && dependents is None {
     return Err(
@@ -2885,6 +3015,8 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     why_index,
     why_root,
     why_json,
+    path_between,
+    path_between_json,
     dependents,
     dependents_json,
     dependencies,

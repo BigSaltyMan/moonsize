@@ -136,6 +136,23 @@ default to zero and a common limit clips each side. Missing bytes are null (--),
 not 00. No resource matching or insertion/deletion alignment. --diff-data instead
 groups complete payload content. See [byte contract, API and actual ranges](docs/data-preview.md).
 
+## A model path between any two functions
+
+Source addition after public0.5.1: explicitly choose FROM and TO in the full
+function index space, including imports. The source need not be a model root.
+
+```sh
+moonsize app.wasm --path-between 12 47
+moonsize app.wasm --path-between 12 47 --path-between-json new-path.json --strict
+```
+
+Indices12/47 are placeholders. Only own JSON and strict combine; explicit Top
+is rejected. Found, zero-step and within-model not-found all return0; strict
+checks full-module diagnostics before writing. The complete dependencies closure
+is prepared once, then predecessors are reconstructed without another search.
+This is a model path, not execution, stack depth or removal benefit.
+[Exact path, preparation cost, null states and API](docs/function-path-between.md).
+
 ## Transitive function model referrers
 
 Source addition after public 0.5.1: `--dependents INDEX` lists every modeled
@@ -662,6 +679,8 @@ identify candidates for investigation.
   --baseline-locals <n> baseline target; requires locals and baseline
   --calls <n> list call instructions in one local body; Top/own JSON only
   --calls-json <path> save all call sites to a new .json; requires calls
+  --path-between <from> <to> one shortest model path; strict/own JSON only, no Top
+  --path-between-json <path> full path to a new .json; requires explicit pair
   --dependents <n>     transitive model referrers to any function; Top/strict
   --dependents-json <path> full reverse closure to a new .json; requires dependents
   --dependencies <n>   transitive model closure from any function; Top/strict allowed
@@ -982,6 +1001,9 @@ Family keys apply within one artifact; totals do not predict removable bytes.
 See [the observed encoding, size ledger and limits](docs/generic-instances.md).
 
 ## Explaining a function's reference path
+
+For an arbitrary non-root FROM -> TO query use [path-between](docs/function-path-between.md);
+why-index and why-root retain their model-root rules.
 
 `--cycles --cycle-witness` instead closes a representative path inside each
 component, without selecting roots or claiming all members are visited. It is

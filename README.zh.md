@@ -76,6 +76,20 @@ offset各自默认0、共用limit并各自裁剪。缺字节为null（文本--�
 不匹配资源身份或进行插入删除对齐；diff-data仍按完整payload内容分桶。
 [范围规则、API与实测字节](docs/data-preview.md)。
 
+### 任意双函数之间的模型路径
+
+公开0.5.1后的源码增量：显式指定完整索引FROM和TO（含导入），起点不必是模型根。
+
+```sh
+moonsize app.wasm --path-between 12 47
+moonsize app.wasm --path-between 12 47 --path-between-json new-path.json --strict
+```
+
+12/47仅示范语法。只允许自身JSON和strict，显式Top拒绝。找到、零步或模型内
+未找到均为0；strict按全模块缺口在写入前拒绝。一次dependencies准备完整闭包，
+再还原前驱，不重复建图/搜索。路径不代表执行、调用栈或删除收益。
+[实测路径、成本边界、null状态和API](docs/function-path-between.md)。未重新发布包。
+
 ### 指定函数的传递引用来源
 
 公开0.5.1后的源码增量：`--dependents INDEX`查哪些函数能沿模型边到达目标，
@@ -331,6 +345,8 @@ moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
 moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
+  --path-between <from> <to> 双函数最短模型路径，仅strict/自身JSON，拒绝Top
+  --path-between-json <path> 路径写入新.json，需显式双索引
   --dependents <n>     到达任意目标的传递模型来源，允许Top/strict
   --dependents-json <path> 完整反向闭包写入新.json，需dependents
   --dependencies <n>   任意函数的传递模型闭包，允许Top/strict
@@ -777,6 +793,9 @@ moonsize app.wasm --generics-json new-generics.json
 总量不是可删除字节。[实际符号、闭合账本与范围](docs/generic-instances.md)。
 
 ## 查询函数引入路径
+
+任意非根FROM→TO关系可用[path-between](docs/function-path-between.md)；
+why-index仍从模型根出发，why-root仍只允许真实根。
 
 `--cycles --cycle-witness`则在每个分量内部选一条代表闭合路径，不从模型根出发，
 不保证访问全部成员。需实际opcode时，可按边offset单独运行locate-decode。
