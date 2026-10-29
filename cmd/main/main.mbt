@@ -319,6 +319,10 @@ fn main {
     run_function_calls(options, index)
     return
   }
+  if options.dependents is Some(index) {
+    run_function_dependents(options, index)
+    return
+  }
   if options.dependencies is Some(index) {
     run_function_dependencies(options, index)
     return

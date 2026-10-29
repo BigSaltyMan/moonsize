@@ -1438,3 +1438,33 @@ strict3在预检前拒写，strict.json不存在；已有sentinel拒绝1且无�
 本四调用，核对最终SHA。七主题/21示例不变，版本0.5.1及依赖不变，未发布Mooncakes。
 原图片/AGENTS/规划/构建证据不提交。模型闭包不代表执行热度、必需保留量或
 删除/重编译/gzip收益；不同目标闭包可重叠，不可直接相加；depth不是调用栈深度。
+
+## 63. 指定函数的传递引用来源（公开0.5.1后源码增量）
+
+新增function_dependents及独立--dependents/--dependents-json，允许任意完整索引，
+包括导入，不要求导出/根可达/循环。一次inventory、一次build、一次入向BFS，
+不调用analyze/retained/SCC或逐函数查询，不额外解码opcode。先校验全图索引、
+本地caller及文件offset；入边按caller/D/R/I/offset，head队列首次入队保存depth/
+next_edge。next_edge始终原caller→callee并降层到目标，自环/回边不改目标0/null。
+完整内部边按callee在反向闭包筛选，caller也必须在其中；指向外部的边排除。
+平行位置/种类/自环/交叉/回边保留，边按caller/offset/callee/kind，节点按depth/index。
+新3类型、4函数、Options两字段，旧签名/JSON不变；复用预检和原生独占写入。
+
+本地新3项组合单测首轮3/3，恰好4次CLI为0/0/3/1；未跑旧套件。130B正常样本
+SHA bef050f03cb12940e1b153c40de0f2ba54cda02e658719bd87a79d220cc93dc8；
+目标2来源2/1/3/4，depth0/1/1/2，next依次null、1→2 D67、3→2 D93、4→1 D98。
+9条完整边D7/R1/I1区别于3后继树边，raw文件86的2→0字节[16,0]明确排除。
+7函数=本地6+导入1=来源4+其他3；来源4=本地4+导入0；其他来源3=4-1。
+42B=来源36+其他6，36=目标7+其他来源29。导入目标0另在单测核对：0/2/1/3/4，
+depth0/1/2/2/3，全10边，节点大小null、本地贡献0、来源编码36。孤立目标5只含
+自身3B/其他来源0，自环目标0层/null不变；重排证据、平行种类及后继链均核对。
+
+134B缺口SHA4368f888598462ad6601e8cc1115ea15444d3a5487ad7507acb482489bf63bbe，
+闭包外function6/file108 call_ref仍诊断，unresolved_count保持0；strict在预检前
+返回3、无strict.json。已有sentinel拒绝1、原文件和两侧输入不变。Top1只一来源行，
+JSON全4nodes/9edges。证据_build/function-dependents-verification/run-dR6VSE/。
+接口以当前moon-info及可读HEAD声明审查，不改ACL、不重建历史。info/fmt/native
+check、精确新测试、一次release及四调用通过；CI只追加轻量脚本，最终SHA另核对。
+未跑本地旧/全量套件、旧CLI、演示、探针、V8、性能/浏览器/PDF。版本0.5.1和
+依赖不变，未发布Mooncakes；原图片/AGENTS/规划/构建证据不提交。此为模型来源，
+不是源码修改影响、实际执行、必需保留量或删除/重编译/gzip收益；不同目标不可相加。

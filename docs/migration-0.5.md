@@ -439,3 +439,17 @@ change; new JSON is moonsize-function-dependencies/schema1. An import's encoded
 size stays null; target_local_encoded_bytes=0 is only its local accounting weight.
 Full graph validation and module diagnostics apply even to an import target.
 This is not republished. [Contract and evidence](function-dependencies.md).
+
+## Source-only function referrer closure after public 0.5.1
+
+Adds FunctionDependentNode, FunctionDependentsReport, FunctionDependentsError,
+and four functions: function_dependents, describe_function_dependents_error,
+render_function_dependents, render_function_dependents_json. Options adds only
+dependents=None and dependents_json=None. Existing FunctionPathNode/CallEdge are
+reused. Old public signatures, error variants and JSON remain unchanged; new
+format is moonsize-function-dependents/schema1. Nodes use next_edge toward the
+target, not predecessor. Edges retain original caller-to-callee direction;
+import encoded_size stays null. Full module diagnostics govern strict before
+output preflight/create. Independent mode only allows Top, own JSON and strict.
+No source-change impact or removal benefit is computed. No version/dependency
+change or package publication. [Contract and evidence](function-dependents.md).

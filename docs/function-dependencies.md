@@ -198,3 +198,12 @@ one release build and four CLI calls ran locally; old suites/CLI, demos, probes,
 V8, performance and browser/PDF validation were skipped. CI retains its full
 flow and adds only this lightweight four-call script; final-SHA status is
 reported separately. Version stays0.5.1; no Mooncakes release is performed.
+
+## Incoming versus outgoing source queries (source addition after public 0.5.1)
+
+`--callers INDEX` lists one-hop incoming instruction evidence; `--dependents INDEX`
+lists the transitive incoming closure, with original caller-to-callee edges and
+next_edge toward the target. `--dependencies INDEX` lists the outgoing closure;
+`--why-index INDEX` gives one path from model roots. None is an execution trace
+or source-change impact analysis. Use separate commands, not combined modes.
+[Reverse closure contract and evidence](function-dependents.md).

@@ -381,3 +381,14 @@ index选一条闭合模型路径，可能只经过部分成员，不承诺全局
 calls查单函数调用点，callers查一跳来源，why-index查根到目标一条路径，entrypoints
 查导出入口归因；dependencies查任意目标传递闭包。七主题/21示例不变。
 公开0.5.1后源码增量，未发布。[实际层数、账本和迁移](function-dependencies.md)。
+
+## functions主题：传递引用来源（公开0.5.1后源码增量）
+
+`--dependents INDEX`接受任意完整函数index（含导入）；查询能到达目标的反向闭包，
+包含目标自身，不过滤根不可达来源。只允许Top、strict、自身`--dependents-json new.json`。
+JSON必须有显式主查询，完整保存所有节点、next_edge和原方向内部边。Top仅限制
+非目标文本行。strict依据全模块缺口，在预检/写入前拒绝；新目标沿用独占保护。
+caller→callee方向不反转，next_edge从当前节点走向目标、depth逐步减少；depth不是栈。
+callers是一跳入边，dependencies是出向闭包，why-index是一条根路径。来源集合
+不是源码修改影响分析或删除收益。七主题及既有21示例不变，不新增主题。
+[实际命令、账本、退出码及接口](function-dependents.md)。版本未变，未重新发布。

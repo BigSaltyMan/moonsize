@@ -49,6 +49,7 @@ fn help_topics() -> Array[HelpTopic] {
       title: "Find and explain functions",
       summary: "Locate a local index, inspect its encoding, or query model references.",
       options: [
+        "--dependents <index>; --dependents-json <new.json> (reverse model closure, Top/strict)",
         "--dependencies <index>; --dependencies-json <new.json> (transitive model closure, Top/strict)",
         "--cycles; --cycles-json <new.json>; --cycle-witness (closed model evidence, Top/strict allowed)",
         "--find-functions <literal>; --find-functions-json <new.json>", "--instructions <index>; --instructions-json <new.json>; --baseline-instructions <index>",
@@ -74,6 +75,7 @@ fn help_topics() -> Array[HelpTopic] {
         ],
       ],
       limits: [
+        "--dependents finds all modeled sources reaching any full index, including imports. Edges retain caller -> callee direction; next_edge points toward the target and lowers depth. This is not source-change impact. Only Top, own JSON and strict; Top does not truncate JSON or limit traversal.",
         "--dependencies starts at any full function index and includes itself, imports and three model edge kinds. Depth is minimum model steps, not stack depth. First-discovery predecessors are separate from all closure edges. Unique local bytes are not retained or removal savings; closures may overlap. Only Top, own JSON and strict; Top does not limit traversal or JSON.",
         "--cycle-witness requires cycles or cycles-json. Each component gets one deterministic closed path from its minimum index, possibly a member subset; not globally shortest or runtime recursion. Full base evidence stays intact. Top never truncates displayed steps or JSON; no extra opcode decoding.",
         "--cycles includes unreachable model functions, multi-member SCCs and self-loops; reference/indirect candidate cycles are not runtime recursion. Local encoded component bytes are not retained or deletion savings. Only Top, own JSON and strict; Top never truncates members or JSON.",

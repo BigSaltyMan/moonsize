@@ -99,6 +99,8 @@ jobs:
         run: node scripts/test-entrypoints.mjs _build/native/release/build/cmd/main/main.exe
       - name: Generic-instance CLI regressions (one real probe, four cases)
         run: node scripts/test-generic-instances.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Function-dependents CLI regressions (four cases)
+        run: node scripts/test-function-dependents.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-dependencies CLI regressions (four cases)
         run: node scripts/test-function-dependencies.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-cycle-witness CLI regressions (four cases)

@@ -136,6 +136,24 @@ default to zero and a common limit clips each side. Missing bytes are null (--),
 not 00. No resource matching or insertion/deletion alignment. --diff-data instead
 groups complete payload content. See [byte contract, API and actual ranges](docs/data-preview.md).
 
+## Transitive function model referrers
+
+Source addition after public 0.5.1: `--dependents INDEX` lists every modeled
+source that can reach any valid function, including imported targets. Edges
+retain caller-to-callee direction; each node keeps one next edge toward the
+target and a minimum model depth. Complete internal edges remain separate.
+
+```sh
+moonsize app.wasm --dependents 12 --top 20
+moonsize app.wasm --dependents 12 --dependents-json new-dependents.json --top 1
+```
+
+Index12 is a placeholder. Only Top, own JSON and strict combine; strict checks
+full-module diagnostics. Top limits text rows, not traversal or JSON. This is
+not source-change impact or removal savings. Contrast callers (one-hop incoming),
+dependencies (outgoing closure), and why-index (one root path).
+[Direction, actual accounting, API and limits](docs/function-dependents.md).
+
 ## Transitive function model dependencies
 
 Source addition after public 0.5.1: start at any full function index, including
@@ -644,6 +662,8 @@ identify candidates for investigation.
   --baseline-locals <n> baseline target; requires locals and baseline
   --calls <n> list call instructions in one local body; Top/own JSON only
   --calls-json <path> save all call sites to a new .json; requires calls
+  --dependents <n>     transitive model referrers to any function; Top/strict
+  --dependents-json <path> full reverse closure to a new .json; requires dependents
   --dependencies <n>   transitive model closure from any function; Top/strict allowed
   --dependencies-json <path> full closure to a new .json; requires dependencies
   --cycles             query reference-model cyclic components; Top/strict allowed

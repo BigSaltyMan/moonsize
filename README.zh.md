@@ -76,6 +76,22 @@ offset各自默认0、共用limit并各自裁剪。缺字节为null（文本--�
 不匹配资源身份或进行插入删除对齐；diff-data仍按完整payload内容分桶。
 [范围规则、API与实测字节](docs/data-preview.md)。
 
+### 指定函数的传递引用来源
+
+公开0.5.1后的源码增量：`--dependents INDEX`查哪些函数能沿模型边到达目标，
+允许导入目标，不要求从根可达。边保留caller→callee方向，节点的next_edge指向
+目标方向并逐层降低depth；完整内部边与后继树分别保留。
+
+```sh
+moonsize app.wasm --dependents 12 --top 20
+moonsize app.wasm --dependents 12 --dependents-json new-dependents.json --top 1
+```
+
+index12仅示范语法。只允许Top、自身JSON和strict，strict依据全模块诊断。
+Top只限文本来源行，不截断JSON或限制遍历成本。它不是源码修改影响或删除收益。
+callers查一跳入边、dependencies查出向闭包、why-index查一条根路径。
+[方向、实测账本、API及边界](docs/function-dependents.md)。未重新发布包。
+
 ### 指定函数的传递引用依赖
 
 公开0.5.1后的源码增量：从任意完整函数index（含导入）查看模型传递闭包，目标
@@ -315,6 +331,8 @@ moonsize <file.wasm> --generics [--top <n>] [--generics-json <new.json>]
 moonsize <file.wasm> --callers <n> [--top <n>] [--callers-json <new.json>] [--strict]
 moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [--strict]
 
+  --dependents <n>     到达任意目标的传递模型来源，允许Top/strict
+  --dependents-json <path> 完整反向闭包写入新.json，需dependents
   --dependencies <n>   任意函数的传递模型闭包，允许Top/strict
   --dependencies-json <path> 完整闭包写入新的.json，需dependencies
   --cycles             引用图循环分量，允许Top/strict

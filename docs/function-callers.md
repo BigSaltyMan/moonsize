@@ -110,3 +110,12 @@ functions, including unreachable ones, while callers lists only one target's
 incoming instruction evidence. Cycles preserve direct/reference/candidate kinds
 and full module diagnostics; they do not prove actual recursion. Use separate
 commands. [SCCs, self-loops, bytes and API migration](function-cycles.md).
+
+## Incoming versus outgoing source queries (source addition after public 0.5.1)
+
+`--callers INDEX` lists one-hop incoming instruction evidence; `--dependents INDEX`
+lists the transitive incoming closure, with original caller-to-callee edges and
+next_edge toward the target. `--dependencies INDEX` lists the outgoing closure;
+`--why-index INDEX` gives one path from model roots. None is an execution trace
+or source-change impact analysis. Use separate commands, not combined modes.
+[Reverse closure contract and evidence](function-dependents.md).
