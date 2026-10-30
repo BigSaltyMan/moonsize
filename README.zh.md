@@ -135,7 +135,8 @@ moonsize app.wasm --dependencies 12 --dependencies-dot new-dependencies.dot --to
 
 index12仅示范语法。独立模式允许Top、strict和自身JSON或DOT（两者互斥）；strict依据全模块诊断，
 即使缺口在闭包外也会拒写。Top只限制文本依赖行，不裁剪JSON或DOT。生成DOT不需要Graphviz，
-保留平行边、候选和诊断；局部图不能判断全模块死代码。本次未经过Graphviz解析或实际渲染验证。
+保留平行边、候选和诊断；局部图不能判断全模块死代码。923b9ba的Windows验证未包含Graphviz；
+现Linux CI要求实际-Tjson结构与布局文字检查，并按提交上传消费者证据，不代表人工视觉、中文字形、浏览器或打印验收。
 [实际层数、账本、查询区别及迁移](docs/function-dependencies.md)。未重新发布包。
 
 ### 引用图循环分量查询

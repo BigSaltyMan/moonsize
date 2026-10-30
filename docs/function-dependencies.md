@@ -301,3 +301,84 @@ Local checks omitted old suites/scripts, demos, probes, V8, performance and
 browser/PDF. One release build and required interface/format/native checks ran.
 CI preserves its full flow with one new four-case step; exact final-SHA status
 is reported separately. Version remains0.5.1, no Mooncakes publication.
+
+## Graphviz consumer contract (2026-10-30, source-only after 0.5.1)
+
+The preceding134/138B Windows record belongs to923b9ba and remains historical:
+its special name was on function2, outside the exported closure. This follow-up
+moves the name to function3 in the actual `[0,1,3,4]` subgraph. The name includes
+Chinese, a quote, literal `\N`, `\G`, `\E`, `\n`, `\l`, `\r`, actual newline/tab/ESC
+and text resembling an injected DOT statement. The name section still follows
+code; instruction offsets68/70/72/77/80/92/94/99 and gap diagnostic109 stay fixed.
+The two inputs and resulting DOT have new identities; no old hashes are reused.
+
+Only the test script understands `--require-graphviz`; it is not a product flag:
+
+```sh
+node scripts/test-dependencies-dot.mjs _build/native/release/build/cmd/main/main.exe
+node scripts/test-dependencies-dot.mjs _build/native/release/build/cmd/main/main.exe --require-graphviz
+node scripts/verify-dependencies-dot-graphviz.mjs <explicit-evidence-directory> [dot-executable]
+```
+
+The first command retains string checks and explicitly records Graphviz not
+executed. CI uses the second, exactly once: the same four analyzer calls, then
+the verifier gets that exact new directory. There is no latest-run search or
+fixed historical consumer input. Standalone verification uses the third form,
+with an optional explicit dot executable. It exclusively creates a graphviz/
+subdirectory, never overwrites DOT or earlier consumer results. Missing tools,
+unsupported format, startup/timeout/nonzero/invalid JSON and assertion failures
+all fail the verification. Calls use shell:false, argv arrays,30s timeout and
+8MiB output limit. Version output on stderr is permitted when status is0.
+
+The verifier runs `dot -V` and once per new.dot/gap.dot runs `dot -Tjson`.
+It checks the `_gvid` to node-name mapping (not Wasm indices), the exact node
+set, eight-edge multiset with parallel edges/self-loop/kinds/offsets/styles,
+import not-measured shape/label, and highlighted query target. File size/hash,
+target/completeness/unresolved attributes and full diagnostic JSON are checked.
+The gap retains closure-external function6/file109 call_ref even though fn_6
+is absent. No coordinates, fonts, curve geometry or complete layout snapshots
+are fixed. [Graphviz JSON documentation](https://graphviz.org/docs/outputs/json/)
+distinguishes actual `-Tjson` layout drawing from input-only dot_json.
+
+Checks read actual `_ldraw_` text operations, with independent fixed expected
+lines for all four nodes and edge labels. fn_3's first text line must contain
+the intact literal backslash sequences and visible control escapes; its only
+remaining lines are local encoded7B and BFS depth1. User text must not create
+nodes, substitution names or additional layout lines. diagnostics_json is
+parsed once after decoding the Graphviz JSON envelope, without deleting
+backslashes or ignoring parse errors. These checks establish the tested Linux
+Graphviz version's parsing, layout processing and output text contract; they
+do not establish manual visual, font glyph, browser, PDF or printer acceptance.
+
+CI prepares Graphviz once in the existing native job, reusing dot or installing
+Linux graphviz if absent. Preparation failures and consumer failures have
+separate steps. CI requires the consumer and cannot downgrade to string-only
+success. Its always-on upload, when a run directory exists, contains only that
+run: two inputs/DOT, hashes, four CLI logs/argv/status, Graphviz JSON, version,
+commands/status/stderr and assertions. Artifact name:
+`dependencies-dot-consumer-<full-commit-SHA>`; graphviz/results.json records
+actual version, executable path, final GITHUB_SHA, hashes, drawn text, diagnostic
+and assertion results. The exact run link/version/artifact are reported after
+CI succeeds; this source record does not predeclare an unexecuted Linux result.
+
+### Local focused record
+
+No product fix, public API/Options/.mbti/version/dependency change was required.
+Local MoonBit tests:0; builds:0. Reused the native release CLI from the preceding
+verified product-source build, SHA-256
+`f78793ff4a494978202e0ea1b18e526f62f0c19c353f1c17101e03a1bbbb54a7`.
+Both JS files passed node --check. The four analyzer calls ran only once and
+passed0/0/3/1, preserving inputs/sentinel; Top1 still exports4 nodes/8 full edges
+versus3 tree edges. Evidence: `_build/dependencies-dot-verification/run-USbbSF/`.
+
+| Item | Size | SHA-256 |
+| --- | ---: | --- |
+| overlap.wasm | 180 B | `5ab8b5909382839922958a3371296c1bdce0e1efe20ee50246ade8771ae4777e` |
+| gap.wasm | 184 B | `76123b7954a5cf57aa7dca5cc1db847d6011386288f62cd970f41c5a3261acc2` |
+| new.dot | — | `90843808c22992153211ca247052122a83fec3331869b5195b5c96a9ff7b97b0` |
+| gap.dot | — | `c54f728222b4d6ea77ce451b910183ea7ebd9695854445a8581cf7907b9e18b9` |
+
+Local Graphviz was not installed, probed again or run; actual consumer execution
+is required in target-SHA Linux CI. Old local suites/scripts, demos, V8, probes,
+performance and browser/PDF checks were omitted. Version remains0.5.1; no
+Mooncakes publication. The production CLI still has no Graphviz dependency.

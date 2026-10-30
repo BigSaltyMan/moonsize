@@ -99,8 +99,24 @@ jobs:
         run: node scripts/test-entrypoints.mjs _build/native/release/build/cmd/main/main.exe
       - name: Generic-instance CLI regressions (one real probe, four cases)
         run: node scripts/test-generic-instances.mjs _build/native/release/build/cmd/main/main.exe
-      - name: Dependencies-DOT CLI regressions (four cases)
-        run: node scripts/test-dependencies-dot.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Prepare Graphviz consumer (Linux test dependency only)
+        run: |
+          if ! command -v dot >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y graphviz
+          fi
+          command -v dot
+          dot -V
+      - name: Dependencies-DOT CLI and Graphviz consumer (four cases)
+        id: dependencies-dot
+        run: node scripts/test-dependencies-dot.mjs _build/native/release/build/cmd/main/main.exe --require-graphviz
+      - name: Save this run's dependencies DOT consumer evidence
+        if: always() && steps.dependencies-dot.outputs.evidence_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependencies-dot-consumer-${{ github.sha }}
+          path: ${{ steps.dependencies-dot.outputs.evidence_dir }}
+          if-no-files-found: error
       - name: Dependency-overlap CLI regressions (four cases)
         run: node scripts/test-dependency-overlap.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-path-between CLI regressions (four cases)

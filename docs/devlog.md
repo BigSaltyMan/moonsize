@@ -1555,3 +1555,25 @@ moon info与前一提交接口快照精确对照，仅一函数一字段；格�
 不安装工具，不把字符串断言当视觉验收。本地未跑旧套件/CLI、演示、探针、V8、性能、
 浏览器/PDF。CI仅追加四场景脚本，最终SHA另报。版本0.5.1、依赖不变，不发布Mooncakes。
 原图片、AGENTS、规划和构建证据排除。局部图不证明全模块死代码、执行或删除收益。
+
+## 67. Graphviz实际消费者验证（2026-10-30，公开0.5.1后源码增量）
+
+修正四场景夹具：特殊名称由闭包外function2移到实际导出的function3，涵盖中文、引号、
+反斜杠替换序列、实际换行/tab/ESC及伪DOT语句。name仍在code之后，图仍[0,1,3,4]及
+8完整边，前驱树3边，所有指令偏移不变。新输入180/184B及新DOT散列见function-dependencies.md。
+
+新增独立verify-dependencies-dot-graphviz.mjs，明确本轮目录/可选dot路径，不找最新或旧目录。
+测试专用require-graphviz由原四调用脚本在结束后启动，产品CLI不增加参数/依赖。
+真实dot -V及两次-Tjson保存输出/版本/命令/状态/stderr及失败记录。检查_gvid映射和八边
+多重集合、导入/目标、哈希/状态/完整诊断，并逐行比较_ldraw_实际文字；不锁坐标/字体宽度。
+缺工具/格式不支持/超时/失败/坏JSON均失败，不随意去反斜杠。Graphviz读取两份产品DOT，
+不另跑分析器。CI同一native任务准备一次Graphviz，原步骤改带require，不重复四场景；
+按GITHUB_OUTPUT本轮目录always上传，artifact以最终SHA命名，含source_sha和实际Graphviz版本。
+Linux实际结论只以最终CI及graphviz/results.json为准，成功后另外报告，不能提前写成功。
+
+本地正常零项MoonBit测试、零次构建，仅两个JS语法检查、一次四场景CLI(0/0/3/1)及diff检查。
+证据_build/dependencies-dot-verification/run-USbbSF/，来源确认复用前次release且产品源未改。
+没有安装/再次探测本地Graphviz或运行已知缺工具的消费者。旧套件/演示/探针/V8/性能/
+浏览器/PDF均未执行。保留923b9ba的Windows未验历史，不把布局文字检查称人工视觉或中文字形、
+浏览器/打印验收。版本仍0.5.1，不发布。API/Options/.mbti与产品依赖不变，图片/AGENTS/规划/构建
+证据不纳入提交。

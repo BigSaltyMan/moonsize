@@ -208,8 +208,10 @@ Index12 is a placeholder. Only Top, strict and own JSON or DOT combine; JSON
 and DOT are mutually exclusive. Strict uses whole-module diagnostics, including
 outside the target closure. Top limits text, never the complete JSON or DOT.
 DOT generation needs no Graphviz; parallel edges, candidates and diagnostics
-remain. This local graph does not determine global dead code. Graphviz parsing
-and actual rendering were not verified for this delivery. [Actual depths, byte ledgers, related queries
+remain. This local graph does not determine global dead code. Windows checks
+for 923b9ba did not include Graphviz. Linux CI now requires Graphviz -Tjson
+structure and layout-text checks, with per-commit consumer artifacts; this is
+not manual visual, font-glyph, browser or print acceptance. [Actual depths, byte ledgers, related queries
 and migration](docs/function-dependencies.md).
 
 ## Reference cycle components
