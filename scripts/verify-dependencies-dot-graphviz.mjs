@@ -116,10 +116,16 @@ function validateGraph(graph, inputBytes, incomplete) {
   // or deleting any remaining backslashes. Malformed data is a hard failure.
   const diagnostics = JSON.parse(graph.diagnostics_json);
   assert.deepEqual(diagnostics, incomplete ? expectedGapDiagnostics : []);
-  assert.equal(typeof graph.graph_warning, 'string');
   if (incomplete) {
+    assert.equal(typeof graph.graph_warning, 'string');
     assert(graph.graph_warning.includes('function 6, offset 109: call_ref'));
-  } else assert.equal(graph.graph_warning, '');
+  } else {
+    // Graphviz 2.43.0 omits empty graph attributes from -Tjson. The product
+    // string check independently requires graph_warning="" in new.dot;
+    // only this known-empty, complete-graph value may be absent here.
+    assert(graph.graph_warning === undefined || graph.graph_warning === '',
+      'complete graph must not contain a nonempty warning');
+  }
 
   assert(Array.isArray(graph.objects));
   assert.equal(graph.objects.length, 4);

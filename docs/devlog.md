@@ -1577,3 +1577,9 @@ Linux实际结论只以最终CI及graphviz/results.json为准，成功后另外�
 浏览器/PDF均未执行。保留923b9ba的Windows未验历史，不把布局文字检查称人工视觉或中文字形、
 浏览器/打印验收。版本仍0.5.1，不发布。API/Options/.mbti与产品依赖不变，图片/AGENTS/规划/构建
 证据不纳入提交。
+
+首轮Linux run41055902945实际Graphviz2.43.0(0)，两次-Tjson均退出0，gap图的全部结构/
+布局文字/诊断断言通过。new图因消费者JSON省略空graph_warning而失败；只修验证器的
+已知空值断言（源DOT仍严格检查空属性），非空警告与完整诊断不放宽。无需产品修复。
+针对两份已下载真实布局复测同一断言，不新增analyzer/Graphviz调用或MoonBit测试，
+最终SHA仍需重新确认CI和本轮artifact，不能借用首轮部分成功。

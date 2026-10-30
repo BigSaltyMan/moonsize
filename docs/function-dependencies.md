@@ -382,3 +382,17 @@ Local Graphviz was not installed, probed again or run; actual consumer execution
 is required in target-SHA Linux CI. Old local suites/scripts, demos, V8, probes,
 performance and browser/PDF checks were omitted. Version remains0.5.1; no
 Mooncakes publication. The production CLI still has no Graphviz dependency.
+
+### First Linux consumer observation and verifier adjustment
+
+Run41055902945 (source1fb2746) used `/usr/bin/dot`, reporting
+`dot - graphviz version 2.43.0 (0)`. Both -Tjson commands returned0 and retained
+four nodes/eight edges. gap.dot passed every structure/layout-text/diagnostic
+assertion. The complete new.dot failed a verifier assumption: Graphviz omits
+the empty graph_warning attribute from JSON. Its product DOT string check still
+requires graph_warning="". Only this known-empty complete-graph consumer value
+now accepts omitted or empty; incomplete graphs still require a nonempty string
+and exact diagnostic record. No backslash rewriting or product fix was needed.
+Both archived real layouts are rechecked with the same corrected assertions;
+this does not replace the final SHA's fresh CI consumption. The failed artifact
+and logs remain preserved, and the final run/artifact are reported separately.
