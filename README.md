@@ -201,11 +201,15 @@ removal savings; imported encoded sizes remain null.
 ```sh
 moonsize app.wasm --dependencies 12 --top 20
 moonsize app.wasm --dependencies 12 --dependencies-json new-dependencies.json --top 1
+moonsize app.wasm --dependencies 12 --dependencies-dot new-dependencies.dot --top 1
 ```
 
-Index12 is a placeholder. Only Top, own JSON and strict combine; strict uses
-whole-module diagnostics, including outside the target closure. Top limits text
-rows, not traversal or full JSON. [Actual depths, byte ledgers, related queries
+Index12 is a placeholder. Only Top, strict and own JSON or DOT combine; JSON
+and DOT are mutually exclusive. Strict uses whole-module diagnostics, including
+outside the target closure. Top limits text, never the complete JSON or DOT.
+DOT generation needs no Graphviz; parallel edges, candidates and diagnostics
+remain. This local graph does not determine global dead code. Graphviz parsing
+and actual rendering were not verified for this delivery. [Actual depths, byte ledgers, related queries
 and migration](docs/function-dependencies.md).
 
 ## Reference cycle components
@@ -705,6 +709,7 @@ identify candidates for investigation.
   --dependents-json <path> full reverse closure to a new .json; requires dependents
   --dependencies <n>   transitive model closure from any function; Top/strict allowed
   --dependencies-json <path> full closure to a new .json; requires dependencies
+  --dependencies-dot <path> full subgraph to a new .dot; exclusive with JSON; Top only limits text
   --cycles             query reference-model cyclic components; Top/strict allowed
   --cycle-witness      add one closed model path per component; requires cycles
   --cycles-json <path> complete cycles JSON to a new .json; implies cycles

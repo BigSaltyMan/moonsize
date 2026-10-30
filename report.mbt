@@ -541,6 +541,7 @@ pub fn usage() -> String {
   "  --dependents-json <path.json> save full reverse closure; requires index\n" +
   "  --dependencies <n>   list transitive model dependencies from any function (Top/strict)\n" +
   "  --dependencies-json <path.json> save full closure to a new .json; requires index\n" +
+  "  --dependencies-dot <path.dot> full subgraph to new .dot; exclusive with JSON; Top only limits text\n" +
   "  --cycles             query reference-model cyclic components (Top/strict allowed)\n" +
   "  --cycle-witness      add one deterministic closed model path per component (requires cycles)\n" +
   "  --cycles-json <path.json> save all components to a new .json; implies --cycles\n" +

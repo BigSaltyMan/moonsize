@@ -373,8 +373,9 @@ index选一条闭合模型路径，可能只经过部分成员，不承诺全局
 ## functions主题：任意函数的传递引用闭包
 
 `--dependencies INDEX`接受完整函数index，目标可本地或导入，不要求导出/根可达。
-`--dependencies-json new.json`必须配主查询；只允许Top、自身JSON和strict。目标
-单独展示不占Top；Top不截断全部节点/边/诊断或JSON，不是遍历资源限制。
+`--dependencies-json new.json`或`--dependencies-dot new.dot`必须配主查询且互斥；只允许Top、自身输出和strict。目标
+单独展示不占Top；Top不截断全部节点/边/诊断、JSON或DOT，不是遍历资源限制。
+DOT保留完整有向边，不要求安装Graphviz，也不代表全模块死代码分析。导入目标可生成单节点图。
 层数是三类模型边的最少步数，前驱是一条首次发现原边；完整闭包边保留平行/
 自环/回指/交叉证据。导入encoded_size为null，零本地贡献不是宿主无成本。
 成功0，读取/结构/索引/图证据/输出错1，参数错2，全模块strict拒绝3且先于预检创建。

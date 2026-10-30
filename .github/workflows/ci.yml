@@ -99,6 +99,8 @@ jobs:
         run: node scripts/test-entrypoints.mjs _build/native/release/build/cmd/main/main.exe
       - name: Generic-instance CLI regressions (one real probe, four cases)
         run: node scripts/test-generic-instances.mjs _build/native/release/build/cmd/main/main.exe
+      - name: Dependencies-DOT CLI regressions (four cases)
+        run: node scripts/test-dependencies-dot.mjs _build/native/release/build/cmd/main/main.exe
       - name: Dependency-overlap CLI regressions (four cases)
         run: node scripts/test-dependency-overlap.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-path-between CLI regressions (four cases)

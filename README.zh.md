@@ -130,10 +130,12 @@ callers查一跳入边、dependencies查出向闭包、why-index查一条根路�
 ```sh
 moonsize app.wasm --dependencies 12 --top 20
 moonsize app.wasm --dependencies 12 --dependencies-json new-dependencies.json --top 1
+moonsize app.wasm --dependencies 12 --dependencies-dot new-dependencies.dot --top 1
 ```
 
-index12仅示范语法。独立模式只允许Top、自身JSON和strict；strict依据全模块诊断，
-即使缺口在闭包外也会拒写。Top只限制文本依赖行，不限制遍历或完整JSON。
+index12仅示范语法。独立模式允许Top、strict和自身JSON或DOT（两者互斥）；strict依据全模块诊断，
+即使缺口在闭包外也会拒写。Top只限制文本依赖行，不裁剪JSON或DOT。生成DOT不需要Graphviz，
+保留平行边、候选和诊断；局部图不能判断全模块死代码。本次未经过Graphviz解析或实际渲染验证。
 [实际层数、账本、查询区别及迁移](docs/function-dependencies.md)。未重新发布包。
 
 ### 引用图循环分量查询
@@ -368,6 +370,7 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --dependents-json <path> 完整反向闭包写入新.json，需dependents
   --dependencies <n>   任意函数的传递模型闭包，允许Top/strict
   --dependencies-json <path> 完整闭包写入新的.json，需dependencies
+  --dependencies-dot <path> 完整子图写入新.dot，与JSON互斥；Top只限文本
   --cycles             引用图循环分量，允许Top/strict
   --cycle-witness      每个分量一条闭合模型路径，需cycles或cycles-json
   --cycles-json <path> 完整分量写入新的.json，隐含cycles

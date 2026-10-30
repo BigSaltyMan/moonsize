@@ -486,3 +486,15 @@ One build, two old helper traversals at most, one for identical starts. Only
 Top/own JSON/strict combine. No baseline/global exclusivity or savings metric.
 Version/dependencies unchanged; no package publication.
 [Contract and evidence](dependency-overlap.md).
+
+## Source-only dependencies DOT after public 0.5.1
+
+Adds render_function_dependencies_dot(FunctionDependenciesReport) -> String and
+Options.dependencies_dot: String? (default None). No new public types or
+analysis entrypoint; old signatures/JSON stay unchanged. Explicit Options
+literals must supply the new field; Options::default supplies None. New .dot
+output requires dependencies and is mutually exclusive with its JSON. Top
+never clips DOT. Existing exclusive writer/strict order apply. Legacy
+render_dot and whole-module call-graph export remain unchanged.
+[Contract and validation limits](function-dependencies.md#complete-dependency-subgraph-dot-source-addition-after-public-051).
+Version/dependencies unchanged, no publication.

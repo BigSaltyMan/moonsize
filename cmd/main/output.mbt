@@ -39,6 +39,7 @@ fn check_outputs(options : @lib.Options) -> Unit {
       options.path_between_json,
       options.dependents_json,
       options.dependencies_json,
+      options.dependencies_dot,
       options.cycles_json,
       options.callers_json,
       options.calls_json,

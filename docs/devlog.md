@@ -1533,3 +1533,25 @@ strict先于预检/创建返回3，无strict.json；已有sentinel返回1、无�
 七主题/原示例不变，版本0.5.1及依赖不变，不发布。图片/AGENTS/规划/构建证据排除。
 单侧仅相对这两个起点，不借用entrypoints的全根独占/共享定义，也不是跨构建比较；
 不预测执行、retained、去重/拆包、删除、重编译或gzip收益，不新增左右字节和指标。
+
+## 66. 指定函数依赖子图 DOT（2026-10-29，公开0.5.1后源码增量）
+
+新增纯render_function_dependencies_dot和Options.dependencies_dot默认None，未新增公开
+类型或分析入口。runner复用一次function_dependencies及原strict/预检/独占writer，
+保存DOT只输出确认。必须配dependencies，新.dot与JSON互斥，Top不裁剪图；全模块
+call-graph/旧render_dot/旧JSON不变。排序副本，普通digraph保留完整边，目标不叫根，
+导入not measured，三类边用文字及线型区分，文件偏移不猜opcode。图属性完整携带诊断，
+用户控制字符先可见化再DOT转义，字面反斜杠序列不触发替换，中文保留。
+
+本地三个新合并单测首轮3/3，四次真实CLI为0/0/3/1。检查前修复了新文件match括号和
+新测试迭代语法，未运行旧测试。134B样本查1，完整节点[0,1,3,4]，8边D6/R1/I1，前驱树
+仅3边；平行file68/70、引用72、候选77、自环80、其他92/94/99全部保留，Top1无裁剪。
+138B缺口样本闭包外function6/file109 call_ref诊断保留且可见，unresolved_count0；
+strict3不创建，已有目标1原字节不变、无成功提示。证据与完整DOT：
+_build/dependencies-dot-verification/run-XtfaaJ/。输入哈希和边表见function-dependencies.md。
+
+moon info与前一提交接口快照精确对照，仅一函数一字段；格式/native检查、一次release
+构建、新脚本及diff检查。PATH未发现Graphviz，未经过Graphviz解析或实际渲染验证，
+不安装工具，不把字符串断言当视觉验收。本地未跑旧套件/CLI、演示、探针、V8、性能、
+浏览器/PDF。CI仅追加四场景脚本，最终SHA另报。版本0.5.1、依赖不变，不发布Mooncakes。
+原图片、AGENTS、规划和构建证据排除。局部图不证明全模块死代码、执行或删除收益。

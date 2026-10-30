@@ -6,12 +6,13 @@ Example index12 below is a syntax placeholder, not a measurement of your input:
 ```sh
 moonsize app.wasm --dependencies 12 --top 20
 moonsize app.wasm --dependencies 12 --dependencies-json new-dependencies.json --top 1
+moonsize app.wasm --dependencies 12 --dependencies-dot new-dependencies.dot --top 1
 moonsize app.wasm --dependencies 12 --strict
 ```
 
 The full function index space includes preceding imports. Any valid local or
 imported function can be the target; it need not be exported, model-root
-reachable or cyclic. The closure includes the target. Only Top, own JSON and
+reachable or cyclic. The closure includes the target. Only Top, own JSON or DOT (mutually exclusive), and
 strict may combine; baseline, budgets, HTML and other query/report modes are
 rejected before business I/O. JSON requires an explicit dependencies index and
 a new, nonempty `.json` path. Existing argument value constraints, unknown
@@ -27,7 +28,7 @@ options, `--` and first-argument help routing are unchanged.
 A valid decimal index outside the real inventory is an input/index error1;
 invalid numeric syntax is parameter error2. Empty modules have no valid target.
 Strict examines the entire module's `graph_complete`, before output preflight
-and creation. The new JSON destination uses existing unified path protection
+and creation. JSON and DOT destinations use existing unified path protection
 and native exclusive creation. Existing files are not removed or truncated.
 No rollback, new writer or multi-file transaction is introduced.
 
@@ -225,3 +226,78 @@ neither. It is not a cross-build comparison or global exclusive attribution.
 entrypoints uses all function exports and start/element roots; this query does
 not examine third-party roots or reuse that exclusive/shared definition.
 Only Top, own JSON and strict combine. [Sets, actual ledgers and complete evidence](dependency-overlap.md).
+
+## Complete dependency subgraph DOT (source addition after public 0.5.1)
+
+`--dependencies-dot new.dot` requires `--dependencies INDEX`, a nonempty new
+`.dot` target, and cannot combine with `--dependencies-json`. Top only affects
+text: DOT includes every closure node and original edge. Imported or isolated
+targets produce one-node graphs. The old whole-module `--call-graph`, text and
+JSON format remain unchanged. CLI reads once and calls function_dependencies
+once, then checks strict before unified preflight/exclusive creation. DOT mode
+prints only a save confirmation. Non-strict incomplete graphs keep warnings;
+strict rejects with3 before writing. Existing targets return1 unchanged;
+parameter errors2, success0. No second query/build/instruction decode occurs.
+
+API: `render_function_dependencies_dot(FunctionDependenciesReport) -> String`.
+The pure renderer sorts copies by node index and caller/offset/callee/kind.
+Ordinary digraph retains one statement per original edge, without strict or
+concentration. IDs are fn_INDEX, never names. Query target is highlighted, not
+called a model root. Labels include identity, local encoded bytes (imports:
+not measured), and BFS depth. Direct/solid, reference/dashed and indirect
+candidate/dotted labels carry actual file offsets, without guessing opcodes.
+
+Graph attributes preserve input_sha256, file_size, target_index, graph_complete,
+unresolved_count, modeling_scope, graph_warning and diagnostics_json (complete
+existing diagnostic JSON as a safely quoted DOT string, including records
+outside the closure). The visible title includes full counts, legend, model
+limits and incomplete warning/diagnostic count. This is model evidence, not
+execution, global dead/live status or removal savings. Layout cost is not
+bounded. Generating DOT does not require or launch Graphviz.
+
+User controls become visible `\uXXXX` text before DOT quote/backslash escaping.
+Literal `\N`, `\G`, `\E`, `\n`, `\l`, `\r` stay literal; only program separators
+create layout newlines. Chinese is preserved. No HTML-like/record labels, raw
+user comments, URLs or image attributes are generated. Legacy render_dot is
+unchanged. See [DOT grammar](https://graphviz.org/doc/info/lang.html) and
+[escString rules](https://graphviz.org/docs/attr-types/escString/).
+
+### Targeted evidence (Windows, 2026-10-29)
+
+Toolchain: moon 0.1.20260915 (2e1a46d), Node24.18.0. The fixed134B input SHA-256:
+`4bc13ffc04a8eefd9122f4f05a7c3ea3f09b138af45c6bbfb5141691152e0f76`.
+Query1 exports nodes `[0,1,3,4]`, eight complete edges versus three predecessor
+tree edges. Six direct, one reference and one indirect candidate remain:
+
+| Caller -> callee | Kind | File offset |
+| --- | --- | ---: |
+| 1 -> 3 | direct | 68 |
+| 1 -> 3 | direct | 70 |
+| 1 -> 4 | reference | 72 |
+| 1 -> 4 | indirect candidate | 77 |
+| 1 -> 1 | direct | 80 |
+| 3 -> 4 | direct | 92 |
+| 3 -> 0 | direct | 94 |
+| 4 -> 3 | direct | 99 |
+
+Top1 removes none. Import0 is an ellipse marked not measured; target1 is
+highlighted with17B/depth0. Closure-external function6 call_ref at file109 in
+138B gap input remains a full diagnostic (one record, unresolved_count0) with
+visible warning. Gap SHA-256:
+`60f19584f36ac1f2fa5386d317f7fc1b16fc5c6f1b9d26780cad3df1e4ecdcea`.
+
+Three new combined tests passed3/3 on first execution: exact escaping,
+non-mutating sort, full edges, single-node graphs and parameter contracts.
+Initial new-source syntax/type issues were corrected before running tests.
+Exactly four CLI calls passed0/0/3/1: Top1 DOT, non-strict gap DOT, strict gap
+refusal and existing sentinel refusal. Inputs and sentinel stayed unchanged.
+Evidence: `_build/dependencies-dot-verification/run-XtfaaJ/` contains inputs,
+new.dot, gap.dot, argv/status, logs and results.json. Sibling api-diff.txt shows
+exactly one renderer and one Options field; old signatures/types unchanged.
+
+Graphviz dot was not available on PATH. **No Graphviz parsing or actual rendering
+was verified.** String checks are not visual acceptance. No tools installed.
+Local checks omitted old suites/scripts, demos, probes, V8, performance and
+browser/PDF. One release build and required interface/format/native checks ran.
+CI preserves its full flow with one new four-case step; exact final-SHA status
+is reported separately. Version remains0.5.1, no Mooncakes publication.
