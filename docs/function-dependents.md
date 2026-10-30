@@ -6,13 +6,14 @@ these syntax examples is a placeholder:
 ```sh
 moonsize app.wasm --dependents 12 --top 20
 moonsize app.wasm --dependents 12 --dependents-json new-dependents.json --top 1
+moonsize app.wasm --dependents 12 --dependents-dot new-referrers.dot --top 1
 moonsize app.wasm --dependents 0 --strict
 ```
 
 Any valid full function index, including preceding imports, may be the target.
 The function need not be exported, reachable from a model root or part of a
 cycle. The reverse closure includes the target itself. Sources are not filtered
-by root reachability. Only Top, strict and the mode's own JSON option combine.
+by root reachability. Only Top, strict and the mode's own JSON or DOT option combine (JSON/DOT are mutually exclusive).
 Other modes, baseline, budgets and HTML are rejected before input I/O.
 
 `--dependents-json` requires an explicit `--dependents INDEX` and a nonempty
@@ -28,7 +29,7 @@ and first-argument help dispatch remain unchanged.
 
 A syntactically valid decimal outside the actual index space is error1; invalid
 numeric syntax is error2. An empty module has no valid target. Strict checks
-whole-module completeness **before output preflight or creation**. JSON uses
+whole-module completeness **before output preflight or creation**. JSON and DOT use
 the existing unified target checks and native exclusive creation. Existing
 files are never deleted or truncated. The existing nontransactional output
 boundary is unchanged.
@@ -221,3 +222,114 @@ run another graph search or relax why-root. Not-found has empty paths/null hops;
 same-index has zero hops. No Top; only own JSON and strict combine. Workflow:
 name search -> dependencies/dependents sets -> explicit pair path -> locate-decode
 for actual instruction offsets. [Contract and real evidence](function-path-between.md).
+
+## Incoming closure DOT (source addition after public 0.5.1)
+
+`--dependents INDEX --dependents-dot new.dot` requires an explicit full function
+index and a new nonempty `.dot` path. Only Top/strict combine; own JSON and DOT
+are mutually exclusive. Top limits text, never nodes/edges/diagnostics in DOT.
+Any valid local/imported target is allowed, including isolated one-node results.
+The source is read once and function_dependents is called once. Strict checks
+before preflight/exclusive creation; DOT prints only a save confirmation.
+Non-strict incomplete results preserve warnings. Successful completion0,
+input/index/evidence/output failure1, argument error2, strict refusal3. Existing
+files and link aliases keep the unified native exclusive-create protection and
+existing nontransactional boundary. Product generation never launches dot.
+
+API: `render_function_dependents_dot(FunctionDependentsReport) -> String`.
+The pure renderer reads the report directly, without casting it to an outgoing
+report or calling any query/build/analyze/SCC/instruction decoder. Nodes and
+edges sort on copies by index and caller/offset/callee/kind. It reuses the
+Graphviz-verified private name/control escaping from the outgoing renderer.
+Original caller → callee direction is preserved, without swapping endpoints
+or dir=back. `depth to target` is minimum model-edge distance to the endpoint,
+not execution stack depth. Target depth0 is highlighted as query target, never
+called a model root. Imported bodies are ellipse/not measured, not measured0B.
+
+Ordinary digraph moonsize_dependents uses rankdir=LR and program-generated
+fn_INDEX IDs. Each complete internal edge gets one statement, including
+parallel locations, references/candidates, self-loops/back/cross edges. next_edge
+is not rendered again and its tree never replaces the full edges. Edges to
+outside nodes stay excluded. Direct/solid, reference/dashed and indirect
+candidate/dotted labels include actual file offsets, without guessing opcodes.
+
+The visible title says Functions with a modeled path to target, full counts,
+legend and model limits; incomplete graphs include warning and diagnostic count.
+Attributes preserve input_sha256, file_size, target_index, graph_complete,
+unresolved_count, modeling_scope, graph_warning and full diagnostics_json,
+including closure-external gaps. This local subgraph does not classify global
+dead/live functions or predict execution, source-change impact or deletion,
+recompile/gzip benefits. Forward dependencies DOT shows what a start reaches;
+incoming dependents DOT shows which sources reach an endpoint. Both keep the
+same original arrows, even though their traversal directions differ.
+
+### Focused evidence and consumer checks
+
+New fixture name is on actual exported node3, including Chinese, quotes,
+literal backslash substitution sequences, actual newline/tab/ESC and text
+resembling a DOT statement. Its custom name section follows code, retaining
+instruction offsets. Target2 nodes are `[1,2,3,4]`, depths by index `[1,0,1,2]`.
+All9 internal edges (7 direct/1 reference/1 candidate) remain, versus3 next-edge
+tree edges. Top1 changes none. The real outgoing edge2→0 at file86 remains in
+input but is excluded from this reverse closure and DOT.
+
+| Caller → callee | Kind | File offset |
+| --- | --- | ---: |
+| 1 → 2 | direct | 67 |
+| 1 → 2 | direct | 69 |
+| 1 → 3 | reference | 71 |
+| 1 → 3 | indirect candidate | 76 |
+| 1 → 1 | direct | 79 |
+| 2 → 4 | direct | 84 |
+| 3 → 4 | direct | 91 |
+| 3 → 2 | direct | 93 |
+| 4 → 1 | direct | 98 |
+
+Local checks used three new combined tests: two passed initially, and one
+single-node assertion was corrected because it mistook caller -> callee in
+model-scope text for an edge. Only that failed test was rerun, passing1/1; all
+three unique tests passed. No old tests were executed. One release build,
+required interface/format/native checks, both JS syntax checks and exactly
+four CLI calls passed0/0/3/1. Strict did not create DOT, existing sentinel stayed
+unchanged with no success message, inputs stayed unchanged. A closure-external
+function6 call_ref at file108 remains one diagnostic, unresolved_count0.
+Evidence: `_build/dependents-dot-verification/run-nufGAj/`.
+
+| Item | Size | SHA-256 |
+| --- | ---: | --- |
+| dependents.wasm | 176 B | `e0d6d1a779f3f5d92010c868ba4156643a301bb0c2c80afb33a932517d07523e` |
+| gap.wasm | 180 B | `17a147549543733256f7cedf2d67c294b1d5a047cc569824f5a121e13d2aed36` |
+| new.dot | — | `fbeeb7e206d170b9143df5331bed87d623172734ede08643d07def2e7128fe90` |
+| gap.dot | — | `268fa6319eb130f56dfabcf2164f7c58eab39989ad2232c192c7acdfa7dcde95` |
+
+
+New script `test-dependents-dot.mjs` accepts testing-only --require-graphviz.
+CI requires it once after reusing the existing Graphviz preparation. The old
+forward consumer remains. `verify-dependents-dot-graphviz.mjs` gets the explicit
+current directory and optional dot executable, exclusively creates graphviz/,
+and records dot -V plus one -Tjson for each new.dot/gap.dot. Missing tool,
+unsupported JSON, timeout/nonzero/invalid JSON or assertions fail; stderr may
+contain a successful version message. argv arrays/shell:false,30s timeout and
+8MiB output limits apply. No latest-run lookup or historical evidence input.
+
+Consumer assertions map _gvid to node names, compare the9-edge multiset with
+original directions/styles/offsets, check target/depth labels, exclude2→0,
+and read actual _ldraw_ text for all nodes and edges. The fixed fn3 name must
+stay on one drawn line plus two program lines, without substitution, injected
+nodes or user-created layout lines. Full diagnostics and visible warning are
+checked. Only the known empty graph_warning of a complete graph can be omitted
+by Graphviz, following the prior2.43.0 observation; nonempty data is not relaxed.
+No coordinates, glyph appearance, font widths or object order are fixed.
+
+Artifact `dependents-dot-consumer-<final-SHA>` uploads only this run's inputs,
+DOT, logs/hashes, Graphviz version/commands/status/stderr/JSON and assertion
+results, even after failure when evidence exists. graphviz/results.json records
+source_sha and actual Graphviz version. Target-SHA CI, actual version and
+artifact are reported after verification, not assumed from the earlier forward
+success. This establishes that tested Linux consumer's parsing/layout/output
+text contract, not manual visual, font-glyph, browser or printer acceptance.
+
+Local Graphviz was not installed or run. Old suites/scripts, demos, probes,
+V8, performance and browser/PDF were omitted. Only one renderer and one Options
+field are added; old API/JSON/query algorithms stay unchanged. Version0.5.1,
+no Mooncakes release; original image/AGENTS/plans/build evidence are excluded.

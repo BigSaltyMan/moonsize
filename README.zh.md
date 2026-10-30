@@ -114,12 +114,17 @@ moonsize app.wasm --path-between 12 47 --path-between-json new-path.json --stric
 ```sh
 moonsize app.wasm --dependents 12 --top 20
 moonsize app.wasm --dependents 12 --dependents-json new-dependents.json --top 1
+moonsize app.wasm --dependents 12 --dependents-dot new-referrers.dot --top 1
 ```
 
-index12仅示范语法。只允许Top、自身JSON和strict，strict依据全模块诊断。
+index12仅示范语法。只允许Top、strict、自身JSON或DOT，strict依据全模块诊断。
 Top只限文本来源行，不截断JSON或限制遍历成本。它不是源码修改影响或删除收益。
 callers查一跳入边、dependencies查出向闭包、why-index查一条根路径。
 [方向、实测账本、API及边界](docs/function-dependents.md)。未重新发布包。
+
+入向DOT保留原caller → callee方向，depth to target为到目标的最少模型步数；
+Top不裁剪图，JSON与DOT互斥。产品生成不要求Graphviz；Linux CI检查实际布局文字。
+[入向图契约与证据](docs/function-dependents.md#incoming-closure-dot-source-addition-after-public-051)。
 
 ### 指定函数的传递引用依赖
 
@@ -369,6 +374,7 @@ moonsize <file.wasm> --why-index <n> [--why-root <n>] [--why-json <path.json>] [
   --path-between-json <path> 路径写入新.json，需显式双索引
   --dependents <n>     到达任意目标的传递模型来源，允许Top/strict
   --dependents-json <path> 完整反向闭包写入新.json，需dependents
+  --dependents-dot <path> 完整入向子图写入新.dot，原方向；与JSON互斥，Top只限文本
   --dependencies <n>   任意函数的传递模型闭包，允许Top/strict
   --dependencies-json <path> 完整闭包写入新的.json，需dependencies
   --dependencies-dot <path> 完整子图写入新.dot，与JSON互斥；Top只限文本

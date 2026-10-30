@@ -16,6 +16,12 @@ fn run_function_dependents(options : @lib.Options, index : Int) -> Unit {
     @sys.exit(@lib.EXIT_OVER_SIZE)
     return
   }
+  if options.dependents_dot is Some(target) {
+    check_outputs(options)
+    write_output(target, @lib.render_function_dependents_dot(report))
+    println("Function dependents DOT written to " + target)
+    return
+  }
   match options.dependents_json {
     Some(target) => {
       check_outputs(options)

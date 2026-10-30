@@ -498,3 +498,15 @@ never clips DOT. Existing exclusive writer/strict order apply. Legacy
 render_dot and whole-module call-graph export remain unchanged.
 [Contract and validation limits](function-dependencies.md#complete-dependency-subgraph-dot-source-addition-after-public-051).
 Version/dependencies unchanged, no publication.
+
+## Source-only dependents DOT after public 0.5.1
+
+Adds render_function_dependents_dot(FunctionDependentsReport) -> String and
+Options.dependents_dot: String? default None. No public types, query entries,
+old signatures or JSON formats change. Explicit Options literals need the
+new field; Options::default supplies None. New .dot target requires explicit
+dependents and cannot combine with its JSON. Top never clips DOT, arrows keep
+caller → callee and labels show depth to target. Reuses the verified private
+escaping and existing strict/preflight/exclusive writer; no Graphviz product
+dependency. [Contract and evidence](function-dependents.md#incoming-closure-dot-source-addition-after-public-051).
+Version/dependencies unchanged; no package publication.

@@ -1583,3 +1583,28 @@ Linux实际结论只以最终CI及graphviz/results.json为准，成功后另外�
 已知空值断言（源DOT仍严格检查空属性），非空警告与完整诊断不放宽。无需产品修复。
 针对两份已下载真实布局复测同一断言，不新增analyzer/Graphviz调用或MoonBit测试，
 最终SHA仍需重新确认CI和本轮artifact，不能借用首轮部分成功。
+
+## 68. 传递引用来源子图DOT（2026-10-30，公开0.5.1后源码增量）
+
+新增纯render_function_dependents_dot及Options.dependents_dot默认None，复用安全私有DOT
+转义，不伪装出向report、不新增类型/查询/分析算法。原function_dependents只调用一次，
+strict先于统一预检及独占writer，DOT只提示保存。需显式dependents、新.dot与JSON互斥，
+Top不裁剪。普通digraph moonsize_dependents，箭头保留caller→callee，标depth to target，
+目标depth0/query target，导入ellipse且not measured；完整内部边按副本排序保留，不重复
+next_edge、不夹带外连。全模块诊断/警告和模型边界保留，旧API/JSON/算法不变。
+
+三个新组合单测首轮2过1失败：单节点断言把模型说明中的箭头文字误当成边声明。仅修该断言，
+只复跑失败测试1/1通过，三项最终均过；旧测试未执行。一次release及一次新四场景CLI
+0/0/3/1，均验证原输入及sentinel不变、strict无文件。目标2节点[1,2,3,4]，depth[1,0,1,2]；
+完整9边D7/R1/I1，next-edge树3边，2→0@86真实存在但排除。特殊名在实际节点3，name段code后；
+新输入176/180B，文件偏移67/69/71/76/79/84/91/93/98保持；闭包外call_ref位于function6/file108。
+散列与完整DOT见function-dependents.md和_build/dependents-dot-verification/run-nufGAj/。
+
+CI在原Graphviz准备后追加新四场景必需消费者及本轮artifact，保留正向验证、不重复安装。
+新verify-dependents-dot-graphviz.mjs明确目录，2次-Tjson和版本/命令/状态/stderr完整保存，
+_gvid映射、九边多重集合、原方向/目标外连排除、实际_ldraw_特殊名和depth-to-target及诊断均断言。
+保留已知空graph_warning省略处理，其他非空数据不放宽，不锁布局坐标/字体宽度。最终SHA的
+Linux实际版本、结果及artifact另报，不借用历史成功。人工视觉、字形、浏览器与打印未验。
+接口精确对照仅一renderer一Options字段。本地未装/跑Graphviz，也未跑旧套件/脚本、演示、
+探针、V8、性能或浏览器/PDF。版本仍0.5.1、不改依赖、不发布Mooncakes。原图片、AGENTS、
+规划和构建证据不提交。

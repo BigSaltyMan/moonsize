@@ -181,13 +181,19 @@ target and a minimum model depth. Complete internal edges remain separate.
 ```sh
 moonsize app.wasm --dependents 12 --top 20
 moonsize app.wasm --dependents 12 --dependents-json new-dependents.json --top 1
+moonsize app.wasm --dependents 12 --dependents-dot new-referrers.dot --top 1
 ```
 
-Index12 is a placeholder. Only Top, own JSON and strict combine; strict checks
+Index12 is a placeholder. Only Top, strict and own JSON or DOT combine; strict checks
 full-module diagnostics. Top limits text rows, not traversal or JSON. This is
 not source-change impact or removal savings. Contrast callers (one-hop incoming),
 dependencies (outgoing closure), and why-index (one root path).
 [Direction, actual accounting, API and limits](docs/function-dependents.md).
+
+Incoming DOT keeps original caller → callee arrows; depth to target counts the
+minimum model steps toward the query target. Top never clips the graph; own
+JSON and DOT are mutually exclusive. Generation needs no Graphviz, while Linux
+CI checks actual layout text. [Incoming DOT contract](docs/function-dependents.md#incoming-closure-dot-source-addition-after-public-051).
 
 ## Transitive function model dependencies
 
@@ -709,6 +715,7 @@ identify candidates for investigation.
   --path-between-json <path> full path to a new .json; requires explicit pair
   --dependents <n>     transitive model referrers to any function; Top/strict
   --dependents-json <path> full reverse closure to a new .json; requires dependents
+  --dependents-dot <path> full incoming subgraph with original arrows; exclusive with JSON; Top only limits text
   --dependencies <n>   transitive model closure from any function; Top/strict allowed
   --dependencies-json <path> full closure to a new .json; requires dependencies
   --dependencies-dot <path> full subgraph to a new .dot; exclusive with JSON; Top only limits text

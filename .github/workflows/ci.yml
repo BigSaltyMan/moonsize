@@ -117,6 +117,16 @@ jobs:
           name: dependencies-dot-consumer-${{ github.sha }}
           path: ${{ steps.dependencies-dot.outputs.evidence_dir }}
           if-no-files-found: error
+      - name: Dependents-DOT CLI and Graphviz consumer (four cases)
+        id: dependents-dot
+        run: node scripts/test-dependents-dot.mjs _build/native/release/build/cmd/main/main.exe --require-graphviz
+      - name: Save this run's dependents DOT consumer evidence
+        if: always() && steps.dependents-dot.outputs.evidence_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependents-dot-consumer-${{ github.sha }}
+          path: ${{ steps.dependents-dot.outputs.evidence_dir }}
+          if-no-files-found: error
       - name: Dependency-overlap CLI regressions (four cases)
         run: node scripts/test-dependency-overlap.mjs _build/native/release/build/cmd/main/main.exe
       - name: Function-path-between CLI regressions (four cases)

@@ -539,6 +539,7 @@ pub fn usage() -> String {
   "  --path-between-json <path.json> save full path; requires explicit FROM and TO\n" +
   "  --dependents <n>     list transitive model sources reaching any function (Top/strict)\n" +
   "  --dependents-json <path.json> save full reverse closure; requires index\n" +
+  "  --dependents-dot <path.dot> full incoming subgraph, caller -> callee; exclusive with JSON; Top only limits text\n" +
   "  --dependencies <n>   list transitive model dependencies from any function (Top/strict)\n" +
   "  --dependencies-json <path.json> save full closure to a new .json; requires index\n" +
   "  --dependencies-dot <path.dot> full subgraph to new .dot; exclusive with JSON; Top only limits text\n" +

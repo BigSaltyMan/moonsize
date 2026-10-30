@@ -386,7 +386,10 @@ calls查单函数调用点，callers查一跳来源，why-index查根到目标�
 ## functions主题：传递引用来源（公开0.5.1后源码增量）
 
 `--dependents INDEX`接受任意完整函数index（含导入）；查询能到达目标的反向闭包，
-包含目标自身，不过滤根不可达来源。只允许Top、strict、自身`--dependents-json new.json`。
+包含目标自身，不过滤根不可达来源。只允许Top、strict、自身JSON或DOT（互斥）。
+`--dependents-dot new.dot`必须配显式dependents，Top不裁剪节点、完整边和诊断。
+原caller → callee箭头，depth to target向目标计最少模型步数；不能反转箭头或用next_edge树代替完整边。
+正向dependencies图看从目标可达，入向dependents图看谁能到目标；两者均非执行轨迹或全局死代码判断。
 JSON必须有显式主查询，完整保存所有节点、next_edge和原方向内部边。Top仅限制
 非目标文本行。strict依据全模块缺口，在预检/写入前拒绝；新目标沿用独占保护。
 caller→callee方向不反转，next_edge从当前节点走向目标、depth逐步减少；depth不是栈。

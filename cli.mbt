@@ -46,6 +46,7 @@ pub struct Options {
   /// Independent reverse reference-model closure reaching any function.
   dependents : Int?
   dependents_json : String?
+  dependents_dot : String?
   /// Independent transitive model-reference closure from any function.
   dependencies : Int?
   dependencies_json : String?
@@ -175,6 +176,7 @@ pub fn Options::default(path : String) -> Options {
     path_between_json: None,
     dependents: None,
     dependents_json: None,
+    dependents_dot: None,
     dependencies: None,
     dependencies_json: None,
     dependencies_dot: None,
@@ -452,6 +454,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
   let mut path_between_json : String? = None
   let mut dependents : Int? = None
   let mut dependents_json : String? = None
+  let mut dependents_dot : String? = None
   let mut dependencies : Int? = None
   let mut dependencies_json : String? = None
   let mut dependencies_dot : String? = None
@@ -779,6 +782,16 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
             usage(),
           )
       }
+      i += 2
+    } else if arg == "--dependents-dot" {
+      if i + 1 >= args.length() ||
+        args[i + 1].trim().is_empty() ||
+        args[i + 1].has_prefix("--") {
+        return Err(
+          "moonsize: --dependents-dot needs a new .dot path\n\n" + usage(),
+        )
+      }
+      dependents_dot = Some(args[i + 1])
       i += 2
     } else if arg == "--dependents-json" {
       if i + 1 >= args.length() ||
@@ -1491,6 +1504,22 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       )
     }
   }
+  if dependents_dot is Some(_) {
+    if dependents is None {
+      return Err(
+        "moonsize: --dependents-dot requires --dependents\n\n" + usage(),
+      )
+    }
+    if dependents_json is Some(_) {
+      return Err(
+        "moonsize: --dependents-dot and --dependents-json are mutually exclusive\n\n" +
+        usage(),
+      )
+    }
+    if dependents_dot is Some(target) && !target.has_suffix(".dot") {
+      return Err("moonsize: --dependents-dot wants a .dot path\n\n" + usage())
+    }
+  }
   if dependents_json is Some(_) && dependents is None {
     return Err(
       "moonsize: --dependents-json requires --dependents\n\n" + usage(),
@@ -1574,7 +1603,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
       budget_md is Some(_) ||
       data_json is Some(_) {
       return Err(
-        "moonsize: --dependents is an independent mode; only --top, --strict and --dependents-json may be combined with it\n\n" +
+        "moonsize: --dependents is an independent mode; only --top, --strict and either --dependents-json or --dependents-dot may be combined with it\n\n" +
         usage(),
       )
     }
@@ -3183,6 +3212,7 @@ pub fn parse_options(args : Array[String]) -> Result[Options, String] {
     path_between_json,
     dependents,
     dependents_json,
+    dependents_dot,
     dependencies,
     dependencies_json,
     dependencies_dot,
