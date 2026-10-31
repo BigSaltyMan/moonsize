@@ -1638,3 +1638,31 @@ CLI同fixture只跑三次：HTML内嵌资源0、新入向DOT0、已有DOT保护1
 网络/依赖、打包内容、探针和构建按stage/log分别定位，不以网络失败认定包缺陷。原图片、
 AGENTS、规划和构建证据排除；API/Options/.mbti及产品实现不变。Graphviz、人工视觉/字形、
 浏览器/PDF、性能和源码演示未在本次包审计重做，原边界继续保留。
+
+## 70. 0.6.0源码发布候选（2026-10-31，仅准备）
+
+核对HEAD为4b93245后，将实际moon.mod版本从0.5.1改0.6.0，模块名/依赖/native目标不动。
+这是已实现源码增量的版本与迁移说明收束，不是本提交新做一批产品功能。README保留并标注
+旧公开库moon add @0.5.1，当前源码明确为未发布0.6.0候选，CLI按完整源码SHA构建；不写
+尚不可验证的0.6.0安装方式或Release链接。source-delivery更新当前身份，migration-0.5顶端
+引导到新migration-0.6，旧0.5.1后阶段章节保留历史并说明已纳入候选，不全局替换旧版本号。
+
+公开0.5.1基线的源码/已有接口快照可读，按实际声明核对累计变更。迁移指南推荐Options::default，
+手工完整Options需补新增字段；WasmError两个新增输入编码分支可能要求调整外部穷举匹配。
+旧函数签名/其他旧类型及已有JSON文件核对结果见指南及本地api-review，不称完全源码兼容。
+本次不新增API、Options字段、JSON或.mbt实现，不运行info生成新.mbti或构建历史版本。
+
+Node/Python包审计去掉0.5.1身份常量：干净导出后先严格解析source manifest name/version，
+再将实际ZIP身份与源码期望逐项比较；模块名仍固定BigSaltyMan/moonsize。CI旧步骤显式
+--expected-version 0.6.0，源版本不匹配会在打包前拒绝，不能从包反取版本自比较。缺失、
+畸形、重复字段、非字符串或冲突manifest均失败。旧ZIP安全、逐文件哈希、未知成员拒绝、
+native/ECharts/压缩许可证、包内API探针及一次解压包CLI构建/三次0/0/1完整保留，不加第二任务。
+结果published=false、registry_consumer=false，不能依赖未发布的注册表0.6.0。
+
+本地只有Node/Python语法、文档路径、身份谓词和diff检查；三份最小临时manifest检查结果：
+源码0.6.0+包0.6.0接受，包0.5.1拒绝，不同模块名拒绝。记录在
+_build/release-0.6-candidate-status/identity-cases/results.json。零MoonBit测试、零CLI、
+零构建、零打包；不执行moon publish/tag/Release/报名表操作，不重跑旧验证。最终SHA的
+CI、实际0.6.0包大小/成员/哈希、探针和0/0/1状态来自新artifact，不能拿4b93245旧证据替代，
+也不为填写自身SHA循环改提交。旧人工PDF/Graphviz/性能实验保持历史身份；原图片、AGENTS、
+规划和构建证据继续排除。

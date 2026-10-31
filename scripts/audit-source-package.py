@@ -113,16 +113,96 @@ def extract_zip(archive, destination, records):
     return base
 
 
+MODULE_NAME = "BigSaltyMan/moonsize"
+VERSION_PATTERN = re.compile(
+    r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+)
+
+
+def unique_json_object(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate manifest JSON field: " + key)
+        value[key] = item
+    return value
+
+
+def valid_identity(name, version, path):
+    if not isinstance(name, str) or not name or name != name.strip():
+        raise ValueError("manifest name must be a nonempty string: " + str(path))
+    if not isinstance(version, str) or not VERSION_PATTERN.fullmatch(version):
+        raise ValueError("manifest version must be an explicit semantic version: " + str(path))
+    return name, version
+
+
 def module_identity(path):
-    if path.name.endswith(".json"):
-        value = json.loads(path.read_text(encoding="utf-8"))
-        return value.get("name"), value.get("version")
+    """Read exact identity assignments, never substring-match a package name.
+
+    Only ordinary single-line string identity assignments are supported in the
+    MoonBit manifest form. Unsupported or malformed identity syntax fails rather
+    than guessing; the package command separately validates the full manifest.
+    """
+    path = Path(path)
     text = path.read_text(encoding="utf-8")
-    name = re.search(r'^name\s*=\s*"([^"\n]+)"', text, re.M)
-    version = re.search(r'^version\s*=\s*"([^"\n]+)"', text, re.M)
-    if not name or not version:
-        raise ValueError("module name/version missing: " + str(path))
-    return name.group(1), version.group(1)
+    if path.name.endswith(".json"):
+        value = json.loads(text, object_pairs_hook=unique_json_object)
+        if not isinstance(value, dict):
+            raise ValueError("module manifest must be an object: " + str(path))
+        return valid_identity(value.get("name"), value.get("version"), path)
+    values = {}
+    assignment = re.compile(
+        r'\s*(name|version)\s*=\s*("(?:[^"\\\r\n]|\\.)*")\s*(?://[^\r\n]*)?'
+    )
+    for line in text.splitlines():
+        if not re.match(r"\s*(?:name|version)\b", line):
+            continue
+        match = assignment.fullmatch(line)
+        if not match:
+            raise ValueError("unsupported or malformed manifest identity: " + str(path))
+        key, literal = match.groups()
+        if key in values:
+            raise ValueError("duplicate manifest identity field " + key + ": " + str(path))
+        values[key] = json.loads(literal)
+    return valid_identity(values.get("name"), values.get("version"), path)
+
+
+def source_identity(source, expected_version=None):
+    """Obtain the expectation from the clean source, before reading the ZIP."""
+    source = Path(source)
+    manifests = [source / name for name in ("moon.mod", "moon.mod.json") if (source / name).is_file()]
+    if not manifests:
+        raise ValueError("clean source module manifest missing: " + str(source))
+    identities = [module_identity(manifest) for manifest in manifests]
+    identity = identities[0]
+    if any(other != identity for other in identities[1:]):
+        raise ValueError("clean source manifests disagree on name/version")
+    if identity[0] != MODULE_NAME:
+        raise ValueError("clean source module name mismatch: expected " + MODULE_NAME)
+    if expected_version is not None:
+        if not isinstance(expected_version, str) or not VERSION_PATTERN.fullmatch(expected_version):
+            raise ValueError("invalid explicit expected version")
+        if identity[1] != expected_version:
+            raise ValueError("clean source version mismatch: expected " + expected_version + ", got " + identity[1])
+    return identity
+
+
+def check_package_identity(expected, package_manifest):
+    """Compare to the source-derived identity, not to another ZIP value."""
+    if not isinstance(expected, tuple) or len(expected) != 2:
+        raise ValueError("source-derived identity tuple required")
+    valid_identity(expected[0], expected[1], "clean source expectation")
+    if expected[0] != MODULE_NAME:
+        raise ValueError("source-derived module name mismatch")
+    actual = module_identity(package_manifest)
+    if actual != expected:
+        raise ValueError(
+            "package manifest identity/version mismatch: expected " + repr(expected) +
+            ", got " + repr(actual) + " at " + str(package_manifest)
+        )
+    return actual
 
 
 def excluded_member(relative):
@@ -171,6 +251,8 @@ def audit(source, archive, destination, evidence):
         "passed": False,
     }
     try:
+        expected_identity = source_identity(source)
+        report["expected_source_name"], report["expected_source_version"] = expected_identity
         module_members = [row["path"] for row in records if not row["directory"] and PurePosixPath(row["path"]).name in {"moon.mod", "moon.mod.json"}]
         roots = {str(PurePosixPath(name).parent) for name in module_members}
         if len(roots) != 1:
@@ -242,12 +324,8 @@ def audit(source, archive, destination, evidence):
         report["package_root"] = str(package_root)
         manifests = [package_root / PurePosixPath(name).name for name in module_members]
         for manifest in manifests:
-            if module_identity(manifest) != ("BigSaltyMan/moonsize", "0.5.1"):
-                raise ValueError("package manifest identity/version mismatch: " + str(manifest))
-        if ("moon.mod" in source_files and module_identity(source / "moon.mod") != ("BigSaltyMan/moonsize", "0.5.1")):
-            raise ValueError("source manifest identity/version mismatch")
-        report["manifest_name"] = "BigSaltyMan/moonsize"
-        report["manifest_version"] = "0.5.1"
+            check_package_identity(expected_identity, manifest)
+        report["manifest_name"], report["manifest_version"] = expected_identity
         # Raw-byte checks cover all source metadata; these checks make the
         # native-only CLI and its C stub requirements separately reviewable.
         pkg = package_root / "cmd/main/moon.pkg"
@@ -276,8 +354,11 @@ def main():
         print(json.dumps({"destination": str(extracted), "members": len(records)}, ensure_ascii=False))
     elif len(args) == 5 and args[0] == "audit":
         print(json.dumps(audit(*map(Path, args[1:])), ensure_ascii=False))
+    elif len(args) in (2, 3) and args[0] == "identity":
+        name, version = source_identity(Path(args[1]), args[2] if len(args) == 3 else None)
+        print(json.dumps({"name": name, "version": version}, ensure_ascii=False))
     else:
-        raise ValueError("usage: audit-source-package.py extract ZIP NEW_DIR | audit SOURCE ZIP NEW_DIR EVIDENCE")
+        raise ValueError("usage: audit-source-package.py extract ZIP NEW_DIR | audit SOURCE ZIP NEW_DIR EVIDENCE | identity SOURCE [EXPECTED_VERSION]")
 
 
 if __name__ == "__main__":

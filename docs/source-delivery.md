@@ -1,9 +1,11 @@
 # Source delivery and actual package boundary
 
 `moon add BigSaltyMan/moonsize@0.5.1` installs the published **library
-dependency**, not an independent CLI. This source still declares0.5.1 and
-contains additions that have not been published under a new version. A matching
-version string alone does not identify the same code. Historical
+dependency**, not an independent CLI. Current source is the **unpublished 0.6.0
+release candidate**, collecting the additions developed after public0.5.1.
+See the [0.6 migration guide](migration-0.6.md). Candidate preparation does not
+publish a package or establish registry-consumer success. Reproducing historical
+source results requires a complete SHA; a version string alone is insufficient. Historical
 [migration](migration-0.5.md) and
 [v0.5.1 release](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.1)
 records retain their original identity.
@@ -46,11 +48,16 @@ standard libraries orchestrate Git and the existing MoonBit tools:
 
 ```sh
 node scripts/audit-source-package.mjs "$SOURCE_SHA" \
-  _build/source-package-audit/manual-unique-id
+  _build/source-package-audit/manual-unique-id --expected-version 0.6.0
 ```
 
 The script is a validation action: it packages and compiles code. CI requires
-its explicit source SHA to equal final `GITHUB_SHA`. It creates a fresh temporary
+its explicit source SHA to equal final `GITHUB_SHA` and its clean source version
+to equal0.6.0 via `--expected-version 0.6.0`. The version is read from the clean
+source manifest before packaging, never inferred from the ZIP itself. Module
+name must be BigSaltyMan/moonsize; ZIP name/version must exactly match the clean
+source identity. Optional expected-version permits explicit historical audits;
+it does not relax package/source matching. It creates a fresh temporary
 directory outside the repository and uses `git archive` for that commit.
 Uncommitted images, plans and AGENTS never enter the clean export. It runs
 `moon package --list` and **one actual `moon package`**, then audits the resulting
@@ -96,6 +103,11 @@ submission is part of this source-delivery change.
 
 ## Evidence and limits
 
+Current scope has two parts: the completed source capabilities linked above,
+and this commit's version/migration/audit-identity preparation. No new product
+API, Options field or JSON format is implemented by candidate preparation.
+Historical post0.5.1 development sections remain, now collected in0.6.0 candidate.
+
 The existing complete CI remains. One package-boundary step produces artifact
 `source-package-audit-<full-SHA>`: actual `package.zip`, `members.json`, command
 stdout/stderr/status, toolchain/source SHA, probe source/result, three CLI
@@ -109,8 +121,8 @@ commit. A later change to package content requires a fresh final-SHA audit.
 Network/dependency setup, package content, probe and build failures retain
 distinct stage/log identities; a failed download is not proof of a bad package.
 
-Local validation for this change is limited to script syntax, documentation
-links/paths and diff checks: **zero MoonBit tests, CLI invocations or builds**.
+Local validation for candidate preparation is limited to script syntax,
+documentation links/paths, identity-only temporary manifests and diff checks: **zero MoonBit tests, CLI invocations, builds or package generation**.
 CI package execution does not redo Graphviz, visual/browser/PDF checks,
 performance benchmarks or source demos. Prior [offline/PDF evidence](html-delivery.md)
 keeps its historical scope. Complete Wasm semantic validation, future recompiles,

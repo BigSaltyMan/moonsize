@@ -1,5 +1,10 @@
 # Migrating from public 0.4.0 to 0.5.0
 
+Current source is the **unpublished0.6.0 release candidate**; see the
+[0.6 migration guide](migration-0.6.md). This document remains historical. Its
+post-public0.5.1 source-addition sections are now included in the0.6.0 candidate;
+that does not retroactively publish them as part of the old0.5.1 package.
+
 This guide compares the public 0.4.0 package with the 0.5.0 source. Actual
 publication, source SHA, exact-SHA Linux CI, ZIP hashes and external consumer
 results are recorded when completed in the

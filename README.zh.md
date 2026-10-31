@@ -1,5 +1,7 @@
 # moonsize
 
+旧公开库（0.5.1）：
+
 ```sh
 moon add BigSaltyMan/moonsize@0.5.1
 ```
@@ -10,11 +12,11 @@ moon add BigSaltyMan/moonsize@0.5.1
 
 英文版见 [README.md](README.md)。
 
-上方 `moon add BigSaltyMan/moonsize@0.5.1` 选择的是**公开 0.5.1 库**，不会安装独立 CLI。当前源码仍声明 0.5.1，但已经包含**尚未以新版本发布的源码增量**；使用这些新功能，请从明确的完整源码提交构建 native CLI，并在分享结果时记录 SHA。
+上方 `moon add BigSaltyMan/moonsize@0.5.1` 选择的是**公开 0.5.1 库**，不会安装独立 CLI。当前源码已标为 **0.6.0 发布候选，尚未发布**，收录公开 0.5.1 之后的源码增量。使用这些新功能，请从明确的完整源码提交构建 native CLI，并在分享结果时记录 SHA。
 
 数据段明细、内容组比较、HTML 当前输入明细及报告独占创建的历史变更见[0.5 迁移说明](docs/migration-0.5.md)；[0.4 迁移说明](docs/migration-0.4.md)保留原身份。[0.5.1 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.1)只对应当时的公开版本，不能证明后续源码增量已发布。
 
-[源码交付与任务导航](docs/source-delivery.md)集中列出当前入口、构建方法和最终提交的实际包审计流程。本次不发布 Mooncakes、不创建 tag 或 GitHub Release。已发布 0.4.0 的 HTML/调用图写入行为仍按历史记录解释。
+[源码交付与任务导航](docs/source-delivery.md)集中列出当前入口、构建方法和最终提交的实际包审计流程。[0.6 迁移指南](docs/migration-0.6.md)说明累计 API 和 CLI 变化。本次只准备候选，不发布 Mooncakes、不创建 tag 或 GitHub Release，也未验证 0.6.0 注册表消费。已发布 0.4.0 的 HTML/调用图写入行为仍按历史记录解释。
 
 [公开复审证据](https://github.com/BigSaltyMan/moonsize/blob/main/docs/review-evidence.md)提供指标边界、真实源码重建、路径、预算与两份 PDF；[0.4.0 发布记录](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.4.0)记录对应源码 SHA、目标 Linux CI、实际包摘要和独立消费验证。历史开发日志中的数量保持当时快照。
 

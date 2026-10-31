@@ -1,5 +1,7 @@
 # moonsize
 
+Older published library (0.5.1):
+
 ```sh
 moon add BigSaltyMan/moonsize@0.5.1
 ```
@@ -31,14 +33,17 @@ records the exact source SHA, target Linux CI, registry checksum and clean consu
 verification; historic devlog counts are snapshots.
 
 The install command above selects the **published 0.5.1 library**, not the
-newest source features or a standalone CLI. This checkout still declares 0.5.1
-but includes **unpublished source additions**. Build the latest CLI from an
+newest source features or a standalone CLI. The current source declares
+**0.6.0, an unpublished release candidate**, including the additions developed
+after public 0.5.1. Build the latest CLI from an
 explicit full source commit; record that SHA when sharing results. The historic
 [0.5.1 release record](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.1)
 identifies that public release and is not evidence that later source changes
 were published. [Source delivery and task-oriented guide](docs/source-delivery.md)
-links current features and the final-commit package audit. This task does not
-publish a new Mooncakes version, tag or GitHub Release.
+links current features and the final-commit package audit. Read the
+[0.6 migration guide](docs/migration-0.6.md) for cumulative API and CLI changes.
+Candidate preparation does not publish Mooncakes or create a tag or GitHub
+Release; registry consumption of 0.6.0 has not been verified.
 
 Patch 0.5.1 removes the obsolete JSON-manifest dependency chain that blocked
 Mooncakes documentation for 0.4.0/0.5.0. It ships the pinned synchronous gzip

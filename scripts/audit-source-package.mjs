@@ -8,8 +8,11 @@ import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 
 const [sha, evidenceArg, ...extra] = process.argv.slice(2);
-assert(/^[0-9a-f]{40}$/.test(sha || '') && evidenceArg && extra.length === 0,
-  'Usage: node scripts/audit-source-package.mjs <full-source-commit> <new-evidence-directory>');
+assert(/^[0-9a-f]{40}$/.test(sha || '') && evidenceArg &&
+  (extra.length === 0 || (extra.length === 2 && extra[0] === '--expected-version' &&
+    /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(extra[1]))),
+  'Usage: node scripts/audit-source-package.mjs <full-source-commit> <new-evidence-directory> [--expected-version x.y.z]');
+const expectedVersion = extra.length === 2 ? extra[1] : null;
 const repository = path.resolve(fileURLToPath(new URL('../', import.meta.url)));
 const evidence = path.resolve(evidenceArg);
 assert(!fs.existsSync(evidence), 'Evidence directory must be new');
@@ -21,7 +24,8 @@ const python = process.platform === 'win32' ? 'python' : 'python3';
 const commands = [];
 const result = {
   format: 'moonsize-source-package-audit', schema_version: 1, source_sha: sha,
-  manifest_version: '0.5.1', published: false, registry_consumer: false,
+  manifest_name: null, manifest_version: null, expected_version: expectedVersion,
+  published: false, registry_consumer: false,
   platform: process.platform, node: process.version, commands, passed: false,
 };
 let stage = 'source-identity';
@@ -70,6 +74,14 @@ try {
   const committedFiles = sourceInventory(source);
   fs.writeFileSync(path.join(evidence, 'source-files.json'), JSON.stringify(committedFiles, null, 2) + '\n', {flag: 'wx'});
   const helper = path.join(source, 'scripts/audit-source-package.py');
+  stage = 'clean-source-manifest';
+  const identityArgs = [helper, 'identity', source];
+  if (expectedVersion !== null) identityArgs.push(expectedVersion);
+  const identity = JSON.parse(invoke('source-manifest', python, identityArgs, source));
+  assert.equal(identity.name, 'BigSaltyMan/moonsize', 'Unexpected clean source module');
+  assert.equal(typeof identity.version, 'string');
+  if (expectedVersion !== null) assert.equal(identity.version, expectedVersion, 'Unexpected candidate version');
+  result.manifest_name = identity.name; result.manifest_version = identity.version;
   stage = 'package-list';
   invoke('package-list', 'moon', ['package', '--list'], source);
   stage = 'actual-package';
@@ -88,6 +100,8 @@ try {
   invoke('audit-members', python, [helper, 'audit', source, packageZip, extracted, evidence], source);
   const members = JSON.parse(fs.readFileSync(path.join(evidence, 'members.json'), 'utf8'));
   assert.equal(members.passed, true, 'Actual ZIP content audit did not pass');
+  assert.equal(members.manifest_name, identity.name, 'Package/source module mismatch');
+  assert.equal(members.manifest_version, identity.version, 'Package/source version mismatch');
   result.members = {path: 'members.json', file_count: members.file_count,
     runtime_file_count: members.runtime_file_count,
     manifest_name: members.manifest_name, manifest_version: members.manifest_version};

@@ -39,7 +39,7 @@ jobs:
         run: moon build --target native --release
       - name: Audit actual source package at this commit
         id: source-package
-        run: node scripts/audit-source-package.mjs "$GITHUB_SHA" "_build/source-package-audit/$GITHUB_SHA"
+        run: node scripts/audit-source-package.mjs "$GITHUB_SHA" "_build/source-package-audit/$GITHUB_SHA" --expected-version 0.6.0
       - name: Source package boundary evidence
         if: always() && steps.source-package.outputs.evidence_dir != ''
         uses: actions/upload-artifact@v4
