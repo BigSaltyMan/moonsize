@@ -1,0 +1,151 @@
+///|
+/// Copied into a new executable package inside the audited ZIP extraction.
+/// This template is not a repository test and never resolves a registry package.
+fn audit_edges(edges : Array[@lib.CallEdge]) -> Unit {
+  guard edges.length() == 3 else { abort("three complete model edges required") }
+  for (position, callee, offset) in [(0, 2, 44), (1, 2, 46), (2, 1, 48)] {
+    let edge = edges[position]
+    guard edge.caller == 1 && edge.callee == callee && edge.offset == offset else {
+      abort("original edge direction or file offset")
+    }
+    guard edge.kind is Direct else { abort("direct edge kind") }
+  }
+}
+
+///|
+fn main {
+  // 54 B: import0 m.f; local1 calls2 twice and itself; local2 returns; export1.
+  // Full encoded local sizes are9 and3, including each body-length prefix.
+  let data : Bytes = [
+    0, 97, 115, 109, 1, 0, 0, 0,
+    1, 4, 1, 96, 0, 0,
+    2, 7, 1, 1, 109, 1, 102, 0, 0,
+    3, 3, 2, 0, 0,
+    7, 9, 1, 5, 101, 110, 116, 114, 121, 0, 1,
+    10, 13, 2, 8, 0, 16, 2, 16, 2, 16, 1, 11, 2, 0, 11,
+  ]
+  guard data.length() == 54 else { abort("fixture byte length") }
+  let dependencies = match @lib.function_dependencies(data, 1) {
+    Ok(report) => report
+    Err(error) => abort(@lib.describe_function_dependencies_error(error))
+  }
+  guard dependencies.function_count == 3 &&
+    dependencies.local_function_count == 2 &&
+    dependencies.imported_function_count == 1 else { abort("function inventory") }
+  guard dependencies.graph_complete && dependencies.diagnostics.is_empty() else {
+    abort("complete direct-only dependency graph")
+  }
+  guard dependencies.nodes.map(fn(entry) { entry.node.index }) == [1, 2] else {
+    abort("outgoing closure indices")
+  }
+  guard dependencies.nodes.map(fn(entry) { entry.depth }) == [0, 1] else {
+    abort("outgoing closure depth")
+  }
+  guard dependencies.nodes[0].node.encoded_size == Some(9) &&
+    dependencies.nodes[1].node.encoded_size == Some(3) else { abort("local encoded weights") }
+  guard dependencies.reachable_function_count == 2 &&
+    dependencies.reachable_local_count == 2 &&
+    dependencies.reachable_imported_count == 0 &&
+    dependencies.other_function_count == 1 else { abort("outgoing count ledger") }
+  guard dependencies.function_count == dependencies.reachable_function_count + dependencies.other_function_count &&
+    dependencies.local_encoded_bytes == 12 &&
+    dependencies.reachable_local_encoded_bytes == 12 &&
+    dependencies.other_local_encoded_bytes == 0 &&
+    dependencies.target_local_encoded_bytes == 9 &&
+    dependencies.dependency_local_encoded_bytes == 3 &&
+    dependencies.local_encoded_bytes == dependencies.reachable_local_encoded_bytes + dependencies.other_local_encoded_bytes &&
+    dependencies.reachable_local_encoded_bytes == dependencies.target_local_encoded_bytes + dependencies.dependency_local_encoded_bytes else {
+      abort("outgoing byte ledger")
+    }
+  audit_edges(dependencies.edges)
+
+  let dependents = match @lib.function_dependents(data, 2) {
+    Ok(report) => report
+    Err(error) => abort(@lib.describe_function_dependents_error(error))
+  }
+  guard dependents.graph_complete && dependents.diagnostics.is_empty() else {
+    abort("complete direct-only referrer graph")
+  }
+  guard dependents.nodes.map(fn(entry) { entry.node.index }) == [2, 1] &&
+    dependents.nodes.map(fn(entry) { entry.depth }) == [0, 1] else {
+      abort("incoming closure indices or depth")
+    }
+  guard dependents.function_count == 3 && dependents.local_function_count == 2 &&
+    dependents.imported_function_count == 1 && dependents.reaching_function_count == 2 &&
+    dependents.reaching_local_count == 2 && dependents.reaching_imported_count == 0 &&
+    dependents.other_function_count == 1 &&
+    dependents.function_count == dependents.reaching_function_count + dependents.other_function_count else {
+      abort("incoming count ledger")
+    }
+  guard dependents.local_encoded_bytes == 12 && dependents.reaching_local_encoded_bytes == 12 &&
+    dependents.other_local_encoded_bytes == 0 && dependents.target_local_encoded_bytes == 3 &&
+    dependents.dependent_local_encoded_bytes == 9 &&
+    dependents.local_encoded_bytes == dependents.reaching_local_encoded_bytes + dependents.other_local_encoded_bytes &&
+    dependents.reaching_local_encoded_bytes == dependents.target_local_encoded_bytes + dependents.dependent_local_encoded_bytes else {
+      abort("incoming byte ledger")
+    }
+  audit_edges(dependents.edges)
+
+  let path = match @lib.function_path_between(data, 1, 2) {
+    Ok(report) => report
+    Err(error) => abort(@lib.describe_function_path_between_error(error))
+  }
+  guard path.status is BetweenPathFound else { abort("explicit path status") }
+  guard path.hop_count == Some(1) && path.path_nodes.map(fn(node) { node.index }) == [1, 2] &&
+    path.path_edges.length() == 1 && path.path_edges[0].caller == 1 &&
+    path.path_edges[0].callee == 2 && path.path_edges[0].offset == 44 else {
+      abort("explicit one-hop path evidence")
+    }
+
+  let overlap = match @lib.compare_function_dependencies(data, 1, 2) {
+    Ok(report) => report
+    Err(error) => abort(@lib.describe_dependency_overlap_error(error))
+  }
+  guard overlap.function_count == 3 && overlap.local_function_count == 2 &&
+    overlap.imported_function_count == 1 && overlap.local_encoded_bytes == 12 &&
+    overlap.left_reachable == [1, 2] && overlap.right_reachable == [2] &&
+    overlap.union_function_count == 2 && overlap.union_local_encoded_bytes == 12 else {
+      abort("two-start closure counts")
+    }
+  guard overlap.groups.map(fn(group) { group.kind }) == ["shared", "left_only", "right_only", "neither"] &&
+    overlap.groups.map(fn(group) { group.indices }) == [[2], [1], [], [0]] &&
+    overlap.groups.map(fn(group) { group.function_count }) == [1, 1, 0, 1] &&
+    overlap.groups.map(fn(group) { group.local_encoded_bytes }) == [3, 9, 0, 0] else {
+      abort("fixed partitions and local weights")
+    }
+  let mut functions = 0
+  let mut local_bytes = 0
+  for group in overlap.groups {
+    guard group.function_count == group.local_count + group.imported_count &&
+      group.function_count == group.indices.length() else { abort("partition count identity") }
+    functions += group.function_count
+    local_bytes += group.local_encoded_bytes
+  }
+  guard functions == overlap.function_count && local_bytes == overlap.local_encoded_bytes &&
+    overlap.left_local_encoded_bytes == overlap.groups[0].local_encoded_bytes + overlap.groups[1].local_encoded_bytes &&
+    overlap.right_local_encoded_bytes == overlap.groups[0].local_encoded_bytes + overlap.groups[2].local_encoded_bytes &&
+    overlap.union_local_encoded_bytes == overlap.groups[0].local_encoded_bytes + overlap.groups[1].local_encoded_bytes + overlap.groups[2].local_encoded_bytes &&
+    overlap.function_count == overlap.union_function_count + overlap.groups[3].function_count else {
+      abort("partition/union byte and count identities")
+    }
+  guard overlap.functions[0].imported && overlap.functions[0].encoded_size is None &&
+    overlap.groups[3].imported_count == 1 else { abort("import is unmeasured, not a zero-sized body") }
+
+  let forward = @lib.render_function_dependencies_dot(dependencies)
+  let incoming = @lib.render_function_dependents_dot(dependents)
+  guard forward.has_prefix("digraph moonsize_dependencies {") &&
+    incoming.has_prefix("digraph moonsize_dependents {") else { abort("two public DOT renderer identities") }
+  for dot in [forward, incoming] {
+    guard dot.contains("nodes 2; edges 3") &&
+      dot.contains("fn_1 -> fn_2 [style=solid, label=\"direct; file offset 44\"];") &&
+      dot.contains("fn_1 -> fn_2 [style=solid, label=\"direct; file offset 46\"];") &&
+      dot.contains("fn_1 -> fn_1 [style=solid, label=\"direct; file offset 48\"];") &&
+      !dot.contains("fn_2 -> fn_1") && !dot.contains("dir=back") else {
+        abort("complete DOT evidence and original arrows")
+      }
+  }
+  guard incoming.contains("depth to target 0") && incoming.contains("depth to target 1") else {
+    abort("incoming depth labels")
+  }
+  println("{\"format\":\"moonsize-source-package-api-probe\",\"status\":\"passed\",\"fixture_size\":54,\"functions\":3,\"local_functions\":2,\"imports\":1,\"local_encoded_bytes\":12,\"dependency_nodes\":2,\"dependency_edges\":3,\"dependent_nodes\":2,\"dependent_edges\":3,\"path_hops\":1,\"shared_bytes\":3,\"left_only_bytes\":9,\"right_only_bytes\":0,\"neither_imports\":1,\"dot_edges\":3}")
+}

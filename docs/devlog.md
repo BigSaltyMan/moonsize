@@ -1608,3 +1608,33 @@ Linux实际版本、结果及artifact另报，不借用历史成功。人工视�
 接口精确对照仅一renderer一Options字段。本地未装/跑Graphviz，也未跑旧套件/脚本、演示、
 探针、V8、性能或浏览器/PDF。版本仍0.5.1、不改依赖、不发布Mooncakes。原图片、AGENTS、
 规划和构建证据不提交。
+
+## 69. 源码增量交付与实际包边界（2026-10-31）
+
+版本保持0.5.1。README明确moon add选择公开0.5.1库，不安装CLI；当前源码包含未以新版本
+发布的增量，最新CLI应从明确完整提交构建。新增source-delivery.md按报告/预算/比较、函数编码、
+引用/路径/闭包/循环/DOT、数据/元数据、导入/导出集中链接已实现文档。历史发布/迁移/测量
+记录不改写，本次不发布Mooncakes、不创建tag/Release、不动报名表。
+
+新增audit-source-package.mjs与标准库ZIP helper。CI显式GITHUB_SHA经git archive导出到
+仓库外新临时目录，清洁源码package --list后仅生成一次实际ZIP，审查实际成员和原字节，
+再安全解压到另一新目录。先验证命名空间/穿越/绝对路径/重复冲突/异常链接，以manifest
+确定包根；运行源码清单从导出中实际枚举，不只硬编码几个文件。重点包含原生独占writer/C配置、
+新增闭包/路径/对照/DOT、内嵌ECharts源码/资源/许可NOTICE、vendored compression及许可、
+根许可证与任务说明文档；拒绝构建/依赖/规划/AGENTS/截图/审查附件。未知生成成员或改写字节
+明确失败。现.moonignore先保留，只有真实审计发现问题才最小修复。
+
+source-package-probe.mbt.txt仅为包内临时可执行探针模板，不是新增仓库MoonBit单测。
+54B固定合法样本，import0、本地1/2，完整编码12B；出向1/入向2均2节点3边（1→2@44/46、
+1→1@48），path1→2一跳，overlap四分区及字节恒等式、两个DOT公开入口固定检查。
+探针编译运行与解压包一次native release CLI构建分别记录，旧工作区产品二进制不参与。
+CLI同fixture只跑三次：HTML内嵌资源0、新入向DOT0、已有DOT保护1。结果与产物哈希来自
+实际执行，不提前填数。包内调用不等于注册表消费，不执行或修改verify-release-consumer。
+
+本地仅看moon package --help确认--list/打包命令，做新增脚本语法、文档路径/链接及diff检查；
+零MoonBit测试、零CLI、零构建，不跑info/fmt/check/test或旧矩阵。实际打包/解压/探针/构建/
+三冒烟交最终SHA的CI。原CI保留，仅加一次包边界步骤及本轮artifact，失败也尽量上传。
+最终源码SHA、CI、ZIP/成员/内容哈希和状态写入artifact/完成报告，避免填写自身SHA形成循环。
+网络/依赖、打包内容、探针和构建按stage/log分别定位，不以网络失败认定包缺陷。原图片、
+AGENTS、规划和构建证据排除；API/Options/.mbti及产品实现不变。Graphviz、人工视觉/字形、
+浏览器/PDF、性能和源码演示未在本次包审计重做，原边界继续保留。

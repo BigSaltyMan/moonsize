@@ -30,11 +30,15 @@ links measured rebuild cases, real PDFs and explicit model boundaries. The
 records the exact source SHA, target Linux CI, registry checksum and clean consumer
 verification; historic devlog counts are snapshots.
 
-The source here prepares **0.5.1**. Publication, exact-version consumption and
-the target CI result are recorded separately in the
+The install command above selects the **published 0.5.1 library**, not the
+newest source features or a standalone CLI. This checkout still declares 0.5.1
+but includes **unpublished source additions**. Build the latest CLI from an
+explicit full source commit; record that SHA when sharing results. The historic
 [0.5.1 release record](https://github.com/BigSaltyMan/moonsize/releases/tag/v0.5.1)
-when completed; this document is not a publication receipt. The published 0.4.0
-HTML/graph writer retains its old behavior.
+identifies that public release and is not evidence that later source changes
+were published. [Source delivery and task-oriented guide](docs/source-delivery.md)
+links current features and the final-commit package audit. This task does not
+publish a new Mooncakes version, tag or GitHub Release.
 
 Patch 0.5.1 removes the obsolete JSON-manifest dependency chain that blocked
 Mooncakes documentation for 0.4.0/0.5.0. It ships the pinned synchronous gzip
